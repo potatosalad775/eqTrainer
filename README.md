@@ -18,7 +18,7 @@ Thanks to **Multilingual Support**, anyone can train their auditory skills. The 
 
 ## What's better than Previous Legacy Version of eqTrainer?
 
-* Real-Time Audio Filtering
+* Seamless Audio Transition - thanks to Real-Time Audio Filtering
 
 * Responsive UI with Landscape Mode for Devices with Large Display
 
