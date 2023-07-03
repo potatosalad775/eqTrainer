@@ -1,0 +1,222 @@
+{
+  # Main Page
+  ## Main Page Appbar
+  "MAIN_APPBAR_TITLE_CONFIG_1": "세션",
+  "MAIN_APPBAR_TITLE_CONFIG_2": "설정하기",
+  "MAIN_APPBAR_TITLE_PLAYLIST_1": "플레이리스트",
+  "MAIN_APPBAR_TITLE_PLAYLIST_2": "설정하기",
+  "MAIN_APPBAR_TITLE_SETTING_1": "eqTrainer",
+  "MAIN_APPBAR_TITLE_SETTING_2": "설정",
+  ## Main Page - Navigation Bar
+  "MAIN_NAVBAR_MAIN": "메인",
+  "MAIN_NAVBAR_PLAYLIST": "플레이리스트",
+  "MAIN_NAVBAR_SETTINGS": "설정",
+
+  # Configuration Page
+  ## Config Card
+  "CONFIG_CARD_TITLE_SB": "시작 주파수 밴드",
+  "CONFIG_CARD_SUBTITLE_SB": "필터가 적용될 수 있는 중심 주파수의 개수",
+  "CONFIG_CARD_TITLE_G": "게인",
+  "CONFIG_CARD_SUBTITLE_G": "필터의 게인값",
+  "CONFIG_CARD_TITLE_QF": "Q Factor",
+  "CONFIG_CARD_SUBTITLE_QF": "필터의 대역폭",
+  "CONFIG_CARD_TITLE_FT": "필터 타입",
+  "CONFIG_CARD_SUBTITLE_FT": "필터의 모양새",
+  "CONFIG_CARD_DDB_FT_P": "피크",
+  "CONFIG_CARD_DDB_FT_D": "딥",
+  "CONFIG_CARD_DDB_FT_PD": "피크 & 딥",
+  "CONFIG_CARD_TITLE_T": "임계값",
+  "CONFIG_CARD_SUBTITLE_T": "세션 진행 중 중심 주파수 증감을 위한 임계값",
+  ## Button
+  "CONFIG_BUTTON_START": "세션 시작하기",
+
+  # Session Page
+  "SESSION_APPBAR_TITLE": "세션",
+  ## Empty Playlist Alert
+  "SESSION_ALERT_EMPTY_TITLE": "빈 플레이리스트",
+  "SESSION_ALERT_EMPTY_CONTENT": "세션을 시작하기에 앞서 적어도 하나의 오디오 클립을 추가한 뒤 활성화해주세요.",
+  "SESSION_ALERT_EMPTY_BUTTON": "네",
+  ## Exiting Session Alert
+  "SESSION_ALERT_EXIT_CONTENT": "정말로 세션을 그만두고 나가시겠습니까?",
+  "SESSION_ALERT_EXIT_BUTTON_YES": "네",
+  "SESSION_ALERT_EXIT_BUTTON_NO": "아니오",
+  ## in-Session Button
+  "SESSION_BUTTON_ORIGINAL": "원음",
+  "SESSION_BUTTON_EQ_FILTERED": "EQ 적용",
+  "SESSION_BUTTON_SUBMIT" : "제출하기",
+  ## Session Snackbar
+  ## * 'DO NOT' translate '{_INDEX}' - it will be replaced to an actual value
+  "SESSION_SNACKBAR_CORRECT": "정답입니다!",
+  "SESSION_SNACKBAR_INCORRECT": "오답입니다! 올바른 정답은 {_INDEX}이었습니다.",
+
+  # Session Result Page
+  "RESULT_APPBAR_TITLE": "결과",
+  "RESULT_BOTTOM_BAR_TITLE": "최종 결과",
+  "RESULT_BOTTOM_BAR_ZERO_RESULT": "없음",
+
+  "RESULT_FREQ_SUB_BASS": "극저음",
+  "RESULT_FREQ_MID_BASS": "저음",
+  "RESULT_FREQ_LOWER_MIDRANGE": "중저음",
+  "RESULT_FREQ_CENTRE_MIDRANGE": "중음",
+  "RESULT_FREQ_UPPER_MIDRANGE": "중고음",
+  "RESULT_FREQ_TREBLE": "고음",
+  "RESULT_FREQ_UPPER_TREBLE": "초고음",
+
+  # Playlist Page
+  "PLAYLIST_EMPTY_TEXT": "발견된 오디오 클립이 없습니다",
+  "PLAYLIST_AUDIO_ALERT_TITLE": "오디오 클립 관리",
+  "PLAYLIST_AUDIO_ALERT_ACTION_DELETE": "삭제",
+  "PLAYLIST_FOOTER": "원형 체크박스를 드래그하여 순서를 바꿀 수 있습니다.",
+
+  # Import Audio Page
+  "IMPORT_APPBAR_TITLE": "오디오 클립 편집",
+  ## Alert Dialog - Exiting Page
+  "IMPORT_ALERT_EXIT_CONTENT": "정말로 작업 중이던 내용을 버리고 편집기를 나가시겠습니까?",
+  "IMPORT_ALERT_EXIT_YES": "네",
+  "IMPORT_ALERT_EXIT_NO": "아니오",
+  ## Alert Dialog - Error
+  "IMPORT_ALERT_ERROR_TITLE": "오류",
+  "IMPORT_ALERT_ERROR_CONTENT": "오디오 파일을 불러오는 동안 오류가 발생했습니다.",
+  "IMPORT_ALERT_ERROR_BUTTON": "확인",
+  ## Alert Dialog - Aborted
+  "IMPORT_ALERT_ABORTED_CONTENT": "파일 불러오기가 취소되었습니다",
+  "IMPORT_ALERT_ABORTED_BUTTON": "확인",
+  ## Loading Dialog - Converting Audio Clip
+  "IMPORT_CONVERTING_1": "잠시만 기다려주세요...",
+  "IMPORT_CONVERTING_2": "호환되지 않는 오디오 파일을 FLAC로 변환하는 중입니다.",
+  ## CLIP EDITOR
+  ### Time Stamp Indicator
+  ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value
+  "IMPORT_EDITOR_TIMESTAMP_START": "클립 시작 시점 : {_TIME}",
+  "IMPORT_EDITOR_TIMESTAMP_END": "클립 종료 시점 : {_TIME}",
+  ### Time setter button
+  "IMPORT_EDITOR_BUTTON_SET_START": "지금 시작 시점 설정",
+  "IMPORT_EDITOR_BUTTON_SET_END": "지금 종료 시점 설정",
+  ### Alert Dialog - Start and End time
+  "IMPORT_EDITOR_ALERT_START_CONTENT": "시작 시점을 종료 시점 이후로 설정할 수 없습니다.",
+  "IMPORT_EDITOR_ALERT_END_CONTENT": "종료 시점을 시작 시점 이전으로 설정할 수 없습니다.",
+  "IMPORT_EDITOR_ALERT_BUTTON": "확인",
+  ### Button - Done Editing
+  "IMPORT_EDITOR_BUTTON_DONE": "완료",
+
+  # Setting Page
+  ## Setting Card - Theme
+  "SETTING_CARD_THEME_TITLE": "테마",
+  ## Setting Card - Language
+  "SETTING_CARD_LANG_TITLE": "언어",
+  ## Setting Card - Github
+  "SETTING_CARD_GITHUB_TITLE": "Github",
+  ## Setting Card - Contact Dev
+  "SETTING_CARD_CONTACT_TITLE": "개발자와 연락하기",
+  ## Setting Card - Open Source License
+  "SETTING_CARD_LICENSE_TITLE": "오픈소스 라이선스",
+  ## Setting Card - Developer Settings
+  "SETTING_CARD_DEV_SETTING_TITLE": "개발자 설정",
+
+  # Developer Settings Page
+  "DEV_SETTING_APPBAR_TITLE": "개발자 설정",
+  ## DEV SETTING CARD - Android Backend Library
+  "DEV_SETTING_CARD_BACKEND_TITLE": "안드로이드 백엔드 라이브러리",
+  "DEV_SETTING_CARD_BACKEND_DESC":
+    "오디오가 생각했던 것만큼 잘 재생되지 않는다면 오디오 백엔드를 바꿔보세요. AAudio API는 Android Oreo (8.0) 이상을 탑재한 안드로이드 기기에서 사용이 가능합니다.",
+  "DEV_SETTING_CARD_BACKEND_ALERT_TITLE": "알림",
+  "DEV_SETTING_CARD_BACKEND_ALERT_CONTENT": "변경된 설정을 적용하려면 앱을 종료한 뒤 다시 시작해주세요.",
+  "DEV_SETTING_CARD_BACKEND_ALERT_BUTTON": "확인",
+
+  # Help Page
+  "HELP_APPBAR_TITLE": "도움말",
+
+  # Help Sub-Page
+  ## DISCLAIMER - when translating, append '\n' in front of second sentence to move it next line.
+
+  ## Understanding Frequency
+  "HELP_SUB_FREQ_TITLE": "주파수 이해하기",
+  ## - Page 1
+  "HELP_SUB_FREQ_P1_PHOTO_DESC_1":
+    "< 느린 진동, 낮은 주파수, 낮은 음 >",
+  "HELP_SUB_FREQ_P1_PHOTO_DESC_2":
+    "< 빠른 진동, 높은 주파수, 높은 음 >",
+  "HELP_SUB_FREQ_P1_PARAGRAPH_1":
+    "인간은 고막을 통해 공기의 진동을 인식하여 소리를 듣습니다. 소리의 높낮이는 진동의 속도에 의해서만 결정됩니다.
+    \n\n이 때, 주파수는 1초 동안 진동하는 횟수를 의미하므로 주파수가 낮을수록(진동이 느릴수록) 음이 낮아지고, 주파수가 높을수록(진동이 빠를수록) 음이 높아집니다.",
+  "HELP_SUB_FREQ_P1_PARAGRAPH_2":
+    "Hz는 주파수를 나타내는 단위로, eqTrainer에서는 1000 단위 주파수를 표기할 때 SI 접두어인 Kilo를 사용합니다. 예컨대, 1000Hz는 1kHz로 표기됩니다.
+    \n\n인간의 가청주파수는 20Hz부터 20kHz(20000Hz) 사이로, 해당 영역을 나누어 저음, 중음, 고음으로 나눌 수 있습니다.",
+  ## - Page 2
+  "HELP_SUB_FREQ_P2_PARAGRAPH_1":
+    "인터넷에서 유명한 위 사진은 각 악기가 어떤 주파수 영역대에서 소리를 내는지를 잘 보여주고 있습니다.",
+  "HELP_SUB_FREQ_P2_PARAGRAPH_2":
+    "주파수 영역을 어떻게 나눠서 음역대를 구분할 것인지에 대해서는 개인마다 의견이 다를 수 있지만 대략적인 기준은 다음과 같습니다.",
+  "HELP_SUB_FREQ_P2_FREQ_INFO":
+    "* 20Hz ~ 80Hz : 극저음
+    \n* 80Hz ~ 200Hz : 저음
+    \n* 200Hz ~ 800Hz : 중저음
+    \n* 800Hz ~ 1.5kHz : 중음
+    \n* 1.5kHz ~ 5kHz : 중고음
+    \n* 5kHz ~ 10kHz : 고음
+    \n* 10kHz+ : 초고음",
+
+  ## Goal of 'eqTrainer'
+  "HELP_SUB_GOAL_TITLE": "'eqTrainer'의 목표",
+  ## - Page 1
+  "HELP_SUB_GOAL_P1_PARAGRAPH_1":
+    "'eqTrainer'는 JBL, AKG를 비롯한 수많은 브랜드를 소유한 하만 인터내셔널 사의 청음 능력 훈련 프로그램, 'How To Listen'으로부터 큰 영감을 받아 제작되었습니다.
+    \n'eqTrainer'는 'How To Listen'이 제공하는 훈련 기능들 중, 'Band Identification' 기능을 제공합니다.
+    \n\n'Band Identification'은 무작위로 지정된 주파수를 중심으로 소리를 변화시키는 Equalizer가 적용된 음원, 그리고 어떠한 변조도 가해지지 않은 원음을 번갈아 청취한 뒤,
+    어떠한 주파수 영역이 어떻게 변조되었는지를 정확하게 판별해내는 것을 목표로 합니다.
+    \n\n오디오 제품 개발 인력 양성을 위한 훈련 프로그램으로 개발된 'How To Listen'과 같이, 'eqTrainer'는 사용자의 Critical Listening 능력을 훈련할 수 있도록 개발되었습니다.",
+  "HELP_SUB_GOAL_P1_PARAGRAPH_2":
+    "오디오 엔지니어가 아닌 아마추어 애호가 레벨에서 Critical Listening 능력을 길러야 할 필요성이 있는지에 대해서는 갑론을박이 있는 것이 사실이지만,
+    개인적으로 이퀄라이저 사용 능력 향상과, 음향장비 측정치 상대 비교 능력 향상 - 두 가지 측면에서 일반 리스너에게도 도움이 된다고 생각합니다.",
+
+  ## Managing Playlist
+  "HELP_SUB_PLAYLIST_TITLE": "플레이리스트 관리하기",
+  ## - Page 1
+  "HELP_SUB_PLAYLIST_P1_PARAGRAPH_1":
+    "이전 레거시 버전과 동일하게, 새롭게 개발된 'eqTrainer'에도 오디오 편집기를 포함한 플레이리스트 기능이 포함되어 있습니다.
+    \n\n플레이리스트 화면 오른쪽 하단의 + 버튼을 누르면 음원 파일을 선택할 수 있습니다. 이 때, 'eqTrainer'가 지원하는 mp3, wav, flac 포맷이 아닌 파일이 선택된 경우 flac 포맷으로 변환됩니다.",
+  "HELP_SUB_PLAYLIST_P1_PARAGRAPH_2":
+    "음원이 불러와지고 나면, 위와 같은 에디터 화면에 진입하게 됩니다. 음원의 일부분을 잘라서 사용할 예정이라면, 슬라이더를 옮기거나 음원을 자를 위치까지 재생한 뒤,
+    '지금 시작 지점 설정' 또는 '지금 종료 시점 설정' 버튼을 눌러 음원의 시작 시점과 종료 시점을 설정할 수 있습니다. 
+    \n\n이렇게 자른 '오디오 클립'의 시작 및 종료 시점은 화살표와 시간으로 표시됩니다. 작업이 완료된 뒤 '완료' 버튼을 누르면 '오디오 클립'이 플레이리스트에 추가됩니다.",
+
+  ## Configuring Session
+  "HELP_SUB_CONFIG_TITLE": "세션 설정하기",
+  ## - Page 1
+  "HELP_SUB_CONFIG_P1_PARAGRAPH":
+    "각 훈련 세션은 사용자는 변조된 음원과 변조되지 않은 원음을 번갈아 들으면서 어느 주파수 영역에 변화가 생겼는지 판별해내는 방식으로 진행됩니다.
+    \n\n이 과정에서 사용자가 원하는 음역대를 보다 쉽게 선택할 수 있도록 위 사진과 같은 '주파수 그래프'를 통해 시각화된 주파수 정보를 제공하고 있습니다.
+    \n\n훈련 세션을 시작하기에 앞서, 사용자는 '세션 설정하기' 페이지에서 아래 항목들을 조절하여 세션의 난이도나 진행 방식을 자신의 입맛에 맞게 개인화할 수 있습니다.",
+  "HELP_SUB_CONFIG_P1_SB": "* 시작 주파수 밴드",
+  "HELP_SUB_CONFIG_P1_SB_DESC":
+    "'시작 주파수 밴드'는 세션이 시작되었을 때 필터가 적용될 수 있는 '중심 주파수'의 개수를 결정합니다.
+    '중심 주파수'의 개수나 늘어나면, 보다 인접한 주파수 사이의 미묘한 소리적 변화를 눈치챌 수 있는 능력이 필요하기 때문에 난이도가 높아집니다.",
+  "HELP_SUB_CONFIG_P1_G": "* 게인",
+  "HELP_SUB_CONFIG_P1_G_DESC":
+    "'게인'은 음원을 변조시키는 필터의 세기를 결정합니다. '게인'이 높을수록 소리에 더 큰 변화를 주기 때문에 세션 난이도가 낮아집니다.",
+  "HELP_SUB_CONFIG_P1_Q": "* Q Factor",
+  "HELP_SUB_CONFIG_P1_Q_DESC":
+    "'Q Factor'는 음원에 가해지는 필터의 대역폭을 결정합니다. 'Q Factor'가 커질수록 필터가 영향을 주는 주파수의 범위가 좁아집니다.",
+  "HELP_SUB_CONFIG_P1_TYPE": "* 필터 타입",
+  "HELP_SUB_CONFIG_P1_TYPE_DESC":
+    "'필터 타입'은 음원에 가해지는 필터의 모양새를 결정합니다. 
+    \n'피크'는 위로 솟아오른 그래프로 표현되며, 특정 주파수의 소리를 '강조'합니다. 반면 '딥'은 아래로 움푹 파인 그래프로 표현되며, 특정 주파수의 소리를 '약화'시킵니다. 
+    \n사진과 같이 '피크'와 '딥' 형태의 필터가 모두 등장할 수 있게 설정할 수도 있습니다.",
+  "HELP_SUB_CONFIG_P1_THR": "* 임계값",
+  "HELP_SUB_CONFIG_P1_THR_DESC":
+    "'임계값'은 사용자의 실력에 따른 난이도 조정을 위한 기준치로 사용됩니다. 'eqTrainer'는 변조된 주파수 영역을 사용자가 제대로 판별했는지의 여부를 기록해두었다가,
+    해당 횟수가 '임계값'에 도달했을 경우 필터에 사용되는 중심 주파수의 개수를 증감시키는 방식으로 난이도를 스스로 조절합니다.",
+
+  ## Running a Session
+  "HELP_SUB_SESSION_TITLE": "세션 진행하기",
+  ## - Page 1
+  "HELP_SUB_SESSION_P1_PARAGRAPH_1":
+    "세션이 시작되면, 사용자는 플레이리스트에서 활성화된 음원을 재생하여 훈련을 시작할 수 있습니다.
+    '원음' 버튼과 'EQ 적용' 버튼을 번갈아 눌러보면서 음원에 가해진 미묘한 변화를 포착해보세요.",
+  "HELP_SUB_SESSION_P1_PARAGRAPH_2":
+    "세션 화면의 숫자 선택창을 드래그하거나, 가장자리에 배치된 버튼을 눌러 음원에 적용된 필터를 선택할 수 있습니다.
+    \n이를 통해 사용자가 선택한 필터 그래프는 파란색으로 표현됩니다. 선택을 마치고 나면 화살표가 그려진 버튼을 눌러 제출할 수 있습니다.
+    \n이후 사용자가 선택한 그래프의 정답 여부 및 정보가 화면 상단에 표시됩니다.",
+  "HELP_SUB_SESSION_P1_PARAGRAPH_3":
+    "세션의 상단바 우측에는 세션이 진행되는 동안 사용자의 정답 및 오답 횟수가 표시됩니다. 상단바 좌측의 화살표 버튼을 누르거나 뒤로 가기를 통해 세션을 끝낼 수 있습니다.",
+}
