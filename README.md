@@ -57,9 +57,16 @@ eqTrainer has been completely re-written to make improvements in a variety of ar
 
 ### Android
 
-eqTrainer is currently under publication pending status on Google Play Store.
+eqTrainer is now available on Google Play Store!
 
-You can directly download APK file from [Release Tab](https://github.com/potatosalad775/eq_trainer/releases/latest) as of now.
+<a href='https://play.google.com/store/apps/details?id=kr.potatosalad775.eq_trainer&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'>
+  <img alt='Get it on Google Play' 
+       src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png'
+       width='200'
+  />
+</a>
+
+You can directly download APK file from [Release Section](https://github.com/potatosalad775/eq_trainer/releases/latest) as well.
 
 ### iOS & MacOS
 
