@@ -150,9 +150,9 @@ class _SettingsPageState extends State<SettingsPage> {
 }
 
 enum URLList {
-  github(url: "https://github.com/potatosalad775"),
+  github(url: "https://github.com/potatosalad775/eq_trainer"),
   mail(url: "mailto:transaction@kakao.com"),
-  release(url: "https://github.com/potatosalad775/eq_trainer/release/latest")
+  release(url: "https://github.com/potatosalad775/eq_trainer/releases/latest")
   ;
 
   final String url;
