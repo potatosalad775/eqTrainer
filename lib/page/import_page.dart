@@ -121,7 +121,18 @@ class _ImportPageState extends State<ImportPage> {
   // ...to convert it into flac format.
   Future<void> importFile() async {
     FilePickerResult? importResult = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
+      type: FileType.custom,
+      allowedExtensions: [
+        'wav',
+        'aiff',
+        'alac',
+        'flac',
+        'mp3',
+        'aac',
+        'wma',
+        'ogg',
+        'm4a'
+      ]
     );
 
     // if file selection was aborted

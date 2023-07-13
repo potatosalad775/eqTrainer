@@ -36,9 +36,7 @@ class _MainPageState extends State<MainPage> {
       upgrader: Upgrader(
         messages: UpgraderMessages(code: context.locale.languageCode),
         onUpdate: () {
-          if(installationSource == Source.IS_INSTALLED_FROM_PLAY_STORE
-          || installationSource == Source.IS_INSTALLED_FROM_APP_STORE
-          || installationSource == Source.IS_INSTALLED_FROM_TEST_FLIGHT) {
+          if(installationSource == Source.IS_INSTALLED_FROM_PLAY_STORE) {
             return true;
           }
           else {
@@ -49,6 +47,7 @@ class _MainPageState extends State<MainPage> {
       ),
       child: Scaffold(
         appBar: AppBar(
+          centerTitle: false,
           toolbarHeight: (MediaQuery.of(context).size.height * reactiveElementData.appbarHeight).clamp(56, 150),
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

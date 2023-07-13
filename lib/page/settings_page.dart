@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -94,7 +95,7 @@ class _SettingsPageState extends State<SettingsPage> {
         //
         // Developer Settings
         //
-        SettingsCard(
+        if(Platform.isAndroid) SettingsCard(
           cardInfo: SettingsCardType.devSetting,
           trailing: IconButton(
             icon: const Icon(Icons.keyboard_arrow_right),

@@ -302,3 +302,5 @@ app.*.map.json
 
 # VSCode
 .vscode/
+/--no-codesign/
+/test/

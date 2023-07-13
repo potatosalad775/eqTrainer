@@ -19,15 +19,26 @@ import 'package:eq_trainer/model/audio_clip.dart';
 import 'package:eq_trainer/player/isolated_music_player.dart';
 
 Future<void> main() async {
+  // Initialize Packages
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
+  installationSource = await StoreChecker.getSource;
+
+  // Prepare Document Directory
+  appSupportDir = await getApplicationSupportDirectory();
+  audioClipDir = await Directory("${appSupportDir.path}/audioclip").create(recursive: true);
+
   // Load Hive - audio backend info & playlist database
-  await Hive.initFlutter();
+  await Hive.initFlutter(appSupportDir.path);
   Hive.registerAdapter(SettingDataAdapter());
   Hive.registerAdapter(AndroidAudioBackendAdapter());
   Hive.registerAdapter(AudioClipAdapter());
   var settingBox = await Hive.openBox<SettingData>(settingBoxName);
   await Hive.openBox<AudioClip>(audioClipBoxName);
+
   // Load Setting value
   if(settingBox.isNotEmpty) { androidAudioBackend = settingBox.get(audioBackendKey)?.androidAudioBackend; }
+
   // Initialize Player
   MabLibrary.initialize();
   if(androidAudioBackend == null || androidAudioBackend == AndroidAudioBackend.opensl) {
@@ -36,13 +47,6 @@ Future<void> main() async {
   else {
     MabDeviceContext.enableSharedInstance(backends: backendsAAUDIO);
   }
-  // Prepare Document Directory
-  appSupportDir = await getApplicationSupportDirectory();
-  audioClipDir = await Directory("${appSupportDir.path}/audioclip").create(recursive: true);
-  // Load Localization Packages
-  WidgetsFlutterBinding.ensureInitialized();
-  await EasyLocalization.ensureInitialized();
-  installationSource = await StoreChecker.getSource;
 
   runApp(
     EasyDynamicThemeWidget(
