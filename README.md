@@ -68,11 +68,18 @@ eqTrainer is now available on Google Play Store!
 
 You can directly download APK file from [Release Section](https://github.com/potatosalad775/eq_trainer/releases/latest) as well.
 
-### iOS & MacOS
+### iOS
 
-Since eqTrainer is built upon Flutter Framework, technically it could be expanded to Apple Devices, and I'm really looking forward to it.
+eqTrainer for iOS and iPadOS is available on [Release Section](https://github.com/potatosalad775/eq_trainer/releases/latest) as an ipa file.
 
-However, Support for those two platforms are currently not available for now. If you're familiar with Flutter and Apple Ecosystem, please feel free to contribute to the project!
+You have to sign it with your own Apple ID to install it. Not sure how? try [Sideloadly](https://sideloadly.io/) or [AltStore](https://altstore.io/).
+
+### macOS
+
+eqTrainer would work on macOS with Apple Silicon Mac, but I haven't tested it yet.
+If you have an Apple Silicon Mac, try building it.
+
+Unfortunately, the Audio Backend of eqTrainer does not support x86-based Intel Mac for now.
 
 ### Windows
 
@@ -86,7 +93,7 @@ If you want to translate this project, please refer to [Localization Wiki page](
 
 ## Donation
 
-If you like this project, please consider donating! It will help me purchase an used Mac to add support for iOS and MacOS.
+If you like this project, please consider donating!
 
 [PayPal(Global)][PAYPAL] / [Toss(Korean)][TOSS]
 
