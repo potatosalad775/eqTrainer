@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/banner.png" alt="banner"/>
+<img src="https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/banner.png" alt="banner"/>
 
 -----------------
 
@@ -30,26 +30,26 @@ eqTrainer has been completely re-written to make improvements in a variety of ar
 
 <div align="center">
   
-[<img src="https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/1.png"
+[<img src="https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/1.png"
       alt="screenshot_1"
       height="200"
-   />](https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/1.png)
-[<img src="https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/2.png"
+   />](https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/1.png)
+[<img src="https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/2.png"
       alt="screenshot_2"
       height="200"
-   />](https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/2.png)
-[<img src="https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/3.png"
+   />](https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/2.png)
+[<img src="https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/3.png"
       alt="screenshot_3"
       height="200"
-   />](https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/3.png)
-[<img src="https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/4.png"
+   />](https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/3.png)
+[<img src="https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/4.png"
       alt="screenshot_4"
       height="200"
-   />](https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/4.png)
-[<img src="https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/5.png"
+   />](https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/4.png)
+[<img src="https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/5.png"
       alt="screenshot_5"
       height="200"
-   />](https://raw.githubusercontent.com/potatosalad775/eq_trainer/master/.github/screenshot/5.png)
+   />](https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/.github/screenshot/5.png)
 
 <div align="left">
 
@@ -66,11 +66,11 @@ eqTrainer is now available on Google Play Store!
   />
 </a>
 
-You can directly download APK file from [Release Section](https://github.com/potatosalad775/eq_trainer/releases/latest) as well.
+You can directly download APK file from [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as well.
 
 ### iOS
 
-eqTrainer for iOS and iPadOS is available on [Release Section](https://github.com/potatosalad775/eq_trainer/releases/latest) as an ipa file.
+eqTrainer for iOS and iPadOS is available on [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as an ipa file.
 
 You have to sign it with your own Apple ID to install it. Not sure how? try [Sideloadly](https://sideloadly.io/) or [AltStore](https://altstore.io/).
 
@@ -89,7 +89,7 @@ Since Original 'How to Listen' from Harman International is working fine on Wind
 
 eqTrainer is built with Localization in mind, and you can easily contribute to this project by translating it!
 
-If you want to translate this project, please refer to [Localization Wiki page](https://github.com/potatosalad775/eq_trainer/wiki/Localization).
+If you want to translate this project, please refer to [Localization Wiki page](https://github.com/potatosalad775/eqTrainer/wiki/Localization).
 
 ## Donation
 
