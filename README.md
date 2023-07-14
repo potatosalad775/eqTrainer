@@ -55,9 +55,7 @@ eqTrainer has been completely re-written to make improvements in a variety of ar
 
 ## Supported Platform & Download
 
-### Android
-
-eqTrainer is now available on Google Play Store!
+### Android (≥ 7.0)
 
 <a href='https://play.google.com/store/apps/details?id=kr.potatosalad775.eq_trainer&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'>
   <img alt='Get it on Google Play' 
@@ -66,22 +64,18 @@ eqTrainer is now available on Google Play Store!
   />
 </a>
 
-You can directly download APK file from [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as well.
+You can also directly download APK file from [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as well.
 
-eqTrainer works on Android 7.0 or up.
+### iOS (≥ 12.1)
 
-### iOS
-
-eqTrainer for iOS and iPadOS is available on [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as an ipa file.
+eqTrainer for iOS and iPadOS is available on [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as an iPA file.
 
 You have to sign it with your own Apple ID to install it. Not sure how? try [Sideloadly](https://sideloadly.io/) or [AltStore](https://altstore.io/).
 
-eqTrainer works on iOS 12.1 or up.
+### macOS (≥ 10.15)
 
-### macOS
-
-eqTrainer would work on macOS with Apple Silicon Mac, but I haven't tested it yet.
-If you have an Apple Silicon Mac, try building it.
+eqTrainer should work with Apple Silicon Mac, but I haven't tested it yet.
+If you have an Apple Silicon Mac, try building it by yourself.
 
 Unfortunately, the Audio Backend of eqTrainer does not support x86-based Intel Mac for now.
 
