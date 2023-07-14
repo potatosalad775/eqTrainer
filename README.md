@@ -4,7 +4,7 @@
 
 -----------------
 
-eqTrainer is Open-Source Critical Listening Training Application, built with Flutter for Platform-Independency in mind.
+eqTrainer is Open-Source Critical Listening Training Application, built with Flutter for Platform-Independence in mind.
 
 <div align="left">
 
@@ -64,11 +64,11 @@ eqTrainer has been completely re-written to make improvements in a variety of ar
   />
 </a>
 
-You can also directly download APK file from [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as well.
+You can also directly download APK file from [Release Section][RELEASE] as well.
 
 ### iOS (≥ 12.1)
 
-eqTrainer for iOS and iPadOS is available on [Release Section](https://github.com/potatosalad775/eqTrainer/releases/latest) as an iPA file.
+eqTrainer for iOS and iPadOS is available on [Release Section][RELEASE] as an iPA file.
 
 You have to sign it with your own Apple ID to install it. Not sure how? try [Sideloadly](https://sideloadly.io/) or [AltStore](https://altstore.io/).
 
@@ -93,8 +93,11 @@ If you want to translate this project, please refer to [Localization Wiki page](
 
 If you like this project, please consider donating!
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B1N764X)
+
 [PayPal(Global)][PAYPAL] / [Toss(Korean)][TOSS]
 
 [H2LLink]: http://harmanhowtolisten.blogspot.com/ "How to Listen"
+[RELEASE]: https://github.com/potatosalad775/eqTrainer/releases/latest
 [PAYPAL]: https://paypal.me/potatosalad775
 [TOSS]: https://toss.me/감자샐러드
