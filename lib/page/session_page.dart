@@ -163,10 +163,9 @@ class _SessionPageState extends State<SessionPage> {
         SessionPickerPortrait(),
         SizedBox(height: 20),
         Padding(
-          padding: EdgeInsets.fromLTRB(35, 0, 35, 0),
+          padding: EdgeInsets.fromLTRB(30, 10, 30, 0),
           child: SessionPositionSlider(),
         ),
-        SizedBox(height: 20),
         SessionControl(),
         SizedBox(height: 20),
         Padding(

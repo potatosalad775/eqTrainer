@@ -27,7 +27,7 @@ mixin _$IsolatedPlayerCommand {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) =>
       throw _privateConstructorUsedError;
@@ -42,7 +42,7 @@ mixin _$IsolatedPlayerCommand {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) =>
       throw _privateConstructorUsedError;
@@ -57,7 +57,7 @@ mixin _$IsolatedPlayerCommand {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) =>
@@ -211,7 +211,7 @@ class _$_IsolatedPlayerCommandOpen implements _IsolatedPlayerCommandOpen {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return open(filePath);
@@ -229,7 +229,7 @@ class _$_IsolatedPlayerCommandOpen implements _IsolatedPlayerCommandOpen {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return open?.call(filePath);
@@ -247,7 +247,7 @@ class _$_IsolatedPlayerCommandOpen implements _IsolatedPlayerCommandOpen {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -381,7 +381,7 @@ class _$_IsolatedPlayerCommandPlay implements _IsolatedPlayerCommandPlay {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return play();
@@ -399,7 +399,7 @@ class _$_IsolatedPlayerCommandPlay implements _IsolatedPlayerCommandPlay {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return play?.call();
@@ -417,7 +417,7 @@ class _$_IsolatedPlayerCommandPlay implements _IsolatedPlayerCommandPlay {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -545,7 +545,7 @@ class _$_IsolatedPlayerCommandPause implements _IsolatedPlayerCommandPause {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return pause();
@@ -563,7 +563,7 @@ class _$_IsolatedPlayerCommandPause implements _IsolatedPlayerCommandPause {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return pause?.call();
@@ -581,7 +581,7 @@ class _$_IsolatedPlayerCommandPause implements _IsolatedPlayerCommandPause {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -709,7 +709,7 @@ class _$_IsolatedPlayerCommandStop implements _IsolatedPlayerCommandStop {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return stop();
@@ -727,7 +727,7 @@ class _$_IsolatedPlayerCommandStop implements _IsolatedPlayerCommandStop {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return stop?.call();
@@ -745,7 +745,7 @@ class _$_IsolatedPlayerCommandStop implements _IsolatedPlayerCommandStop {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -900,7 +900,7 @@ class _$_IsolatedPlayerCommandSetVolume
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return setVolume(volume);
@@ -918,7 +918,7 @@ class _$_IsolatedPlayerCommandSetVolume
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return setVolume?.call(volume);
@@ -936,7 +936,7 @@ class _$_IsolatedPlayerCommandSetVolume
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -1100,7 +1100,7 @@ class _$_IsolatedPlayerCommandSetPosition
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return setPosition(position);
@@ -1118,7 +1118,7 @@ class _$_IsolatedPlayerCommandSetPosition
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return setPosition?.call(position);
@@ -1136,7 +1136,7 @@ class _$_IsolatedPlayerCommandSetPosition
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -1301,7 +1301,7 @@ class _$_IsolatedPlayerCommandSetDevice
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return setDevice(deviceInfo);
@@ -1319,7 +1319,7 @@ class _$_IsolatedPlayerCommandSetDevice
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return setDevice?.call(deviceInfo);
@@ -1337,7 +1337,7 @@ class _$_IsolatedPlayerCommandSetDevice
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -1473,7 +1473,7 @@ class _$_IsolatedPlayerCommandDispose implements _IsolatedPlayerCommandDispose {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return dispose();
@@ -1491,7 +1491,7 @@ class _$_IsolatedPlayerCommandDispose implements _IsolatedPlayerCommandDispose {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return dispose?.call();
@@ -1509,7 +1509,7 @@ class _$_IsolatedPlayerCommandDispose implements _IsolatedPlayerCommandDispose {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -1664,7 +1664,7 @@ class _$_IsolatedPlayerCommandSetEQ implements _IsolatedPlayerCommandSetEQ {
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return setEQ(value);
@@ -1682,7 +1682,7 @@ class _$_IsolatedPlayerCommandSetEQ implements _IsolatedPlayerCommandSetEQ {
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return setEQ?.call(value);
@@ -1700,7 +1700,7 @@ class _$_IsolatedPlayerCommandSetEQ implements _IsolatedPlayerCommandSetEQ {
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -1790,7 +1790,7 @@ abstract class _$$_IsolatedPlayerCommandSetEQGainCopyWith<$Res> {
           $Res Function(_$_IsolatedPlayerCommandSetEQGain) then) =
       __$$_IsolatedPlayerCommandSetEQGainCopyWithImpl<$Res>;
   @useResult
-  $Res call({int gain});
+  $Res call({double gain});
 }
 
 /// @nodoc
@@ -1812,7 +1812,7 @@ class __$$_IsolatedPlayerCommandSetEQGainCopyWithImpl<$Res>
       gain: null == gain
           ? _value.gain
           : gain // ignore: cast_nullable_to_non_nullable
-              as int,
+              as double,
     ));
   }
 }
@@ -1824,7 +1824,7 @@ class _$_IsolatedPlayerCommandSetEQGain
   const _$_IsolatedPlayerCommandSetEQGain({required this.gain});
 
   @override
-  final int gain;
+  final double gain;
 
   @override
   String toString() {
@@ -1861,7 +1861,7 @@ class _$_IsolatedPlayerCommandSetEQGain
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return setEQGain(gain);
@@ -1879,7 +1879,7 @@ class _$_IsolatedPlayerCommandSetEQGain
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return setEQGain?.call(gain);
@@ -1897,7 +1897,7 @@ class _$_IsolatedPlayerCommandSetEQGain
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {
@@ -1972,10 +1972,10 @@ class _$_IsolatedPlayerCommandSetEQGain
 
 abstract class _IsolatedPlayerCommandSetEQGain
     implements IsolatedPlayerCommand {
-  const factory _IsolatedPlayerCommandSetEQGain({required final int gain}) =
+  const factory _IsolatedPlayerCommandSetEQGain({required final double gain}) =
       _$_IsolatedPlayerCommandSetEQGain;
 
-  int get gain;
+  double get gain;
   @JsonKey(ignore: true)
   _$$_IsolatedPlayerCommandSetEQGainCopyWith<_$_IsolatedPlayerCommandSetEQGain>
       get copyWith => throw _privateConstructorUsedError;
@@ -2061,7 +2061,7 @@ class _$_IsolatedPlayerCommandSetEQCenterFreq
     required TResult Function(DeviceInfo<dynamic>? deviceInfo) setDevice,
     required TResult Function() dispose,
     required TResult Function(bool value) setEQ,
-    required TResult Function(int gain) setEQGain,
+    required TResult Function(double gain) setEQGain,
     required TResult Function(double centerFreq) setEQCenterFreq,
   }) {
     return setEQCenterFreq(centerFreq);
@@ -2079,7 +2079,7 @@ class _$_IsolatedPlayerCommandSetEQCenterFreq
     TResult? Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult? Function()? dispose,
     TResult? Function(bool value)? setEQ,
-    TResult? Function(int gain)? setEQGain,
+    TResult? Function(double gain)? setEQGain,
     TResult? Function(double centerFreq)? setEQCenterFreq,
   }) {
     return setEQCenterFreq?.call(centerFreq);
@@ -2097,7 +2097,7 @@ class _$_IsolatedPlayerCommandSetEQCenterFreq
     TResult Function(DeviceInfo<dynamic>? deviceInfo)? setDevice,
     TResult Function()? dispose,
     TResult Function(bool value)? setEQ,
-    TResult Function(int gain)? setEQGain,
+    TResult Function(double gain)? setEQGain,
     TResult Function(double centerFreq)? setEQCenterFreq,
     required TResult orElse(),
   }) {

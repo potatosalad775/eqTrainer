@@ -1,8 +1,6 @@
 import 'dart:io';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
-import 'package:eq_trainer/player/parametric_eq_node.dart';
 import 'package:eq_trainer/main.dart';
 
 class MusicPlayer extends MabAudioPlayer {
@@ -50,30 +48,34 @@ class MusicPlayer extends MabAudioPlayer {
   }
 
   void setEQ(bool value) {
-    pEQNode.pEQNodeRunState = value;
-    pEQNode.bypass = true;
+    pEQNode.bypass = !value;
     return;
   }
 
-  void setEQGain(int gain) {
-    pEQNode.gain = gain;
+  void setEQGain(double gain) {
+    pEQFilter.update(gainDb: gain);
     return;
   }
 
   void setEQCenterFreq(double centerFreq) {
-    pEQNode.centerFreq = centerFreq;
+    pEQFilter.update(frequency: centerFreq);
     return;
   }
 
   String? _filePath;
   String? get filePath => _filePath;
 
-  var pEQNode = ParametricEQNode(
+  static var pEQFilter = MabPeakingEqFilter(
     format: mainFormat,
-    gain: 6,
-    centerFreq: 20,
-    pEQNodeRunState: false,
+    gainDb: 6,
+    q: mainSessionData.qFactor,
+    frequency: 100
   );
 
-  bool get pEQState => pEQNode.pEQNodeRunState;
+  var pEQNode = MabFilterNode(
+    format: mainFormat,
+    filter: pEQFilter,
+  );
+
+  bool get pEQState => !pEQNode.bypass;
 }

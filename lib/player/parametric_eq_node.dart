@@ -2,6 +2,11 @@ import 'dart:math';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
 import 'package:eq_trainer/main.dart';
 
+/*
+* DEPRECATED PEAKING EQ NODE
+* REPLACED BY MINIAUDIO BUILT-IN FILTER
+*/
+
 class ParametricEQNode extends AutoFormatSingleInoutNode with ProcessorNodeMixin, BypassNodeMixin {
   ParametricEQNode({
     required this.format,
@@ -32,7 +37,6 @@ class ParametricEQNode extends AutoFormatSingleInoutNode with ProcessorNodeMixin
   double _y2 = 0;
   double gainRatio = 1.0;
 
-  @override
   List<SampleFormat> get supportedSampleFormats => const [SampleFormat.float32];
 
   @override

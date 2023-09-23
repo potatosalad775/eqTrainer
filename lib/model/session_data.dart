@@ -185,6 +185,8 @@ class SessionFrequencyData extends ChangeNotifier {
   // Collective Function for initializing Session.
   Future<void> initSession(BuildContext context) async {
     final player = Provider.of<IsolatedMusicPlayer>(context, listen: false);
+    // Reset pEQ Status
+    player.setEQ(false);
 
     // Num of Graph
     int numOfGraph = graphBarDataList.length;
@@ -200,10 +202,10 @@ class SessionFrequencyData extends ChangeNotifier {
     // Determine Appropriate Gain Value
     // if chosen graph is dip graph, invert gain value of session.
     if(mainSessionData.filterType == FilterType.dip || (mainSessionData.filterType == FilterType.peakDip && sessionResultGraphIndex % 2 == 1)) {
-      player.setEQGain(0 - mainSessionData.gain);
+      player.setEQGain(0 - mainSessionData.gain.toDouble());
     }
     else {
-      player.setEQGain(mainSessionData.gain);
+      player.setEQGain(mainSessionData.gain.toDouble());
     }
     notifyListeners();
   }

@@ -14,6 +14,6 @@ class IsolatedPlayerCommand with _$IsolatedPlayerCommand {
   const factory IsolatedPlayerCommand.setDevice({required DeviceInfo<dynamic>? deviceInfo}) = _IsolatedPlayerCommandSetDevice;
   const factory IsolatedPlayerCommand.dispose() = _IsolatedPlayerCommandDispose;
   const factory IsolatedPlayerCommand.setEQ({required bool value}) = _IsolatedPlayerCommandSetEQ;
-  const factory IsolatedPlayerCommand.setEQGain({required int gain}) = _IsolatedPlayerCommandSetEQGain;
+  const factory IsolatedPlayerCommand.setEQGain({required double gain}) = _IsolatedPlayerCommandSetEQGain;
   const factory IsolatedPlayerCommand.setEQCenterFreq({required double centerFreq}) = _IsolatedPlayerCommandSetEQCenterFreq;
 }

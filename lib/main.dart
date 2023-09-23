@@ -41,11 +41,11 @@ Future<void> main() async {
 
   // Initialize Player
   MabLibrary.initialize();
-  if(androidAudioBackend == null || androidAudioBackend == AndroidAudioBackend.opensl) {
-    MabDeviceContext.enableSharedInstance(backends: backendsOPENSL);
+  if(androidAudioBackend == null || androidAudioBackend == AndroidAudioBackend.aaudio) {
+    MabDeviceContext.enableSharedInstance(backends: backendsAAUDIO);
   }
   else {
-    MabDeviceContext.enableSharedInstance(backends: backendsAAUDIO);
+    MabDeviceContext.enableSharedInstance(backends: backendsOPENSL);
   }
 
   runApp(

@@ -85,9 +85,7 @@ void _playerRunner(_IsolatedPlayerInitialMessage message) async {
     return cmd.when<FutureOr<void>>(
       open: (filePath) async {
         await player.openFile(File(filePath));
-        sendPort
-          ..send(IsolatedPlayerDeviceState(player.device))
-          ..send(IsolatedPlayerDeviceState(player.device));
+        sendPort.send(IsolatedPlayerDeviceState(player.device));
         sendState();
       },
       play: () {
@@ -241,7 +239,7 @@ class IsolatedMusicPlayer extends ChangeNotifier {
     sendPort.send(IsolatedPlayerCommand.setEQ(value: value));
   }
 
-  Future<void> setEQGain(int gain) async {
+  Future<void> setEQGain(double gain) async {
     final sendPort = await _sendPort.future;
     sendPort.send(IsolatedPlayerCommand.setEQGain(gain: gain));
   }
