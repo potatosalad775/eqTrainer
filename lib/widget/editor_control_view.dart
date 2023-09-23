@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
@@ -6,8 +5,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit.dart';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/model/audio_clip.dart';
 import 'package:eq_trainer/page/import_page.dart';
 
@@ -43,79 +42,41 @@ class _EditorControlViewState extends State<EditorControlView> {
             ],
           ),
         ),
-        // Slider
-        Stack(
-          children: [
-            // Clip Divisor Indicator
-            Padding(
-              padding: const EdgeInsets.fromLTRB(23, 0, 23, 0),
-              child: Stack(
-                children: [
-                  Align(
-                    alignment: Alignment(
-                      (playerDuration == AudioTime.zero) ? -1
-                      : ((2 * clipDivProvider.clipStartTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
-                    ),
-                    child: const Icon(Icons.arrow_downward),
-                  ),
-                  Align(
-                    alignment: Alignment(
-                      (playerDuration == AudioTime.zero) ? 1
-                      : ((2 * clipDivProvider.clipEndTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
-                    ),
-                    child: const Icon(Icons.arrow_downward),
-                  )
-                ],
-              ),
-            ),
-            // Actual Slider
-            Padding(
-              padding: const EdgeInsets.fromLTRB(35, 0, 35, 0),
-              child: SliderTheme(
-                data: SliderThemeData(
-                  trackHeight: 10,
-                  trackShape: CustomTrackShape(),
-                ),
-                child: Slider(
-                  value: playerPosition.seconds,
-                  min: 0,
-                  max: max(playerDuration.seconds, playerPosition.seconds),
-                  onChanged: (player.state != MabAudioPlayerState.stopped)
-                      ? (position) {
-                    player.position = AudioTime(position);
-                  } : null,
-                ),
-              ),
-            ),
-          ],
-        ),
-        // Audio Duration Indicator
+        // Clip Indicator
         Padding(
-          padding: const EdgeInsets.fromLTRB(35, 0, 35, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.fromLTRB(23, 0, 23, 0),
+          child: Stack(
             children: [
-              SizedBox(
-                width: 40,
-                child: Text(
-                  playerPosition.formatMMSS(),
-                  style: const TextStyle(
-                    height: 1,
-                  ),
+              Align(
+                alignment: Alignment(
+                  (playerDuration == AudioTime.zero) ? -1
+                  : ((2 * clipDivProvider.clipStartTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
                 ),
+                child: const Icon(Icons.arrow_downward),
               ),
-              SizedBox(
-                width: 40,
-                child: Text(
-                  AudioTime(max(playerDuration.seconds, playerPosition.seconds) - playerPosition.seconds).formatMMSS(),
-                  style: const TextStyle(
-                    height: 1,
-                  ),
+              Align(
+                alignment: Alignment(
+                  (playerDuration == AudioTime.zero) ? 1
+                  : ((2 * clipDivProvider.clipEndTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
                 ),
-              ),
+                child: const Icon(Icons.arrow_downward),
+              )
             ],
           ),
+        ),
+        // Slider
+        Padding(
+          padding: const EdgeInsets.fromLTRB(35, 0, 35, 0),
+          child: ProgressBar(
+            barHeight: 12,
+            timeLabelPadding: 8,
+            progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
+            total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
+            onSeek: (player.state != MabAudioPlayerState.stopped)
+                ? (position) {
+              player.position = AudioTime(position.inMicroseconds / (1000 * 1000));
+            } : null,
+          )
         ),
         // Audio Control Button Row
         Row(

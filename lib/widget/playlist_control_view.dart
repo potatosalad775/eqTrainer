@@ -1,10 +1,8 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
+import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/player/isolated_music_player.dart';
 
 class PlaylistControlView extends StatelessWidget {
@@ -46,49 +44,16 @@ class PlaylistControlView extends StatelessWidget {
               children: [
                 // Slider
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(35, 0, 35, 0),
-                  child: SliderTheme(
-                    data: SliderThemeData(
-                      trackHeight: 10,
-                      trackShape: CustomTrackShape(),
-                    ),
-                    child: Slider(
-                      value: playerPosition.seconds,
-                      min: 0,
-                      max: max(playerDuration.seconds, playerPosition.seconds),
-                      onChanged: (player.state != MabAudioPlayerState.stopped)
-                          ? (position) {
-                        playlistPlayer.position = AudioTime(position);
-                      } : null,
-                    ),
-                  ),
-                ),
-                // Audio Duration Indicator
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(35, 0, 35, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 40,
-                        child: Text(
-                          playerPosition.formatMMSS(),
-                          style: const TextStyle(
-                            height: 1,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 40,
-                        child: Text(
-                          AudioTime(max(playerDuration.seconds, playerPosition.seconds) - playerPosition.seconds).formatMMSS(),
-                          style: const TextStyle(
-                            height: 1,
-                          ),
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(30, 10, 30, 10),
+                  child: ProgressBar(
+                    barHeight: 12,
+                    timeLabelPadding: 8,
+                    progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
+                    total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
+                    onSeek: (player.state != MabAudioPlayerState.stopped)
+                        ? (position) {
+                      player.position = AudioTime(position.inMicroseconds / (1000 * 1000));
+                    } : null,
                   ),
                 ),
                 // Audio Control Button Row

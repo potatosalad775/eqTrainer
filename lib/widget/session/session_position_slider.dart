@@ -1,12 +1,11 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/player/isolated_music_player.dart';
+import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 
 class SessionPositionSlider extends StatelessWidget {
-  const SessionPositionSlider({Key? key}) : super(key: key);
+  const SessionPositionSlider({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,48 +13,15 @@ class SessionPositionSlider extends StatelessWidget {
     final position = context.select<IsolatedMusicPlayer, AudioTime>((p) => p.position);
     final duration = context.select<IsolatedMusicPlayer, AudioTime?>((p) => p.duration) ?? position;
 
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderThemeData(
-            trackHeight: 10,
-            trackShape: CustomTrackShape(),
-          ),
-          child: Slider(
-            value: position.seconds,
-            min: 0,
-            max: max(duration.seconds, position.seconds),
-            onChanged: (player.state != MabAudioPlayerState.stopped)
-                ? (position) {
-              player.position = AudioTime(position);
-            } : null,
-          ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 40,
-              child: Text(
-                position.formatMMSS(),
-                style: const TextStyle(
-                  height: 1,
-                ),
-              ),
-            ),
-            SizedBox(
-              width: 40,
-              child: Text(
-                AudioTime(max(duration.seconds, position.seconds) - position.seconds).formatMMSS(),
-                style: const TextStyle(
-                  height: 1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+    return ProgressBar(
+      barHeight: 12,
+      timeLabelPadding: 8,
+      progress: Duration(microseconds: (position.seconds * 1000 * 1000).toInt()),
+      total: Duration(microseconds: (duration.seconds * 1000 * 1000).toInt()),
+      onSeek: (player.state != MabAudioPlayerState.stopped)
+          ? (position) {
+        player.position = AudioTime(position.inMicroseconds / (1000 * 1000));
+      } : null,
     );
   }
 }
