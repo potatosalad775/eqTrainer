@@ -10,7 +10,7 @@ class IsolatedPlayerState with _$IsolatedPlayerState {
     required AudioFormat format,
     required String? filePath,
     required double volume,
-    required AudioTime duration,
+    required AudioTime? duration,
     required AudioTime position,
     required MabAudioPlayerState state,
     required bool pEQState,

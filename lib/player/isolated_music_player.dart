@@ -37,6 +37,8 @@ void _playerRunner(_IsolatedPlayerInitialMessage message) async {
 
   final sendPort = message.sendPort;
 
+  late final VoidCallback sendState;
+
   late final MusicPlayer player;
   try {
     player = MusicPlayer(
@@ -44,13 +46,16 @@ void _playerRunner(_IsolatedPlayerInitialMessage message) async {
       onRerouted: () {
         sendPort.send(IsolatedPlayerReroutedState(player.device));
       },
+      onOutput: (_, __) {
+        sendState();
+      }
     );
   } on Object catch (e) {
     debugPrint(e.toString());
     rethrow;
   }
 
-  void sendState() {
+  sendState = () {
     sendPort.send(
       IsolatedPlayerState(
         format: player.format,
@@ -62,11 +67,7 @@ void _playerRunner(_IsolatedPlayerInitialMessage message) async {
         pEQState: player.pEQState,
       ),
     );
-  }
-
-  player.positionStream.listen((_) {
-    sendState();
-  });
+  };
 
   player.stateStream.listen((_) {
     sendState();
@@ -84,7 +85,9 @@ void _playerRunner(_IsolatedPlayerInitialMessage message) async {
     return cmd.when<FutureOr<void>>(
       open: (filePath) async {
         await player.openFile(File(filePath));
-        sendPort.send(IsolatedPlayerDeviceState(player.device));
+        sendPort
+          ..send(IsolatedPlayerDeviceState(player.device))
+          ..send(IsolatedPlayerDeviceState(player.device));
         sendState();
       },
       play: () {
@@ -105,6 +108,7 @@ void _playerRunner(_IsolatedPlayerInitialMessage message) async {
       },
       setPosition: (p) {
         player.position = p;
+        sendState();
       },
       setDevice: (d) {
         player.device = d;
@@ -171,7 +175,7 @@ class IsolatedMusicPlayer extends ChangeNotifier {
 
   VoidCallback? onRerouted;
 
-  AudioTime get duration => _lastState?.duration ?? AudioTime.zero;
+  AudioTime? get duration => _lastState?.duration;
 
   String? get filePath => _lastState?.filePath;
 

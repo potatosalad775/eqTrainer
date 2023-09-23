@@ -48,7 +48,7 @@ class _ImportPageState extends State<ImportPage> {
             child: ValueListenableBuilder<ImportPageState>(
               valueListenable: importPageState,
               builder: (context, value, _) {
-                final playerDuration = context.select<ImportPlayer, AudioTime>((p) => p.duration);
+                final playerDuration = context.select<ImportPlayer, AudioTime?>((p) => p.duration) ?? AudioTime.zero;
                 if (value == ImportPageState.error || value == ImportPageState.timeout) {
                   return AlertDialog(
                     title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
@@ -96,7 +96,7 @@ class _ImportPageState extends State<ImportPage> {
                 }
                 else {
                   // Update imported audio file's duration info to ControlView
-                  clipDivProvider.initEndTime(importPlayer.duration);
+                  clipDivProvider.initEndTime(playerDuration);
                   return const Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.end,

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
@@ -24,6 +25,7 @@ class _EditorControlViewState extends State<EditorControlView> {
     final player = context.read<ImportPlayer>();
     final playerState = context.select<ImportPlayer, MabAudioPlayerState>((p) => p.state);
     final playerPosition = context.select<ImportPlayer, AudioTime>((p) => p.position);
+    final playerDuration = context.select<ImportPlayer, AudioTime?>((p) => p.duration) ?? playerPosition;
     final clipDivProvider = context.watch<ImportAudioData>();
 
     return Column(
@@ -51,15 +53,15 @@ class _EditorControlViewState extends State<EditorControlView> {
                 children: [
                   Align(
                     alignment: Alignment(
-                      (player.duration == AudioTime.zero) ? -1
-                      : ((2 * clipDivProvider.clipStartTime.seconds / player.duration.seconds) - 1).clamp(-1, 1), 1
+                      (playerDuration == AudioTime.zero) ? -1
+                      : ((2 * clipDivProvider.clipStartTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
                     ),
                     child: const Icon(Icons.arrow_downward),
                   ),
                   Align(
                     alignment: Alignment(
-                      (player.duration == AudioTime.zero) ? 1
-                      : ((2 * clipDivProvider.clipEndTime.seconds / player.duration.seconds) - 1).clamp(-1, 1), 1
+                      (playerDuration == AudioTime.zero) ? 1
+                      : ((2 * clipDivProvider.clipEndTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
                     ),
                     child: const Icon(Icons.arrow_downward),
                   )
@@ -75,9 +77,9 @@ class _EditorControlViewState extends State<EditorControlView> {
                   trackShape: CustomTrackShape(),
                 ),
                 child: Slider(
-                  value: player.position.seconds,
+                  value: playerPosition.seconds,
                   min: 0,
-                  max: player.duration.seconds,
+                  max: max(playerDuration.seconds, playerPosition.seconds),
                   onChanged: (player.state != MabAudioPlayerState.stopped)
                       ? (position) {
                     player.position = AudioTime(position);
@@ -106,7 +108,7 @@ class _EditorControlViewState extends State<EditorControlView> {
               SizedBox(
                 width: 40,
                 child: Text(
-                  (player.duration - playerPosition).formatMMSS(),
+                  AudioTime(max(playerDuration.seconds, playerPosition.seconds) - playerPosition.seconds).formatMMSS(),
                   style: const TextStyle(
                     height: 1,
                   ),

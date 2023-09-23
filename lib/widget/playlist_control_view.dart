@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
@@ -22,6 +24,7 @@ class PlaylistControlView extends StatelessWidget {
         final player = context.read<PlaylistPlayer>();
         final playerState = context.select<PlaylistPlayer, MabAudioPlayerState>((p) => p.state);
         final playerPosition = context.select<PlaylistPlayer, AudioTime>((p) => p.position);
+        final playerDuration = context.select<PlaylistPlayer, AudioTime?>((p) => p.duration) ?? playerPosition;
 
         // if player already have file opened
         if(!playlistPlayer.isFileOpened) {
@@ -52,7 +55,7 @@ class PlaylistControlView extends StatelessWidget {
                     child: Slider(
                       value: playerPosition.seconds,
                       min: 0,
-                      max: playlistPlayer.duration.seconds,
+                      max: max(playerDuration.seconds, playerPosition.seconds),
                       onChanged: (player.state != MabAudioPlayerState.stopped)
                           ? (position) {
                         playlistPlayer.position = AudioTime(position);
@@ -79,7 +82,7 @@ class PlaylistControlView extends StatelessWidget {
                       SizedBox(
                         width: 40,
                         child: Text(
-                          (playlistPlayer.duration - playerPosition).formatMMSS(),
+                          AudioTime(max(playerDuration.seconds, playerPosition.seconds) - playerPosition.seconds).formatMMSS(),
                           style: const TextStyle(
                             height: 1,
                           ),

@@ -12,6 +12,7 @@ class MusicPlayer extends MabAudioPlayer {
     super.format,
     super.bufferFrameSize = 4096,
     this.onRerouted,
+    super.onOutput,
   }) {
     notificationStream.listen((notification) {
       if (notification.type == MabDeviceNotificationType.rerouted) {
@@ -50,6 +51,7 @@ class MusicPlayer extends MabAudioPlayer {
 
   void setEQ(bool value) {
     pEQNode.pEQNodeRunState = value;
+    pEQNode.bypass = true;
     return;
   }
 

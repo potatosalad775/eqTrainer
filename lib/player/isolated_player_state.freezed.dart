@@ -19,7 +19,7 @@ mixin _$IsolatedPlayerState {
   AudioFormat get format => throw _privateConstructorUsedError;
   String? get filePath => throw _privateConstructorUsedError;
   double get volume => throw _privateConstructorUsedError;
-  AudioTime get duration => throw _privateConstructorUsedError;
+  AudioTime? get duration => throw _privateConstructorUsedError;
   AudioTime get position => throw _privateConstructorUsedError;
   MabAudioPlayerState get state => throw _privateConstructorUsedError;
   bool get pEQState => throw _privateConstructorUsedError;
@@ -39,7 +39,7 @@ abstract class $IsolatedPlayerStateCopyWith<$Res> {
       {AudioFormat format,
       String? filePath,
       double volume,
-      AudioTime duration,
+      AudioTime? duration,
       AudioTime position,
       MabAudioPlayerState state,
       bool pEQState});
@@ -61,7 +61,7 @@ class _$IsolatedPlayerStateCopyWithImpl<$Res, $Val extends IsolatedPlayerState>
     Object? format = null,
     Object? filePath = freezed,
     Object? volume = null,
-    Object? duration = null,
+    Object? duration = freezed,
     Object? position = null,
     Object? state = null,
     Object? pEQState = null,
@@ -79,10 +79,10 @@ class _$IsolatedPlayerStateCopyWithImpl<$Res, $Val extends IsolatedPlayerState>
           ? _value.volume
           : volume // ignore: cast_nullable_to_non_nullable
               as double,
-      duration: null == duration
+      duration: freezed == duration
           ? _value.duration
           : duration // ignore: cast_nullable_to_non_nullable
-              as AudioTime,
+              as AudioTime?,
       position: null == position
           ? _value.position
           : position // ignore: cast_nullable_to_non_nullable
@@ -111,7 +111,7 @@ abstract class _$$_IsolatedPlayerStateCopyWith<$Res>
       {AudioFormat format,
       String? filePath,
       double volume,
-      AudioTime duration,
+      AudioTime? duration,
       AudioTime position,
       MabAudioPlayerState state,
       bool pEQState});
@@ -131,7 +131,7 @@ class __$$_IsolatedPlayerStateCopyWithImpl<$Res>
     Object? format = null,
     Object? filePath = freezed,
     Object? volume = null,
-    Object? duration = null,
+    Object? duration = freezed,
     Object? position = null,
     Object? state = null,
     Object? pEQState = null,
@@ -149,10 +149,10 @@ class __$$_IsolatedPlayerStateCopyWithImpl<$Res>
           ? _value.volume
           : volume // ignore: cast_nullable_to_non_nullable
               as double,
-      duration: null == duration
+      duration: freezed == duration
           ? _value.duration
           : duration // ignore: cast_nullable_to_non_nullable
-              as AudioTime,
+              as AudioTime?,
       position: null == position
           ? _value.position
           : position // ignore: cast_nullable_to_non_nullable
@@ -190,7 +190,7 @@ class _$_IsolatedPlayerState
   @override
   final double volume;
   @override
-  final AudioTime duration;
+  final AudioTime? duration;
   @override
   final AudioTime position;
   @override
@@ -252,7 +252,7 @@ abstract class _IsolatedPlayerState implements IsolatedPlayerState {
       {required final AudioFormat format,
       required final String? filePath,
       required final double volume,
-      required final AudioTime duration,
+      required final AudioTime? duration,
       required final AudioTime position,
       required final MabAudioPlayerState state,
       required final bool pEQState}) = _$_IsolatedPlayerState;
@@ -264,7 +264,7 @@ abstract class _IsolatedPlayerState implements IsolatedPlayerState {
   @override
   double get volume;
   @override
-  AudioTime get duration;
+  AudioTime? get duration;
   @override
   AudioTime get position;
   @override
