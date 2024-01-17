@@ -18,11 +18,10 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
     final stateData = context.watch<SessionStateData>();
 
     return Container(
-      padding: const EdgeInsets.all(16),
       color: Theme.of(context).colorScheme.surfaceVariant,
       width: (MediaQuery.of(context).size.width * reactiveElementData.sessionPickerLandscapeWidth).clamp(80, 120),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           // increase currentPickerValue, which represents index of selected graph
           ElevatedButton(

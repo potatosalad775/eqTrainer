@@ -118,7 +118,7 @@ class SessionSelectorLandscape extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.tertiary,
             foregroundColor: Theme.of(context).colorScheme.onTertiary,
-            minimumSize: const Size.fromHeight(50),
+            minimumSize: const Size.fromHeight(60),
           ),
           icon: const Icon(Icons.next_plan_outlined),
           label: Text(

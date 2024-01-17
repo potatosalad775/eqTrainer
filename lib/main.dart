@@ -22,7 +22,7 @@ Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  installationSource = await StoreChecker.getSource;
+  if (Platform.isAndroid) installationSource = await StoreChecker.getSource;
 
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();
@@ -55,7 +55,7 @@ Future<void> main() async {
         path: 'assets/translations',
         fallbackLocale: const Locale('en'),
         useOnlyLangCode: true,
-        assetLoader: YamlAssetLoader(),
+        assetLoader: const YamlAssetLoader(),
         child: const MyApp(),
       ),
     )

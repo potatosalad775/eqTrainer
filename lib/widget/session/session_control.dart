@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/player/isolated_music_player.dart';
 import 'package:eq_trainer/model/session_data.dart';
 
 class SessionControl extends StatelessWidget {
 
-  const SessionControl({Key? key}) : super(key: key);
+  const SessionControl({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +47,7 @@ class SessionControl extends StatelessWidget {
     return Column(
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
               onPressed: () {
@@ -58,7 +57,7 @@ class SessionControl extends StatelessWidget {
               icon: const Icon(Icons.skip_previous),
               enableFeedback: false,
             ),
-            SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
+            //SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
             IconButton(
               onPressed: player.state != MabAudioPlayerState.stopped
                   ? () {
@@ -73,7 +72,7 @@ class SessionControl extends StatelessWidget {
               icon: Icon(player.state == MabAudioPlayerState.playing ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
               enableFeedback: false,
             ),
-            SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
+            //SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
             IconButton(
               onPressed: () async {
                 await playerNext();

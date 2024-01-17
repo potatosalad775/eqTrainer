@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/widget/config_card.dart';
-import 'package:eq_trainer/page/help_page.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConfigPage extends StatelessWidget {
   const ConfigPage({Key? key}) : super(key: key);
@@ -24,7 +24,11 @@ class ConfigPage extends StatelessWidget {
             children: [
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const HelpPage()));
+                  try {
+                    launchUrl(Uri.parse("https://github.com/potatosalad775/eqTrainer/wiki/Tutorial"), mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    throw Exception('could not launch url: $e');
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.secondary,

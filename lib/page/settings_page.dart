@@ -7,7 +7,7 @@ import 'package:eq_trainer/widget/settings_card.dart';
 import 'package:eq_trainer/page/dev_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -163,8 +163,10 @@ enum URLList {
   });
 }
 
-Future<void> launchURL(URLList urlList) async {
-  if(!await launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication)) {
-    throw Exception('could not launch url');
+void launchURL(URLList urlList) {
+  try {
+    launchUrl(Uri.parse("urlList.url"), mode: LaunchMode.externalApplication);
+  } catch (e) {
+    throw Exception('could not launch url: $e');
   }
 }
