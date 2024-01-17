@@ -42,8 +42,8 @@
   "SESSION_ALERT_EXIT_BUTTON_NO": "No",
   ## in-Session Button
   "SESSION_BUTTON_ORIGINAL": "Original",
-  "SESSION_BUTTON_EQ_FILTERED": "Apply EQ",
-  "SESSION_BUTTON_SUBMIT" : "Submit",
+  "SESSION_BUTTON_EQ_FILTERED": "Modified",
+  "SESSION_BUTTON_SUBMIT": "Submit",
   ## Session Snackbar
   ## * 'DO NOT' translate '{_INDEX}' - it will be replaced to an actual value
   "SESSION_SNACKBAR_CORRECT": "Correct!",
@@ -122,101 +122,4 @@
   "DEV_SETTING_CARD_BACKEND_ALERT_TITLE": "NOTICE",
   "DEV_SETTING_CARD_BACKEND_ALERT_CONTENT": "Please close and restart eqTrainer to take effect.",
   "DEV_SETTING_CARD_BACKEND_ALERT_BUTTON": "Okay",
-
-  # Help Page
-  "HELP_APPBAR_TITLE": "Help",
-
-  # Help Sub-Page
-  ## DISCLAIMER - when translating, append '\n' in front of second sentence to move it next line.
-
-  ## Understanding Frequency
-  "HELP_SUB_FREQ_TITLE": "Understanding Frequency",
-  ## - Page 1
-  "HELP_SUB_FREQ_P1_PHOTO_DESC_1":
-    "< Slow Vibration, Low Frequency, Low Pitch Sound >",
-  "HELP_SUB_FREQ_P1_PHOTO_DESC_2":
-    "< Fast Vibration, High Frequency, High Pitch Sound >",
-  "HELP_SUB_FREQ_P1_PARAGRAPH_1":
-    "Humans hear sound by perceiving vibrations in the air with the eardrums. The pitch of the sound is determined only by the speed of the vibrations.
-    \n\nHere, frequency means the number of vibrations in one second, so a lower frequency (slower vibration) results in a lower note, and a higher frequency (faster vibration) results in a higher note.",
-  "HELP_SUB_FREQ_P1_PARAGRAPH_2":
-    "Hz is the unit for frequency, and eqTrainer uses the SI prefix 'Kilo' to represent 1000 units of frequency, so 1000Hz is represented as 1kHz.
-    \n\nThe human audible frequency range is between 20 Hz and 20 kHz (20000 Hz), and we can divide that range into bass, midrange, and treble.",
-  ## - Page 2
-  "HELP_SUB_FREQ_P2_PARAGRAPH_1":
-    "The popular photo above, gives a good idea of what frequency range each instrument sounds in.",
-  "HELP_SUB_FREQ_P2_PARAGRAPH_2":
-    "Individuals may have different opinions on how to divide the frequency range to distinguish between the sound, but here's a rough guide.",
-  "HELP_SUB_FREQ_P2_FREQ_INFO":
-    "* 20Hz ~ 80Hz : Sub-bass
-    \n* 80Hz ~ 200Hz : Mid-bass
-    \n* 200Hz ~ 800Hz : Lower-Midrange
-    \n* 800Hz ~ 1.5kHz : Centre-Midrange
-    \n* 1.5kHz ~ 5kHz : Upper-Midrange
-    \n* 5kHz ~ 10kHz : Treble
-    \n* 10kHz+ : Upper-Treble",
-
-  ## Goal of 'eqTrainer'
-  "HELP_SUB_GOAL_TITLE": "Goal of 'eqTrainer'",
-  ## - Page 1
-  "HELP_SUB_GOAL_P1_PARAGRAPH_1":
-    "'eqTrainer' was heavily inspired by 'How To Listen', a hearing skill training program from Harman International - the company that owns JBL, AKG and many other brands.
-    \n'eqTrainer' provides 'Band Identification' among the training features provided by 'How To Listen'.
-    \n\n'Band Identification' is performed by alternately listening to a 'sound source with an equalizer' that changes the sound around a randomly assigned frequency,
-    and the 'original sound source' without any modulation. The goal is to accurately determine which frequency range has been modulated and how.
-    \n\nLike 'How To Listen', which was developed as a training program for audio product R&D team, 'eqTrainer' was developed to train users in critical listening skills.",
-  "HELP_SUB_GOAL_P1_PARAGRAPH_2":
-    "There is some debate as to whether or not there is a need to develop critical listening skills at the amateur hobbyist level, not audio engineers,
-    but I personally believe that it is beneficial for the average listener in two ways: to better utilize an equalizer, and to better make relative comparisons between Frequency Response measurements.",
-
-  ## Managing Playlist
-  "HELP_SUB_PLAYLIST_TITLE": "Managing Playlist",
-  ## - Page 1
-  "HELP_SUB_PLAYLIST_P1_PARAGRAPH_1":
-    "As with the previous legacy version, the newly developed 'eqTrainer' includes playlist functionality, including an audio editor.
-    \n\nPress the + button at the bottom right corner of the playlist screen to select a music file. At this time, if a selected file is not in 'mp3, wav, or flac' format - which is supported by 'eqTrainer', it will be converted to flac format.",
-  "HELP_SUB_PLAYLIST_P1_PARAGRAPH_2":
-    "Once the song has been loaded, you will be in the editor screen as shown above. If you want to cut out a portion of the song, move the slider or play the song to the point where you want to cut it,
-    and You can set the start point or end point of the song by pressing the 'Set Start Now' or 'Set End Now' button.
-    \n\nThe start and end points of these cut 'audio clips' are indicated by arrows and times. When you're done, press the 'Done' button and the 'audio clip' will be added to your playlist.",
-
-  ## Configuring Session
-  "HELP_SUB_CONFIG_TITLE": "Configuring Session",
-  ## - Page 1
-  "HELP_SUB_CONFIG_P1_PARAGRAPH":
-    "Each training session is conducted by the user alternately listening to a modified audio or an original audio, and determining which frequency range has changed.
-    \n\nTo make it easier for the user to select the desired range during this process, eqTrainer provide visualised frequency information via a 'frequency graph' like the one pictured above.
-    \n\nBefore starting a training session, users can personalise the difficulty or progression of the session to their liking by adjusting the items below on the 'Configure Session' page.",
-  "HELP_SUB_CONFIG_P1_SB": "* Starting Band",
-  "HELP_SUB_CONFIG_P1_SB_DESC":
-    "The 'Start Frequency Band' determines how many 'centre frequencies' the filter can be applied to when the session starts.
-    As the number of 'centre frequencies' increases, the difficulty increases, as it requires the ability to notice subtle sound changes between more adjacent frequencies.",
-  "HELP_SUB_CONFIG_P1_G": "* Gain",
-  "HELP_SUB_CONFIG_P1_G_DESC":
-    "'Gain' determines how much the filter modulates the sound: the higher the 'Gain', the greater the change to the sound, and therefore the less challenging the session becomes.",
-  "HELP_SUB_CONFIG_P1_Q": "* Q Factor",
-  "HELP_SUB_CONFIG_P1_Q_DESC":
-    "The 'Q Factor' determines the bandwidth of the filter applied to the sound source: the larger the 'Q Factor', the narrower the range of frequencies the filter affects.",
-  "HELP_SUB_CONFIG_P1_TYPE": "* Filter Type",
-  "HELP_SUB_CONFIG_P1_TYPE_DESC":
-    "The 'Filter Type' determines the appearance of the filter applied to the sound source.
-    \nA 'peak' is represented by a raised graph, which 'emphasises' sounds of a certain frequency. 'Dips', on the other hand, are represented by a dipped graph, which 'dampens' certain frequencies of sound.
-    \nYou can also set it up so that both 'peak' and 'dip' filters appear, as shown in the photo.",
-  "HELP_SUB_CONFIG_P1_THR": "* Threshold",
-  "HELP_SUB_CONFIG_P1_THR_DESC":
-    "The 'threshold' is used as a baseline for adjusting the difficulty based on the user's skill. The 'eqTrainer' keeps a record of whether the user has correctly identified the modulated frequency range,
-    and If the number of times reaches the 'threshold', it self-adjusts the difficulty by increasing or decreasing the number of centre frequencies used for the filter.",
-
-  ## Running a Session
-  "HELP_SUB_SESSION_TITLE": "Running a Session",
-  ## - Page 1
-  "HELP_SUB_SESSION_P1_PARAGRAPH_1":
-    "Once the session has started, the user can begin training by playing the active sound source from the playlist.
-    Try alternately pressing the 'Original' and 'Apply EQ' buttons to capture the subtle changes made to the sound source.",
-  "HELP_SUB_SESSION_P1_PARAGRAPH_2":
-    "You can select the filters applied to the sound source by dragging the numeric selector, or by pressing the buttons placed along the edges.
-    \nThe graph of the filters you have selected will then be coloured blue. Once you've made your selections, you can submit them by pressing the button with the arrow.
-    \nThe top of the screen will then display the correct answer and information about the graph you selected.",
-  "HELP_SUB_SESSION_P1_PARAGRAPH_3":
-    "The right side of the session's top bar shows the number of correct and incorrect answers you've given during the session. You can end the session by pressing the arrow button on the left side of the top bar or by pressing back button.",
 }

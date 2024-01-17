@@ -14,7 +14,7 @@ import 'package:eq_trainer/widget/session/session_selector_portrait.dart';
 import 'package:eq_trainer/model/session_data.dart';
 
 class SessionPage extends StatefulWidget {
-  const SessionPage({Key? key}) : super(key: key);
+  const SessionPage({super.key});
 
   @override
   State<SessionPage> createState() => _SessionPageState();
@@ -135,7 +135,7 @@ class _SessionPageState extends State<SessionPage> {
               SessionPickerLandscape(),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(32, 16, 32, 32),
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
