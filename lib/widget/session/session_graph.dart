@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/model/session_data.dart';
 
 class SessionGraph extends StatefulWidget {
-  const SessionGraph({Key? key}) : super(key: key);
+  const SessionGraph({super.key});
 
   @override
   State<SessionGraph> createState() => _SessionGraphState();
@@ -30,10 +30,10 @@ class _SessionGraphState extends State<SessionGraph> {
             child: LineChart(
               LineChartData(
                 minX: 0, maxX: 200, minY: -3, maxY: 3,
-                clipData: FlClipData.all(),
+                clipData: const FlClipData.all(),
                 lineBarsData: sessionFreqData.graphBarDataList,
-                lineTouchData: LineTouchData(enabled: false),
-                gridData: FlGridData(show: false),
+                lineTouchData: const LineTouchData(enabled: false),
+                gridData: const FlGridData(show: false),
                 borderData: FlBorderData(
                   show: true,
                   border: Border.all(
@@ -53,9 +53,9 @@ class _SessionGraphState extends State<SessionGraph> {
   FlTitlesData _graphTitleData (BuildContext context) {
     return FlTitlesData(
         show: true,
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
             sideTitles: SideTitles(
                 showTitles: true,

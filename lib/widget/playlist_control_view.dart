@@ -32,10 +32,10 @@ class PlaylistControlView extends StatelessWidget {
           playlistPlayer.isFileOpened = true;
         }
 
-        return WillPopScope(
-          onWillPop: () async {
+        return PopScope(
+          canPop: true,
+          onPopInvoked: (_) {
             playlistPlayer.stop();
-            return true;
           },
           child: Card(
             child: ListView(

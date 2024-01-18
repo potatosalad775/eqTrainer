@@ -6,7 +6,7 @@ import 'package:eq_trainer/model/session_data.dart';
 
 class ConfigCard extends StatefulWidget {
   final ConfigCardType cardType;
-  const ConfigCard({Key? key, required this.cardType}) : super(key: key);
+  const ConfigCard({super.key, required this.cardType});
 
   @override
   State<ConfigCard> createState() => _ConfigCardState();

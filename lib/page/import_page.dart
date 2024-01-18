@@ -13,7 +13,7 @@ import 'package:eq_trainer/widget/editor_control_view.dart';
 import 'package:eq_trainer/player/isolated_music_player.dart';
 
 class ImportPage extends StatefulWidget {
-  const ImportPage({Key? key}) : super(key: key);
+  const ImportPage({super.key});
 
   @override
   State<ImportPage> createState() => _ImportPageState();
@@ -38,8 +38,11 @@ class _ImportPageState extends State<ImportPage> {
         ChangeNotifierProvider<ImportAudioData>.value(value: clipDivProvider),
         ChangeNotifierProvider<ImportPlayer>.value(value: importPlayer),
       ],
-      child: WillPopScope(
-        onWillPop: _onWillPop,
+      child: PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) {
+          if(!didPop) _onPop();
+        },
         child: Scaffold(
           appBar: AppBar(
             title: Text("IMPORT_APPBAR_TITLE".tr()),
@@ -201,8 +204,8 @@ class _ImportPageState extends State<ImportPage> {
     });
   }
 
-  Future<bool> _onWillPop() async {
-    final value = await showDialog(
+  void _onPop() {
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -224,7 +227,7 @@ class _ImportPageState extends State<ImportPage> {
         ],
       ),
     );
-    return value == true;
+    return;
   }
 }
 

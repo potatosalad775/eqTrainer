@@ -5,7 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 class SettingsCard extends StatelessWidget {
   final SettingsCardType cardInfo;
   final Widget trailing;
-  const SettingsCard({Key? key, required this.cardInfo, required this.trailing}) : super(key: key);
+  const SettingsCard({super.key, required this.cardInfo, required this.trailing});
 
   @override
   Widget build(BuildContext context) {

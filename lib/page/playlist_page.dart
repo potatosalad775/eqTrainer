@@ -7,7 +7,7 @@ import 'package:eq_trainer/page/import_page.dart';
 import 'package:eq_trainer/widget/playlist_control_view.dart';
 
 class PlaylistPage extends StatefulWidget {
-  const PlaylistPage({Key? key}) : super(key: key);
+  const PlaylistPage({super.key});
 
   @override
   State<PlaylistPage> createState() => _PlaylistPageState();

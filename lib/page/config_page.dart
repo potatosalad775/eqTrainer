@@ -5,7 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ConfigPage extends StatelessWidget {
-  const ConfigPage({Key? key}) : super(key: key);
+  const ConfigPage({super.key});
 
   @override
   Widget build(BuildContext context) {

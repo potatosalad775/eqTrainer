@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/model/session_data.dart';
 
 class SessionPickerLandscape extends StatefulWidget {
-  const SessionPickerLandscape({Key? key}) : super(key: key);
+  const SessionPickerLandscape({super.key});
 
   @override
   State<SessionPickerLandscape> createState() => _SessionPickerLandscapeState();

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/model/session_data.dart';
 
 class SessionPickerPortrait extends StatefulWidget {
-  const SessionPickerPortrait({Key? key}) : super(key: key);
+  const SessionPickerPortrait({super.key});
 
   @override
   State<SessionPickerPortrait> createState() => _SessionPickerPortraitState();

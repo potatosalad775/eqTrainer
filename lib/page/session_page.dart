@@ -63,8 +63,11 @@ class _SessionPageState extends State<SessionPage> {
     final sessionAnswerCorrect = context.select<SessionResultData, int>((d) => d.resultCorrect);
     final sessionAnswerIncorrect = context.select<SessionResultData, int>((d) => d.resultIncorrect);
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if(!didPop) _onPop();
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -176,10 +179,10 @@ class _SessionPageState extends State<SessionPage> {
     );
   }
 
-  Future<bool> _onWillPop() async {
+  void _onPop() {
     final player = Provider.of<IsolatedMusicPlayer>(context, listen: false);
 
-    return await showDialog(
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
         content: Text("SESSION_ALERT_EXIT_CONTENT".tr()),
@@ -200,6 +203,8 @@ class _SessionPageState extends State<SessionPage> {
           ),
         ],
       )
-    ) ?? false;
+    );
+
+    return;
   }
 }

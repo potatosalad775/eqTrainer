@@ -4,7 +4,7 @@ import 'package:eq_trainer/model/session_data.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ResultPage extends StatelessWidget {
-  const ResultPage({Key? key}) : super(key: key);
+  const ResultPage({super.key});
 
   @override
   Widget build(BuildContext context) {

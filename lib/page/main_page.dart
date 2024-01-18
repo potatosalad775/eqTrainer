@@ -9,7 +9,7 @@ import 'package:eq_trainer/page/playlist_page.dart';
 import 'package:eq_trainer/page/settings_page.dart';
 
 class MainPage extends StatefulWidget {
-  const MainPage({Key? key}) : super(key: key);
+  const MainPage({super.key});
 
   @override
   State<MainPage> createState() => _MainPageState();
