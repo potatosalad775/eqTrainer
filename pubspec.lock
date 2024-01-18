@@ -449,8 +449,8 @@ packages:
   flutter_coast_audio_miniaudio:
     dependency: "direct main"
     description:
-      path: "/Users/jinwoolee/VSCodeProjects/coast_audio/packages/flutter_coast_audio_miniaudio"
-      relative: false
+      path: "../../VSCodeProjects/coast_audio/packages/flutter_coast_audio_miniaudio"
+      relative: true
     source: path
     version: "0.0.4"
   flutter_launcher_icons:
