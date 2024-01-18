@@ -74,10 +74,15 @@ You have to sign it with your own Apple ID to install it. Not sure how? try [Sid
 
 ### macOS (≥ 10.15)
 
-eqTrainer should work with Apple Silicon Mac, but I haven't tested it yet.
-If you have an Apple Silicon Mac, try building it by yourself.
+eqTrainer for macOS (Experimental) is available on [Release Section][RELEASE] as an zip file.
 
-Unfortunately, the Audio Backend of eqTrainer does not support x86-based Intel Mac for now.
+You can extract the .app file from the .zip file.
+
+Both Intel Macs (x86_64) and Apple Silicon Macs (arm64) should be supported.
+
+### Linux
+
+Currently looking for a way to add Linux Support. Stay tuned!
 
 ### Windows
 
