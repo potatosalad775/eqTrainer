@@ -16,14 +16,6 @@ The **Playlist Feature** and **Built-in Audio Clip Editor** make managing music 
 
 Thanks to **Multilingual Support**, anyone can train their auditory skills. The Beautiful Design (at least to my eyes) with **Dark Mode** adds to its charm.
 
-## What's better than Previous Legacy Version of eqTrainer?
-
-* Seamless Audio Transition - thanks to Real-Time Audio Filtering
-* Responsive UI with Landscape Mode for Devices with Large Display
-* Better Optimization and Performance
-
-eqTrainer has been completely re-written to make improvements in a variety of areas, including those three major changes mentioned above.
-
 ## Screenshots
 
 <div align="center">
