@@ -19,9 +19,7 @@ Thanks to **Multilingual Support**, anyone can train their auditory skills. The 
 ## What's better than Previous Legacy Version of eqTrainer?
 
 * Seamless Audio Transition - thanks to Real-Time Audio Filtering
-
 * Responsive UI with Landscape Mode for Devices with Large Display
-
 * Better Optimization and Performance
 
 eqTrainer has been completely re-written to make improvements in a variety of areas, including those three major changes mentioned above.
@@ -93,6 +91,11 @@ Since Original 'How to Listen' from Harman International is working fine on Wind
 eqTrainer is built with Localization in mind, and you can easily contribute to this project by translating it!
 
 If you want to translate this project, please refer to [Localization Wiki page](https://github.com/potatosalad775/eqTrainer/wiki/Localization).
+
+## Thanks to
+
+*[coast_audio](https://github.com/SKKbySSK/coast_audio)* <sub>Powerful Audio Processing Library for Dart / Flutter</sub>
+*[Pretendard](https://github.com/orioncactus/pretendard)* <sub>Cross-Platform Typography</sub>
 
 ## Donation
 
