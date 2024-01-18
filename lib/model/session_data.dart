@@ -138,7 +138,7 @@ class SessionFrequencyData extends ChangeNotifier {
               color: Colors.redAccent,
               barWidth: 3,
               isStrokeCapRound: true,
-              dotData: FlDotData(show: false),
+              dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
               spots: peakGraphSpotList,
             )
@@ -158,7 +158,7 @@ class SessionFrequencyData extends ChangeNotifier {
               color: Colors.redAccent,
               barWidth: 3,
               isStrokeCapRound: true,
-              dotData: FlDotData(show: false),
+              dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
               spots: dipGraphSpotList,
             )
@@ -187,6 +187,9 @@ class SessionFrequencyData extends ChangeNotifier {
     final player = Provider.of<IsolatedMusicPlayer>(context, listen: false);
     // Reset pEQ Status
     player.setEQ(false);
+
+    // Set player volume 85% to prevent clipping
+    player.volume = 0.85;
 
     // Num of Graph
     int numOfGraph = graphBarDataList.length;
