@@ -95,6 +95,7 @@ If you want to translate this project, please refer to [Localization Wiki page](
 ## Thanks to
 
 *[coast_audio](https://github.com/SKKbySSK/coast_audio)* <sub>Powerful Audio Processing Library for Dart / Flutter</sub>
+
 *[Pretendard](https://github.com/orioncactus/pretendard)* <sub>Cross-Platform Typography</sub>
 
 ## Donation
