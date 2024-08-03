@@ -1,0 +1,36 @@
+display_name: eqTrainer
+package_name: eq-trainer
+maintainer:
+  name: potatosalad775
+  email: transaction@kakao.com
+priority: optional
+section: x11
+installed_size: 6604
+
+dependencies:
+  - libmpv-dev
+  - mpv
+
+essential: false
+icon: linux/assets/app_icon.ico
+
+postinstall_scripts:
+  - echo "Installed my awesome app"
+postuninstall_scripts:
+  - echo "Surprised Pickachu face"
+
+keywords:
+  - eq
+  - eqTrainer
+
+generic_name: Music Application
+
+categories:
+  - Music
+  - Media
+
+startup_notify: true
+
+# You can also specify [metainfo](https://freedesktop.org/software/appstream/docs/chap-Quickstart.html) file
+# which contains metadata of the app.
+# metainfo: linux/packaging/myappid.appdata.xml

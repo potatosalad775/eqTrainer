@@ -1,0 +1,27 @@
+display_name: eqTrainer
+icon: linux/assets/app_icon.ico
+summary: A beautiful lightweight open-source cross-platform API Client
+group: Applications/
+vendor: potatosalad775
+packager: potatosalad775
+packagerEmail: transaction@kakao.com
+license:
+url: https://github.com/potatosalad775/eqTrainer
+
+build_arch: x86_64, aarch64
+
+requires:
+  - libmpv-dev
+  - mpv
+
+keywords:
+  - eq
+  - eqTrainer
+
+generic_name: Music Application
+
+categories:
+  - Music
+  - Media
+
+startup_notify: true
