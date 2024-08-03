@@ -68,7 +68,7 @@ dependencies:
   coast_audio:
     git:
       url: https://github.com/potatosalad775/coast_audio.git
-      ref: win32
+      ref: "240803"
 
 dev_dependencies:
   flutter_test:
