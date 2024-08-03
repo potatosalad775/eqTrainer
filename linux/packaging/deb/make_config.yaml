@@ -12,7 +12,7 @@ dependencies:
   - mpv
 
 essential: false
-icon: linux/assets/app_icon.ico
+icon: linux/assets/app_icon.png
 
 postinstall_scripts:
   - echo "Installed my awesome app"
