@@ -32,11 +32,16 @@
 
   # Session Page
   "SESSION_APPBAR_TITLE": "세션",
+  ## Alert Dialog - Error Playlist
+  "SESSION_ALERT_ERROR_TITLE": "오류",
+  "SESSION_ALERT_ERROR_CONTENT": "세션을 시작하던 도중 오류가 발생했습니다. 다시 시도해주세요.",
+  "SESSION_ALERT_ERROR_BUTTON": "확인",
   ## Empty Playlist Alert
   "SESSION_ALERT_EMPTY_TITLE": "빈 플레이리스트",
   "SESSION_ALERT_EMPTY_CONTENT": "세션을 시작하기에 앞서 적어도 하나의 오디오 클립을 추가한 뒤 활성화해주세요.",
   "SESSION_ALERT_EMPTY_BUTTON": "네",
   ## Exiting Session Alert
+  "SESSION_ALERT_EXIT_TITLE": "알림",
   "SESSION_ALERT_EXIT_CONTENT": "정말로 세션을 그만두고 나가시겠습니까?",
   "SESSION_ALERT_EXIT_BUTTON_YES": "네",
   "SESSION_ALERT_EXIT_BUTTON_NO": "아니오",
@@ -48,6 +53,8 @@
   ## * 'DO NOT' translate '{_INDEX}' - it will be replaced to an actual value
   "SESSION_SNACKBAR_CORRECT": "정답입니다!",
   "SESSION_SNACKBAR_INCORRECT": "오답입니다! 올바른 정답은 {_INDEX}이었습니다.",
+  ## Session Device Dropdown Button
+  "SESSION_DDBUTTON_DEVICE_DISCLAIMER": "변경된 출력기기를 적용하려면 세션을 다시 시작하세요.",
 
   # Session Result Page
   "RESULT_APPBAR_TITLE": "결과",
@@ -67,9 +74,11 @@
   "PLAYLIST_AUDIO_ALERT_TITLE": "오디오 클립 관리",
   "PLAYLIST_AUDIO_ALERT_ACTION_DELETE": "삭제",
   "PLAYLIST_FOOTER": "원형 체크박스를 드래그하여 순서를 바꿀 수 있습니다.",
+  "PLAYLIST_FOOTER_WINLINUX_1": "mp3 / wav / flac 오디오 파일만 사용할 수 있습니다.",
+  "PLAYLIST_FOOTER_WINLINUX_2": "사용 중인 플랫폼에서는 현재 오디오 편집 기능이 제공되지 않습니다.",
 
   # Import Audio Page
-  "IMPORT_APPBAR_TITLE": "오디오 클립 편집",
+  "IMPORT_APPBAR_TITLE": "오디오 불러오기",
   ## Alert Dialog - Exiting Page
   "IMPORT_ALERT_EXIT_CONTENT": "정말로 작업 중이던 내용을 버리고 편집기를 나가시겠습니까?",
   "IMPORT_ALERT_EXIT_YES": "네",
@@ -112,14 +121,31 @@
   "SETTING_CARD_LICENSE_TITLE": "오픈소스 라이선스",
   ## Setting Card - Developer Settings
   "SETTING_CARD_DEV_SETTING_TITLE": "개발자 설정",
+  ## Setting Card - Miscellaneous Settings
+  "SETTING_CARD_MISC_SETTING_TITLE": "기타 설정",
+
+  # Miscellaneous Settings Page
+  "MISC_SETTING_APPBAR_TITLE": "기타 설정",
+  ## Misc Setting Card - Frequency Tooltip Toggle
+  "MISC_SETTING_CARD_TOOLTIP_TITLE": "그래프 중심 주파수 표시",
 
   # Developer Settings Page
   "DEV_SETTING_APPBAR_TITLE": "개발자 설정",
-  ## DEV SETTING CARD - Android Backend Library
-  "DEV_SETTING_CARD_BACKEND_TITLE": "안드로이드 백엔드 라이브러리",
+  ## DEV SETTING CARD - Android Backend API
+  "DEV_SETTING_CARD_BACKEND_TITLE": "오디오 API",
   "DEV_SETTING_CARD_BACKEND_DESC":
-    "오디오가 생각했던 것만큼 잘 재생되지 않는다면 오디오 백엔드를 바꿔보세요. AAudio API는 Android Oreo (8.0) 이상을 탑재한 안드로이드 기기에서 사용이 가능합니다.",
-  "DEV_SETTING_CARD_BACKEND_ALERT_TITLE": "알림",
-  "DEV_SETTING_CARD_BACKEND_ALERT_CONTENT": "변경된 설정을 적용하려면 앱을 종료한 뒤 다시 시작해주세요.",
-  "DEV_SETTING_CARD_BACKEND_ALERT_BUTTON": "확인",
+    "소리가 생각보다 잘 재생되지 않는다면 오디오 API를 바꿔보세요.",
+  ## DEV SETTING - Backend
+  "DEV_SETTING_BACKEND_APPBAR": "오디오 백엔드 API 설정",
+  "DEV_SETTING_BACKEND_SNACKBAR_ERROR": "선택하신 오디오 백엔드를 활성화하는데 실패했습니다.",
+  "DEV_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND}가 활성화되었습니다.",
+
+  # Update Alert
+  "UPDATE_ALERT_MESSAGE_BODY": "새로운 버전의 eqTrainer가 발견되었습니다!",
+  "UPDATE_ALERT_BUTTON_IGNORE": "무시",
+  "UPDATE_ALERT_BUTTON_LATER": "나중에",
+  "UPDATE_ALERT_BUTTON_UPDATE": "지금 업데이트",
+  "UPDATE_ALERT_MESSAGE_PROMPT": "업데이트된 앱을 설치하시겠습니까?",
+  "UPDATE_ALERT_RELEASE_NOTE": "변경사항",
+  "UPDATE_ALERT_MESSAGE_TITLE": "업데이트 가능",
 }

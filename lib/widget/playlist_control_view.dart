@@ -1,9 +1,10 @@
+import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
+import 'package:coast_audio/coast_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/player/isolated_music_player.dart';
+import 'package:eq_trainer/model/audio_state.dart';
 
 class PlaylistControlView extends StatelessWidget {
   const PlaylistControlView({super.key, required this.filePath});
@@ -13,21 +14,26 @@ class PlaylistControlView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final playlistPlayer = PlaylistPlayer(format: mainFormat);
+    final playlistPlayer = PlaylistPlayer();
 
     return ChangeNotifierProvider<PlaylistPlayer>.value(
       value: playlistPlayer,
       builder: (context, player) {
         // Providers
         final player = context.read<PlaylistPlayer>();
-        final playerState = context.select<PlaylistPlayer, MabAudioPlayerState>((p) => p.state);
-        final playerPosition = context.select<PlaylistPlayer, AudioTime>((p) => p.position);
-        final playerDuration = context.select<PlaylistPlayer, AudioTime?>((p) => p.duration) ?? playerPosition;
+        final audioState = context.watch<AudioState>();
+        final playerPosition = context.select<PlaylistPlayer, AudioTime>((p) => p.fetchPosition);
+        final playerDuration = context.select<PlaylistPlayer, AudioTime>((p) => p.fetchDuration);
+        final playerState = context.select<PlaylistPlayer, PlayerStateResponse>((p) => p.fetchPlayerState);
 
         // if player already have file opened
         if(!playlistPlayer.isFileOpened) {
           // Open Selected Clip
-          playlistPlayer.open(filePath);
+          playlistPlayer.launch(
+            backend: audioState.backend,
+            outputDeviceId: audioState.outputDevice?.id,
+            path: filePath,
+          );
           // Mark Flag
           playlistPlayer.isFileOpened = true;
         }
@@ -35,7 +41,7 @@ class PlaylistControlView extends StatelessWidget {
         return PopScope(
           canPop: true,
           onPopInvoked: (_) {
-            playlistPlayer.stop();
+            playlistPlayer.pause();
           },
           child: Card(
             child: ListView(
@@ -50,10 +56,9 @@ class PlaylistControlView extends StatelessWidget {
                     timeLabelPadding: 8,
                     progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
                     total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
-                    onSeek: (player.state != MabAudioPlayerState.stopped)
-                        ? (position) {
-                      player.position = AudioTime(position.inMicroseconds / (1000 * 1000));
-                    } : null,
+                    onSeek: (position) async {
+                      player.seek(AudioTime.fromDuration(position));
+                    },
                   ),
                 ),
                 // Audio Control Button Row
@@ -63,7 +68,7 @@ class PlaylistControlView extends StatelessWidget {
                     // Skip Previous
                     IconButton(
                       onPressed: () {
-                        player.position = AudioTime.zero;
+                        player.seek(AudioTime.zero);
                       },
                       iconSize: 56,
                       icon: const Icon(Icons.skip_previous),
@@ -72,24 +77,22 @@ class PlaylistControlView extends StatelessWidget {
                     SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
                     // Play Pause
                     IconButton(
-                      onPressed: playerState != MabAudioPlayerState.stopped
-                          ? () {
-                        if (playerState == MabAudioPlayerState.playing) {
+                      onPressed: () {
+                        if (playerState.isPlaying) {
                           player.pause();
                         } else {
                           player.play();
                         }
-                      }
-                          : null,
+                      },
                       iconSize: 64,
-                      icon: Icon(playerState == MabAudioPlayerState.playing ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
+                      icon: Icon(playerState.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
                       enableFeedback: false,
                     ),
                     SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
-                    // Skip Next
+                    // Close
                     IconButton(
                       onPressed: () {
-                        player.stop();
+                        player.pause();
                         Navigator.of(context).pop();
                       },
                       iconSize: 56,
@@ -107,9 +110,9 @@ class PlaylistControlView extends StatelessWidget {
   }
 }
 
-class PlaylistPlayer extends IsolatedMusicPlayer {
+class PlaylistPlayer extends PlayerIsolate {
   // State containing whether file is open or not
   bool isFileOpened = false;
 
-  PlaylistPlayer({required super.format});
+  PlaylistPlayer();
 }

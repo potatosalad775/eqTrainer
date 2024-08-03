@@ -1,21 +1,32 @@
+import 'package:coast_audio/coast_audio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 part 'setting_data.g.dart';
 
 @HiveType(typeId: 1)
-class SettingData {
-  @HiveField(0)
-  AndroidAudioBackend androidAudioBackend;
+class BackendData {
+  @HiveField(0, defaultValue: [])
+  List<AudioDeviceBackend> backendList;
 
-  SettingData(
-    this.androidAudioBackend,
+  BackendData(
+    this.backendList,
   );
 }
 
 @HiveType(typeId: 2)
-enum AndroidAudioBackend {
-  @HiveField(0)
-  aaudio,
-  @HiveField(1)
-  opensl
+class MiscSettings {
+  @HiveField(0, defaultValue: false)
+  bool frequencyToolTip;
+  
+  MiscSettings(
+    this.frequencyToolTip,
+  );
+
+  MiscSettings copyWith({
+    bool? inputFrequencyToolTip
+  }) {
+    return MiscSettings(
+      inputFrequencyToolTip ?? frequencyToolTip
+    );
+  }
 }

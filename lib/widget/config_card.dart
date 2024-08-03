@@ -2,11 +2,15 @@ import 'package:eq_trainer/main.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/model/session_data.dart';
+import 'package:eq_trainer/page/session_page.dart';
+import 'package:eq_trainer/model/session/session_parameter.dart';
 
 class ConfigCard extends StatefulWidget {
+  const ConfigCard({
+    super.key,
+    required this.cardType,
+  });
   final ConfigCardType cardType;
-  const ConfigCard({super.key, required this.cardType});
 
   @override
   State<ConfigCard> createState() => _ConfigCardState();
@@ -15,7 +19,7 @@ class ConfigCard extends StatefulWidget {
 class _ConfigCardState extends State<ConfigCard> {
   @override
   Widget build(BuildContext context) {
-    final sessionValue = context.watch<SessionData>();
+    final sessionValue = context.watch<SessionParameter>();
     final configCardInfo = ConfigCardInfo(type: widget.cardType);
 
     return Padding(
@@ -23,17 +27,23 @@ class _ConfigCardState extends State<ConfigCard> {
       child: Card(
         clipBehavior: Clip.antiAliasWithSaveLayer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainer,
         child: ListTile(
           contentPadding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
-          title: Text(configCardInfo.title),
-          titleTextStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          title: Text(
+            configCardInfo.title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
-          subtitle: Text(configCardInfo.subtitle),
-          subtitleTextStyle: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          subtitle: Text(
+            configCardInfo.subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           trailing: DropdownButton(
             alignment: Alignment.centerRight,

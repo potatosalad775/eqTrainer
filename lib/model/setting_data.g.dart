@@ -6,27 +6,27 @@ part of 'setting_data.dart';
 // TypeAdapterGenerator
 // **************************************************************************
 
-class SettingDataAdapter extends TypeAdapter<SettingData> {
+class BackendDataAdapter extends TypeAdapter<BackendData> {
   @override
   final int typeId = 1;
 
   @override
-  SettingData read(BinaryReader reader) {
+  BackendData read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return SettingData(
-      fields[0] as AndroidAudioBackend,
+    return BackendData(
+      fields[0] == null ? [] : (fields[0] as List).cast<AudioDeviceBackend>(),
     );
   }
 
   @override
-  void write(BinaryWriter writer, SettingData obj) {
+  void write(BinaryWriter writer, BackendData obj) {
     writer
       ..writeByte(1)
       ..writeByte(0)
-      ..write(obj.androidAudioBackend);
+      ..write(obj.backendList);
   }
 
   @override
@@ -35,37 +35,32 @@ class SettingDataAdapter extends TypeAdapter<SettingData> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is SettingDataAdapter &&
+      other is BackendDataAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
 
-class AndroidAudioBackendAdapter extends TypeAdapter<AndroidAudioBackend> {
+class MiscSettingsAdapter extends TypeAdapter<MiscSettings> {
   @override
   final int typeId = 2;
 
   @override
-  AndroidAudioBackend read(BinaryReader reader) {
-    switch (reader.readByte()) {
-      case 0:
-        return AndroidAudioBackend.aaudio;
-      case 1:
-        return AndroidAudioBackend.opensl;
-      default:
-        return AndroidAudioBackend.aaudio;
-    }
+  MiscSettings read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return MiscSettings(
+      fields[0] == null ? false : fields[0] as bool,
+    );
   }
 
   @override
-  void write(BinaryWriter writer, AndroidAudioBackend obj) {
-    switch (obj) {
-      case AndroidAudioBackend.aaudio:
-        writer.writeByte(0);
-        break;
-      case AndroidAudioBackend.opensl:
-        writer.writeByte(1);
-        break;
-    }
+  void write(BinaryWriter writer, MiscSettings obj) {
+    writer
+      ..writeByte(1)
+      ..writeByte(0)
+      ..write(obj.frequencyToolTip);
   }
 
   @override
@@ -74,7 +69,7 @@ class AndroidAudioBackendAdapter extends TypeAdapter<AndroidAudioBackend> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AndroidAudioBackendAdapter &&
+      other is MiscSettingsAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

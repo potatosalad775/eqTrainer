@@ -1,61 +1,51 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
-import 'package:eq_trainer/player/isolated_music_player.dart';
+import 'package:coast_audio/coast_audio.dart';
 import 'package:provider/provider.dart';
+import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/model/audio_state.dart';
+import 'package:easy_localization/easy_localization.dart';
 
-class DeviceDropdown extends StatefulWidget {
+class DeviceDropdown extends StatelessWidget {
   const DeviceDropdown({super.key});
 
   @override
-  State<DeviceDropdown> createState() => _DeviceDropdownState();
-}
-
-class _DeviceDropdownState extends State<DeviceDropdown> {
-  final _devices = <DeviceInfo<dynamic>>[];
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<IsolatedMusicPlayer>().onRerouted = _updateDevices;
-    _updateDevices();
-  }
-
-  void _updateDevices() async {
-    final devices = MabDeviceContext.sharedInstance.getDevices(MabDeviceType.playback);
-    Future.microtask(() {
-      setState(() {
-        _devices
-          ..clear()
-          ..addAll(devices);
-      });
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final device = context.select<IsolatedMusicPlayer, DeviceInfo<dynamic>?>((p) => p.device);
-    final dropdownItems = _devices.map((e) => DropdownMenuItem<DeviceInfo<dynamic>>(value: e, child: Text(e.name))).toList();
+    final audioState = Provider.of<AudioState>(context, listen: false);
+    late final deviceContext = AudioDeviceContext(backends: [audioState.backend]);
+    late final devices = deviceContext.getDevices(AudioDeviceType.playback);
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        const Icon(Icons.headphones),
-        const SizedBox(width: 16),
-        Expanded(
-          child: DropdownButton<DeviceInfo<dynamic>>(
-            items: dropdownItems,
-            isExpanded: true,
-            value: _devices.contains(device) ? device : null,
-            onChanged: (device) {
-              context.read<IsolatedMusicPlayer>().device = device;
-            },
-          ),
+        Row(
+          children: [
+            const Icon(Icons.headphones),
+            const SizedBox(width: 16),
+            Expanded(
+              child: RepaintBoundary(
+                child: DropdownButton<String>(
+                  items: devices.map((e) => e.name).map((e) =>
+                    DropdownMenuItem<String>(
+                      value: e,
+                      child: Text(
+                        e,
+                        maxLines: 1,
+                      ),
+                    )).toList(),
+                  isExpanded: true,
+                  value: audioState.outputDevice?.name,
+                  onChanged: (deviceName) {
+                    final audioState = Provider.of<AudioState>(context, listen: false);
+                    App.of(context).applyAudioState(
+                      audioState.copyWith(outputDevice: devices.firstWhere((device) => device.name == deviceName))
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
-        IconButton(
-          onPressed: () {
-            _updateDevices();
-          },
-          icon: const Icon(Icons.refresh),
-        ),
+        const Text("SESSION_DDBUTTON_DEVICE_DISCLAIMER").tr()
       ],
     );
   }

@@ -1,27 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:another_flushbar/flushbar.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/theme_data.dart';
-import 'package:eq_trainer/model/session_data.dart';
-import 'package:eq_trainer/player/isolated_music_player.dart';
+import 'package:eq_trainer/page/session_page.dart';
+import 'package:eq_trainer/model/session/session_frequency.dart';
+import 'package:eq_trainer/model/session/session_parameter.dart';
+import 'package:eq_trainer/model/session/session_result.dart';
+import 'package:eq_trainer/model/session/session_model.dart';
+import 'package:eq_trainer/model/audio_state.dart';
+import 'package:eq_trainer/model/session/session_playlist.dart';
+import 'package:provider/provider.dart';
 
 class SessionSelectorPortrait extends StatelessWidget {
-  const SessionSelectorPortrait({super.key});
+  const SessionSelectorPortrait({
+    super.key,
+    required this.player,
+    required this.audioState,
+    required this.sessionModel,
+    required this.freqData,
+    required this.stateData,
+    required this.resultData,
+    required this.sessionPlaylist,
+  });
+  final SessionPlayer player;
+  final AudioState audioState;
+  final SessionModel sessionModel;
+  final SessionFrequencyData freqData;
+  final SessionStateData stateData;
+  final SessionResultData resultData;
+  final SessionPlaylist sessionPlaylist;
 
   @override
   Widget build(BuildContext context) {
-    final player = context.watch<IsolatedMusicPlayer>();
-    final freqData = context.read<SessionFrequencyData>();
-    final stateData = context.read<SessionStateData>();
-    final resultData = context.read<SessionResultData>();
-    final sessionData = context.read<SessionData>();
+    final pEQState = context.select<SessionPlayer, bool>((p) => p.fetchEQState);
+    final sessionParameter = context.read<SessionParameter>();
 
     return Row(
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: (player.pEQState == true)
+            onPressed: (pEQState == true)
                 ? () { player.setEQ(false); }
                 : null,
             style: ElevatedButton.styleFrom(
@@ -40,7 +58,7 @@ class SessionSelectorPortrait extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: ElevatedButton(
-            onPressed: (player.pEQState == false)
+            onPressed: (pEQState == false)
                 ? () { player.setEQ(true); }
                 : null,
             style: ElevatedButton.styleFrom(
@@ -62,7 +80,7 @@ class SessionSelectorPortrait extends StatelessWidget {
             // Notify 'the Session is Loading'
             stateData.sessionState = SessionState.loading;
             // Increase or Decrease 'sessionPoint' depends on whether user selected correct answer or not
-            if (freqData.sessionResultGraphIndex + 1 == stateData.selectedGraphValue) {
+            if (sessionModel.answerGraphIndex + 1 == freqData.currentPickerValue) {
               // Notify user chose correct answer
               Flushbar(
                 icon: Icon(Icons.check, color: Theme.of(context).colorScheme.onTertiary),
@@ -71,11 +89,11 @@ class SessionSelectorPortrait extends StatelessWidget {
                 flushbarStyle: FlushbarStyle.GROUNDED,
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
                 messageColor: Theme.of(context).colorScheme.onTertiary,
-                message: "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': (freqData.sessionResultGraphIndex + 1).toString()}),
+                message: "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': (sessionModel.answerGraphIndex + 1).toString()}),
               ).show(context);
               // Increase 'sessionPoint' and update result data
               stateData.currentSessionPoint++;
-              resultData.updateResultFromFreq(freqData.sessionResultCenterFreq, true);
+              resultData.updateResultFromFreq(sessionModel.answerCenterFreq, true);
             } else {
               // Notify user chose incorrect answer
               Flushbar(
@@ -85,27 +103,35 @@ class SessionSelectorPortrait extends StatelessWidget {
                 flushbarStyle: FlushbarStyle.GROUNDED,
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
                 messageColor: Theme.of(context).colorScheme.onTertiary,
-                message: "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': (freqData.sessionResultGraphIndex + 1).toString()}),
+                message: "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': (sessionModel.answerGraphIndex + 1).toString()}),
               ).show(context);
               // Decrease 'sessionPoint' and update result data
               stateData.currentSessionPoint--;
-              resultData.updateResultFromFreq(freqData.sessionResultCenterFreq, false);
+              resultData.updateResultFromFreq(sessionModel.answerCenterFreq, false);
             }
             // Increase or Decrease the number of 'bands'
             // ... if 'sessionPoint' hits the threshold
             // ... when the num of band is changed, recalculate the graph frequency data.
-            if (stateData.currentSessionPoint == sessionData.threshold) {
+            if (stateData.currentSessionPoint == sessionParameter.threshold) {
               stateData.currentSessionPoint = 0;
-              sessionData.startingBand++;
-              await freqData.initSessionFreqData();
+              sessionParameter.startingBand++;
+              await freqData.initSessionFreqData(sessionParameter: sessionParameter);
             }
-            else if (stateData.currentSessionPoint == (0 - sessionData.threshold)) {
+            else if (stateData.currentSessionPoint == (0 - sessionParameter.threshold)) {
               stateData.currentSessionPoint = 0;
-              if(sessionData.startingBand > 2) sessionData.startingBand--;
-              await freqData.initSessionFreqData();
+              if(sessionParameter.startingBand > 2) sessionParameter.startingBand--;
+              await freqData.initSessionFreqData(sessionParameter: sessionParameter);
             }
             // Initialize Session by selecting random index and more.
-            if(context.mounted) await freqData.initSession(context);
+            await sessionModel.initSession(
+              player,
+              audioState: audioState,
+              sessionState: stateData,
+              sessionPlaylist: sessionPlaylist,
+              sessionParameter: sessionParameter,
+              sessionResult: resultData,
+              sessionFreqData: freqData,
+            );
             // Notify 'the Session is Ready'
             stateData.sessionState = SessionState.ready;
           },

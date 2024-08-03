@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -38,7 +39,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   padding: const EdgeInsets.all(3),
                   child: Card(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    color: Theme.of(context).colorScheme.surfaceContainer,
                     child: ListTile(
                       minLeadingWidth: 0,
                       title: Text(
@@ -70,8 +71,17 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                 enableDrag: false,
                                 useSafeArea: true,
                                 context: context,
+                                isScrollControlled: true,
                                 builder: (context) {
-                                  return PlaylistControlView(filePath: "${audioClipDir.path}/${box.getAt(index)?.fileName}");
+                                  if(Platform.isWindows) {
+                                    return PlaylistControlView(
+                                        filePath: "${audioClipDir.path}\\${box.getAt(index)?.fileName}"
+                                    );
+                                  } else {
+                                    return PlaylistControlView(
+                                      filePath: "${audioClipDir.path}/${box.getAt(index)?.fileName}"
+                                    );
+                                  }
                                 }
                               );
                             },
@@ -118,10 +128,15 @@ class _PlaylistPageState extends State<PlaylistPage> {
               },
               footer: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: const Text(
-                  "PLAYLIST_FOOTER",
-                  textAlign: TextAlign.center,
-                ).tr(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text("PLAYLIST_FOOTER").tr(),
+                    if(Platform.isWindows || Platform.isLinux) const SizedBox(height: 12),
+                    if(Platform.isWindows || Platform.isLinux) const Text("PLAYLIST_FOOTER_WINLINUX_1").tr(),
+                    if(Platform.isWindows || Platform.isLinux) const Text("PLAYLIST_FOOTER_WINLINUX_2").tr()
+                  ],
+                ),
               ),
             );
           }

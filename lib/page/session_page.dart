@@ -1,8 +1,10 @@
+import 'package:eq_trainer/model/session/session_playlist.dart';
+import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/page/result_page.dart';
-import 'package:eq_trainer/player/isolated_music_player.dart';
+import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:eq_trainer/widget/device_dropdown.dart';
 import 'package:eq_trainer/widget/session/session_position_slider.dart';
 import 'package:eq_trainer/widget/session/session_selector_landscape.dart';
@@ -11,7 +13,10 @@ import 'package:eq_trainer/widget/session/session_picker_portrait.dart';
 import 'package:eq_trainer/widget/session/session_picker_landscape.dart';
 import 'package:eq_trainer/widget/session/session_control.dart';
 import 'package:eq_trainer/widget/session/session_selector_portrait.dart';
-import 'package:eq_trainer/model/session_data.dart';
+import 'package:eq_trainer/model/audio_state.dart';
+import 'package:eq_trainer/model/session/session_model.dart';
+import 'package:eq_trainer/model/session/session_parameter.dart';
+import 'package:eq_trainer/model/session/session_frequency.dart';
 
 class SessionPage extends StatefulWidget {
   const SessionPage({super.key});
@@ -21,133 +26,164 @@ class SessionPage extends StatefulWidget {
 }
 
 class _SessionPageState extends State<SessionPage> {
-
+  final player = SessionPlayer();
+  final sessionModel = SessionModel();
+  final sessionState = SessionStateData();
+  final sessionPlaylist = SessionPlaylist();
+  final sessionResult = SessionResultData();
+  final sessionFreqData = SessionFrequencyData();
 
   @override
   void initState() {
     super.initState();
-
     // Initializing Session
-    Future.delayed(Duration.zero, () async {
-      final player = Provider.of<IsolatedMusicPlayer>(context, listen: false);
-      final sessionStateData = Provider.of<SessionStateData>(context, listen: false);
-      final sessionAudioData = Provider.of<SessionAudioData>(context, listen: false);
-      final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
-      final sessionResultData = Provider.of<SessionResultData>(context, listen: false);
-      // Notify Session is Loading
-      sessionStateData.sessionState = SessionState.loading;
-      // Reset Session Result
-      sessionResultData.resetResult();
-      // Update Audio Clip Path list for Session
-      sessionAudioData.updateAudioClipPathList();
-      // Calculate Frequencies required for Session and Graph UI
-      await sessionFreqData.initSessionFreqData();
-      // Choose Random Index for Session
-      if(context.mounted) await sessionFreqData.initSession(context);
-      // If List of Audio clips for Session is Not Empty
-      if(sessionAudioData.audioClipPathList.isNotEmpty) {
-        // Open First AudioClip
-        player.open(sessionAudioData.audioClipPathList[0]);
-        // Notify the Session is Ready
-        sessionStateData.sessionState = SessionState.ready;
-      } else {
-        // ... else notify the playlist is empty.
-        sessionStateData.sessionState = SessionState.playlistEmpty;
-      }
-    });
+    _init();
+  }
+
+  Future<void> _init() async {
+    final audioState = Provider.of<AudioState>(context, listen: false);
+    final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
+    await sessionModel.launchSession(
+      player,
+      audioState: audioState,
+      sessionState: sessionState,
+      sessionPlaylist: sessionPlaylist,
+      sessionParameter: sessionParameter,
+      sessionResult: sessionResult,
+      sessionFreqData: sessionFreqData,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final sessionState = context.select<SessionStateData, SessionState>((s) => s.sessionState);
-    final sessionAnswerCorrect = context.select<SessionResultData, int>((d) => d.resultCorrect);
-    final sessionAnswerIncorrect = context.select<SessionResultData, int>((d) => d.resultIncorrect);
-
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) {
-        if(!didPop) _onPop();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            "SESSION_APPBAR_TITLE".tr()
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SessionPlayer>.value(value: player),
+        ChangeNotifierProvider<SessionStateData>.value(value: sessionState),
+        ChangeNotifierProvider<SessionFrequencyData>.value(value: sessionFreqData),
+        ChangeNotifierProvider<SessionResultData>.value(value: sessionResult),
+      ],
+      child: PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) {
+          if(!didPop) _onPop();
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(
+              "SESSION_APPBAR_TITLE".tr()
+            ),
+            actions: [
+              Consumer<SessionResultData>(
+                builder: (_, sessionResult, __) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check),
+                      Text(
+                        sessionResult.resultCorrect.toString(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(Icons.clear),
+                      Text(
+                        sessionResult.resultIncorrect.toString(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                  );
+                }
+              ),
+            ],
+            // ADD PLAYER STOP BUTTON
           ),
-          actions: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Icon(Icons.check),
-                Text(
-                  sessionAnswerCorrect.toString(),
-                  style: const TextStyle(
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Icon(Icons.clear),
-                Text(
-                  sessionAnswerIncorrect.toString(),
-                  style: const TextStyle(
-                    fontSize: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-              ],
-            ),
-          ],
-          // ADD PLAYER STOP BUTTON
+          body: Consumer<SessionStateData>(
+            builder: (_, sessionState, __) {
+              if (sessionState.sessionState == SessionState.playlistEmpty) {
+                return AlertDialog(
+                  title: Text("SESSION_ALERT_EMPTY_TITLE".tr()),
+                  content: Text("SESSION_ALERT_EMPTY_CONTENT".tr()),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text("SESSION_ALERT_EMPTY_BUTTON".tr()),
+                    )
+                  ],
+                );
+              } else if (sessionState.sessionState == SessionState.ready) {
+                return SafeArea(
+                  child: (MediaQuery.of(context).size.shortestSide > 550
+                      && MediaQuery.of(context).size.longestSide > 800
+                      && MediaQuery.of(context).orientation == Orientation.landscape)
+                  // 'Landscape View' if device has large display
+                      ? sessionViewLandscape()
+                  // ...else use 'Portrait View'
+                      : sessionViewPortrait(context),
+                );
+              } else if (sessionState.sessionState == SessionState.loading) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              } else {
+                return AlertDialog(
+                  title: Text("SESSION_ALERT_ERROR_TITLE".tr()),
+                  content: Text("SESSION_ALERT_ERROR_CONTENT".tr()),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Text("SESSION_ALERT_ERROR_BUTTON".tr()),
+                    )
+                  ],
+                );
+              }
+            }
+          )
         ),
-        body: (sessionState == SessionState.loading)
-            ? const Center(
-                child: CircularProgressIndicator(),
-              )
-            : (sessionState == SessionState.playlistEmpty)
-            ? AlertDialog(
-                title: Text("SESSION_ALERT_EMPTY_TITLE".tr()),
-                content: Text("SESSION_ALERT_EMPTY_CONTENT".tr()),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text("SESSION_ALERT_EMPTY_BUTTON".tr()),
-                  )
-                ],
-              )
-            : SafeArea(
-                child: (MediaQuery.of(context).size.shortestSide > 550 && MediaQuery.of(context).size.longestSide > 800
-                        && MediaQuery.of(context).orientation == Orientation.landscape)
-                // 'Landscape View' if device has large display
-                ? sessionViewLandscape()
-                // ...else use 'Portrait View'
-                : sessionViewPortrait(),
-            ),
       ),
     );
   }
 
   Widget sessionViewLandscape() {
-    return const Row(
+    final audioState = Provider.of<AudioState>(context, listen: false);
+    return Row(
       children: [
-        Flexible(child: SessionGraph()),
+        const Flexible(
+          child: SessionGraph()
+        ),
         Flexible(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              SessionPickerLandscape(),
+              const SessionPickerLandscape(),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      DeviceDropdown(),
-                      Spacer(),
-                      SessionPositionSlider(),
-                      SessionControl(),
-                      SizedBox(height: 32),
-                      SessionSelectorLandscape(),
+                      const DeviceDropdown(),
+                      const Spacer(),
+                      const SessionPositionSlider(),
+                      SessionControl(player: player, sessionPlaylist: sessionPlaylist),
+                      const SizedBox(height: 32),
+                      SessionSelectorLandscape(
+                        player: player,
+                        audioState: audioState,
+                        sessionModel: sessionModel,
+                        freqData: sessionFreqData,
+                        stateData: sessionState,
+                        resultData: sessionResult,
+                        sessionPlaylist: sessionPlaylist,
+                      ),
                     ],
                   ),
                 )
@@ -159,32 +195,42 @@ class _SessionPageState extends State<SessionPage> {
     );
   }
 
-  Widget sessionViewPortrait() {
-    return const Column(
+  Widget sessionViewPortrait(BuildContext context) {
+    final audioState = Provider.of<AudioState>(context, listen: false);
+    return Column(
       children: [
-        Expanded(child: SessionGraph()),
-        SessionPickerPortrait(),
-        SizedBox(height: 20),
-        Padding(
+        const Expanded(
+          child: SessionGraph()
+        ),
+        const SessionPickerPortrait(),
+        const SizedBox(height: 20),
+        const Padding(
           padding: EdgeInsets.fromLTRB(30, 10, 30, 0),
           child: SessionPositionSlider(),
         ),
-        SessionControl(),
-        SizedBox(height: 20),
+        SessionControl(player: player, sessionPlaylist: sessionPlaylist),
+        const SizedBox(height: 20),
         Padding(
-          padding: EdgeInsets.all(15),
-          child: SessionSelectorPortrait(),
+          padding: const EdgeInsets.all(15),
+          child: SessionSelectorPortrait(
+            player: player,
+            audioState: audioState,
+            sessionModel: sessionModel,
+            freqData: sessionFreqData,
+            stateData: sessionState,
+            resultData: sessionResult,
+            sessionPlaylist: sessionPlaylist,
+          ),
         ),
       ],
     );
   }
 
   void _onPop() {
-    final player = Provider.of<IsolatedMusicPlayer>(context, listen: false);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        title: Text("SESSION_ALERT_EXIT_TITLE".tr()),
         content: Text("SESSION_ALERT_EXIT_CONTENT".tr()),
         actions: [
           TextButton(
@@ -195,9 +241,9 @@ class _SessionPageState extends State<SessionPage> {
           ),
           TextButton(
             onPressed: () {
-              player.stop();
+              player.shutdown();
               Navigator.of(context).pop(true);
-              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ResultPage()));
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ResultPage(sessionResultData: sessionResult)));
             },
             child: Text("SESSION_ALERT_EXIT_BUTTON_YES".tr()),
           ),
@@ -208,3 +254,28 @@ class _SessionPageState extends State<SessionPage> {
     return;
   }
 }
+
+class SessionPlayer extends PlayerIsolate {
+  SessionPlayer();
+}
+
+// SessionStateData - Used for controlling content to show user
+class SessionStateData extends ChangeNotifier {
+  SessionState _sessionState = SessionState.loading;
+  int currentSessionPoint = 0;
+  int _selectedPickerNum = 1;
+
+  SessionState get sessionState => _sessionState;
+  set sessionState(SessionState sessionState) {
+    _sessionState = sessionState;
+    notifyListeners();
+  }
+
+  int get selectedPickerNum => _selectedPickerNum;
+  set selectedPickerNum(int value) {
+    _selectedPickerNum = value;
+    notifyListeners();
+  }
+}
+enum SessionState { loading, ready, playlistEmpty, error }
+enum FilterType { peak, dip, peakDip }

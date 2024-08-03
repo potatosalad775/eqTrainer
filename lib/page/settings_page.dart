@@ -1,10 +1,11 @@
-import 'dart:io';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:eq_trainer/widget/settings_card.dart';
-import 'package:eq_trainer/page/dev_settings_page.dart';
+import 'package:eq_trainer/page/settings/dev_settings_page.dart';
+import 'package:eq_trainer/page/settings/misc_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -20,11 +21,10 @@ class _SettingsPageState extends State<SettingsPage> {
     return ListView(
       padding: const EdgeInsets.all(5),
       children: [
-        //
         // Language Drop Down Menu
-        //
         SettingsCard(
-          cardInfo: SettingsCardType.language,
+          icon: Icons.language,
+          title: "SETTING_CARD_LANG_TITLE".tr(),
           trailing: DropdownButton(
             alignment: Alignment.centerRight,
             isDense: true,
@@ -45,11 +45,10 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
         ),
-        //
         // Dark Mode Button
-        //
         SettingsCard(
-            cardInfo: SettingsCardType.darkmode,
+            icon: Icons.dark_mode,
+            title: "SETTING_CARD_THEME_TITLE".tr(),
             trailing: IconButton(
               padding: EdgeInsets.zero,
               icon: Icon(
@@ -64,11 +63,40 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             )
         ),
-        //
+        const Divider(
+          indent: 8,
+          endIndent: 8,
+        ),
+        // Misc Settings
+        GestureDetector(
+          child: SettingsCard(
+            icon: Icons.app_settings_alt,
+            title: "SETTING_CARD_MISC_SETTING_TITLE".tr(),
+            trailing: const Icon(Icons.keyboard_arrow_right),
+          ),
+          onTap: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MiscSettingsPage()));
+          },
+        ),
+        // Developer Settings
+        GestureDetector(
+          child: SettingsCard(
+            icon: Icons.developer_mode,
+            title: "SETTING_CARD_DEV_SETTING_TITLE".tr(),
+            trailing: const Icon(Icons.keyboard_arrow_right),
+          ),
+          onTap: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevSettingsPage()));
+          },
+        ),
+        const Divider(
+          indent: 8,
+          endIndent: 8,
+        ),
         // Github Project Button
-        //
         SettingsCard(
-          cardInfo: SettingsCardType.github,
+          icon: FontAwesomeIcons.github,
+          title: "SETTING_CARD_GITHUB_TITLE".tr(),
           trailing: IconButton(
             icon: const Icon(Icons.launch),
             onPressed: () {
@@ -76,11 +104,10 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
         ),
-        //
         // Contact Dev
-        //
         SettingsCard(
-          cardInfo: SettingsCardType.contact,
+          icon: Icons.person,
+          title: "SETTING_CARD_CONTACT_TITLE".tr(),
           trailing: Wrap(
             children: [
               IconButton(
@@ -92,23 +119,10 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
         ),
-        //
-        // Developer Settings
-        //
-        if(Platform.isAndroid) SettingsCard(
-          cardInfo: SettingsCardType.devSetting,
-          trailing: IconButton(
-            icon: const Icon(Icons.keyboard_arrow_right),
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevSettingsPage()));
-            },
-          ),
-        ),
-        //
         // Open Source License Card
-        //
         SettingsCard(
-          cardInfo: SettingsCardType.license,
+          icon: Icons.code,
+          title: "SETTING_CARD_LICENSE_TITLE".tr(),
           trailing: IconButton(
             icon: const Icon(Icons.launch),
             onPressed: () {
@@ -116,9 +130,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
         ),
-        //
         // Version Info
-        //
         Padding(
           padding: const EdgeInsets.all(10),
           child: Column(
@@ -130,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 3,),
@@ -139,7 +151,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],

@@ -2,7 +2,8 @@ import 'package:eq_trainer/main.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/model/session_data.dart';
+import 'package:eq_trainer/page/session_page.dart';
+import 'package:eq_trainer/model/session/session_frequency.dart';
 
 class SessionPickerLandscape extends StatefulWidget {
   const SessionPickerLandscape({super.key});
@@ -15,10 +16,9 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
   @override
   Widget build(BuildContext context) {
     final freqData = context.read<SessionFrequencyData>();
-    final stateData = context.watch<SessionStateData>();
-
+    final sessionState = context.read<SessionStateData>();
     return Container(
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       width: (MediaQuery.of(context).size.width * reactiveElementData.sessionPickerLandscapeWidth).clamp(80, 120),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -26,8 +26,12 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
           // increase currentPickerValue, which represents index of selected graph
           ElevatedButton(
             onPressed: () {
-              freqData.currentPickerValue = (freqData.currentPickerValue - 1).clamp(1, freqData.graphBarDataList.length);
-              stateData.selectedGraphValue = freqData.currentPickerValue;
+              if(sessionState.selectedPickerNum > 1) {
+                setState(() {
+                  sessionState.selectedPickerNum -= 1;
+                  freqData.updatePickerValue(sessionState.selectedPickerNum);
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(50, 50),
@@ -40,7 +44,7 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
           ),
           // horizontal scrollable number picker for currentPickerValue
           NumberPicker(
-            value: freqData.currentPickerValue,
+            value: sessionState.selectedPickerNum,
             minValue: 1,
             maxValue: freqData.graphBarDataList.length,
             step: 1,
@@ -52,21 +56,25 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
               fontSize: 40,
             ),
             textStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onBackground,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 20,
             ),
             onChanged: (value) {
-              freqData.currentPickerValue = value;
-              freqData.swapGraphColor(freqData.previousPickerValue - 1, freqData.currentPickerValue - 1);
-              freqData.previousPickerValue = value;
-              stateData.selectedGraphValue = freqData.currentPickerValue;
+              setState(() {
+                sessionState.selectedPickerNum = value;
+                freqData.updatePickerValue(value);
+              });
             },
           ),
           // decrease currentPickerValue, which represents index of selected graph
           ElevatedButton(
             onPressed: () {
-              freqData.currentPickerValue = (freqData.currentPickerValue + 1).clamp(1, freqData.graphBarDataList.length);
-              stateData.selectedGraphValue = freqData.currentPickerValue;
+              if(sessionState.selectedPickerNum < freqData.graphBarDataList.length) {
+                setState(() {
+                  sessionState.selectedPickerNum += 1;
+                  freqData.updatePickerValue(sessionState.selectedPickerNum);
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(50, 50),

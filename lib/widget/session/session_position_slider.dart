@@ -1,7 +1,7 @@
+import 'package:eq_trainer/page/session_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
+import 'package:coast_audio/coast_audio.dart';
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/player/isolated_music_player.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 
 class SessionPositionSlider extends StatelessWidget {
@@ -9,19 +9,18 @@ class SessionPositionSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final player = context.read<IsolatedMusicPlayer>();
-    final position = context.select<IsolatedMusicPlayer, AudioTime>((p) => p.position);
-    final duration = context.select<IsolatedMusicPlayer, AudioTime?>((p) => p.duration) ?? position;
+    final player = context.read<SessionPlayer>();
+    final playerPosition = context.select<SessionPlayer, AudioTime>((p) => p.fetchPosition);
+    final playerDuration = context.select<SessionPlayer, AudioTime>((p) => p.fetchDuration);
 
     return ProgressBar(
       barHeight: 12,
       timeLabelPadding: 8,
-      progress: Duration(microseconds: (position.seconds * 1000 * 1000).toInt()),
-      total: Duration(microseconds: (duration.seconds * 1000 * 1000).toInt()),
-      onSeek: (player.state != MabAudioPlayerState.stopped)
-          ? (position) {
-        player.position = AudioTime(position.inMicroseconds / (1000 * 1000));
-      } : null,
+      progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
+      total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
+      onSeek: (position) {
+        player.seek(AudioTime(position.inMicroseconds / (1000 * 1000)));
+      },
     );
   }
 }

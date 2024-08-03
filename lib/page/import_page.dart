@@ -7,10 +7,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_audio/return_code.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter_coast_audio_miniaudio/flutter_coast_audio_miniaudio.dart';
 import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/widget/editor_control_view.dart';
-import 'package:eq_trainer/player/isolated_music_player.dart';
+import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:media_kit/media_kit.dart' as m_k;
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -22,13 +23,17 @@ class ImportPage extends StatefulWidget {
 class _ImportPageState extends State<ImportPage> {
   final importPageState = ValueNotifier<ImportPageState>(ImportPageState.loading);
   final clipDivProvider = ImportAudioData();
-  final importPlayer = ImportPlayer(format: mainFormat);
+  final importPlayer = ImportPlayer();
 
   @override
   void initState() {
-    // Open File Picker and Let user pick file
-    importFile();
     super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    // Open File Picker and Let user pick file
+    await importFile();
   }
 
   @override
@@ -51,7 +56,6 @@ class _ImportPageState extends State<ImportPage> {
             child: ValueListenableBuilder<ImportPageState>(
               valueListenable: importPageState,
               builder: (context, value, _) {
-                final playerDuration = context.select<ImportPlayer, AudioTime?>((p) => p.duration) ?? AudioTime.zero;
                 if (value == ImportPageState.error || value == ImportPageState.timeout) {
                   return AlertDialog(
                     title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
@@ -92,14 +96,13 @@ class _ImportPageState extends State<ImportPage> {
                     ),
                   );
                 }
-                else if(value == ImportPageState.loading || playerDuration == AudioTime.zero) {
+                else if(value == ImportPageState.loading) {
                   return const Center(
                     child: CircularProgressIndicator(),
                   );
                 }
                 else {
-                  // Update imported audio file's duration info to ControlView
-                  clipDivProvider.initEndTime(playerDuration);
+                  clipDivProvider.clipEndTime = importPlayer.fetchDuration;
                   return const Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -123,19 +126,18 @@ class _ImportPageState extends State<ImportPage> {
   // if selected audio has unsupported format, this function will attempt
   // ...to convert it into flac format.
   Future<void> importFile() async {
+    final audioState = Provider.of<AudioState>(context, listen: false);
+
+    late final List<String> allowedExtensions;
+    if(Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+      allowedExtensions = ['wav', 'aiff', 'alac', 'flac', 'mp3', 'aac', 'wma', 'ogg', 'm4a'];
+    } else {
+      allowedExtensions = ['wav', 'mp3', 'flac'];
+    }
+
     FilePickerResult? importResult = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: [
-        'wav',
-        'aiff',
-        'alac',
-        'flac',
-        'mp3',
-        'aac',
-        'wma',
-        'ogg',
-        'm4a'
-      ]
+      allowedExtensions: allowedExtensions,
     );
 
     // if file selection was aborted
@@ -152,56 +154,101 @@ class _ImportPageState extends State<ImportPage> {
     String filePath = importResult.files.single.path!;
     final fileExtension = importResult.files.single.extension;
 
-    // if audio clip is supported format
-    if(fileExtension == "mp3" || fileExtension == "wav" || fileExtension == "flac") {
-      // Open Audio Clip with Import Player
-      importPlayer.open(filePath).then((_) {
-        // Notify File Import is done
-        importPageState.value = ImportPageState.ready;
-      });
-      return;
-    }
-
-    // if audio clip is unsupported format - convert into flac
-    // miniaudio backend only support 3 formats below
-    importPageState.value = ImportPageState.converting;
-    Directory appTempDir = await getTemporaryDirectory();
-    Directory tempClipDir = await Directory("${appTempDir.path}/temp").create(recursive: true);
-    // -y : force overwrite temp files
-    // -vn : Remove Video
-    // -c:a flac : convert unsupported audio clip into flac
-    String newFilePath = "${tempClipDir.path}/$fileName.flac";
-    List<String> ffmpegArg = ["-y", "-i", filePath, newFilePath];
-    // Convert Audio Clip with FFMPEG
-    FFmpegKit.executeWithArgumentsAsync(ffmpegArg, (session) async {
-      final returnCode = await session.getReturnCode();
-      final failStackTrace = await session.getFailStackTrace();
-      final failLog = await session.getLogsAsString();
-
-      // if clip conversion was successful
-      if(ReturnCode.isSuccess(returnCode)) {
+    if(Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+      // if audio clip is supported format
+      if(fileExtension == "mp3" || fileExtension == "wav" || fileExtension == "flac") {
         // Open Audio Clip with Import Player
-        importPlayer.open(newFilePath).then((_) {
+        importPlayer.launch(
+          backend: audioState.backend,
+          outputDeviceId: audioState.outputDevice?.id,
+          path: filePath,
+        ).then((_) {
+          importPlayer.filePath = filePath;
           // Notify File Import is done
           importPageState.value = ImportPageState.ready;
         });
         return;
       }
-      // if conversion was cancelled or error occurred
-      else {
-        // Notify error occurred
-        importPageState.value = ImportPageState.error;
-        // Print failStackTrace and Record Fail Log
-        debugPrint(failStackTrace);
-        final File file = await File("${appSupportDir.path}/log/recentLog.txt").create(recursive: true);
-        file.writeAsString(failLog);
+
+      // if audio clip is unsupported format - convert into flac
+      // miniaudio backend only support 3 formats below
+      importPageState.value = ImportPageState.converting;
+      Directory appTempDir = await getTemporaryDirectory();
+      late Directory tempClipDir;
+      late String newFilePath;
+      if (Platform.isWindows) {
+        tempClipDir = await Directory("${appTempDir.path}\\temp").create(recursive: true);
+        newFilePath = "${tempClipDir.path}\\$fileName.flac";
+      } else {
+        tempClipDir = await Directory("${appTempDir.path}/temp").create(recursive: true);
+        newFilePath = "${tempClipDir.path}/$fileName.flac";
       }
-      // If nothing happens even after 10 seconds
-      Timer(const Duration(seconds: 10), () async {
-        // Notify error occurred
-        importPageState.value = ImportPageState.timeout;
+      // -y : force overwrite temp files
+      // -vn : Remove Video
+      // -c:a flac : convert unsupported audio clip into flac
+      List<String> ffmpegArg = ["-y", "-i", filePath, newFilePath];
+      // Convert Audio Clip with FFMPEG
+      try {
+        FFmpegKit.executeWithArgumentsAsync(ffmpegArg, (session) async {
+          final returnCode = await session.getReturnCode();
+          final failStackTrace = await session.getFailStackTrace();
+          final failLog = await session.getLogsAsString();
+
+          // if clip conversion was successful
+          if(ReturnCode.isSuccess(returnCode)) {
+            // Open Audio Clip with Import Player
+            importPlayer.launch(
+              backend: audioState.backend,
+              outputDeviceId: audioState.outputDevice?.id,
+              path: newFilePath,
+            ).then((_) {
+              importPlayer.filePath = newFilePath;
+              // Notify File Import is done
+              importPageState.value = ImportPageState.ready;
+            });
+            return;
+          }
+          // if conversion was cancelled or error occurred
+          else {
+            // Notify error occurred
+            importPageState.value = ImportPageState.error;
+            // Print failStackTrace and Record Fail Log
+            debugPrint(failStackTrace);
+            late File file;
+            if (Platform.isWindows) {
+              file = await File("${appSupportDir.path}\\log\\recentLog.txt").create(recursive: true);
+            } else {
+              file = await File("${appSupportDir.path}/log/recentLog.txt").create(recursive: true);
+            }
+            file.writeAsString(failLog);
+          }
+          // If nothing happens even after 10 seconds
+          Timer(const Duration(seconds: 10), () async {
+            // Notify error occurred
+            importPageState.value = ImportPageState.timeout;
+          });
+        });
+      } catch (e) {
+        throw Exception(e.toString());
+      }
+    } else {
+      final player = m_k.Player();
+      player.setVolume(0);
+      player.open(m_k.Media(filePath), play: false).then((_) {
+        player.stream.duration.listen((duration) {
+          if(duration != Duration.zero) {
+            player.pause();
+            makeAudioClip(filePath, 0, duration.inSeconds.toDouble(), false).then((_) {
+              Navigator.of(context).pop();
+            });
+          } else {
+            importPageState.value = ImportPageState.aborted;
+            return;
+          }
+          player.dispose();
+        });
       });
-    });
+    }
   }
 
   void _onPop() {
@@ -219,8 +266,9 @@ class _ImportPageState extends State<ImportPage> {
           ),
           TextButton(
             onPressed: () {
-              importPlayer.stop();
+              importPlayer.shutdown();
               Navigator.of(context).pop(true);
+              Navigator.of(context).pop();
             },
             child: Text("IMPORT_ALERT_EXIT_YES".tr()),
           ),
@@ -231,8 +279,15 @@ class _ImportPageState extends State<ImportPage> {
   }
 }
 
-enum ImportPageState { ready, loading, converting, error, timeout, aborted }
+enum ImportPageState { ready, loading, converting, error, timeout, aborted, noedit }
 
-class ImportPlayer extends IsolatedMusicPlayer {
-  ImportPlayer({required super.format});
+class ImportPlayer extends PlayerIsolate {
+  String _filePath = "";
+
+  set filePath(value) {
+    _filePath = value;
+  }
+  String get filePath => _filePath;
+
+  ImportPlayer();
 }

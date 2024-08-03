@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:eq_trainer/model/session_data.dart';
+import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ResultPage extends StatelessWidget {
-  const ResultPage({super.key});
+  const ResultPage({
+    super.key,
+    required this.sessionResultData,
+  });
+  final SessionResultData sessionResultData;
 
   @override
   Widget build(BuildContext context) {
-    final sessionResultData = context.read<SessionResultData>();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("RESULT_APPBAR_TITLE").tr(),
@@ -24,7 +25,7 @@ class ResultPage extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                   child: Card(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     child: ListTile(
                       contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                       horizontalTitleGap: 0,
@@ -45,8 +46,14 @@ class ResultPage extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text("${sessionResultData.correctAnswerPerFreq[index].toString()} / ${sessionResultData.elapsedSessionPerFreq[index].toString()}"),
-                          Text(sessionResultData.getResultPercentagePerFreq(index)),
+                          Text(
+                            "${sessionResultData.correctAnswerPerFreq[index].toString()} / ${sessionResultData.elapsedSessionPerFreq[index].toString()}",
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            sessionResultData.getResultPercentagePerFreq(index),
+                            style: const TextStyle(fontSize: 14),
+                          ),
                         ],
                       ),
                     ),
