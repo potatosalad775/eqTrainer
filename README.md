@@ -43,9 +43,9 @@ Thanks to **Multilingual Support**, anyone can train their auditory skills. The 
 
 <div align="left">
 
-## Supported Platform & Download
+## Supported Platforms
 
-### Android (≥ 7.0)
+### Android (7.0+)
 
 <a href='https://play.google.com/store/apps/details?id=kr.potatosalad775.eq_trainer&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'>
   <img alt='Get it on Google Play' 
@@ -54,29 +54,39 @@ Thanks to **Multilingual Support**, anyone can train their auditory skills. The 
   />
 </a>
 
-You can also directly download APK file from [Release Section][RELEASE] as well.
+You can also download apk file below.
 
-### iOS (≥ 12.1)
+### iOS (12.1+)
 
-eqTrainer for iOS and iPadOS is available on [Release Section][RELEASE] as an iPA file.
+eqTrainer for iOS and iPadOS is available as an iPA file.
 
 You have to sign it with your own Apple ID to install it. Not sure how? try [Sideloadly](https://sideloadly.io/) or [AltStore](https://altstore.io/).
 
-### macOS (≥ 10.15)
+### macOS (11.0+)
 
-eqTrainer for macOS (Experimental) is available on [Release Section][RELEASE] as an zip file.
+Both Intel Macs (x86_64) and Apple Silicon Macs (arm64) are supported.
 
 You can extract the .app file from the .zip file.
 
-Both Intel Macs (x86_64) and Apple Silicon Macs (arm64) should be supported.
+### Linux (ALSA, Jack, PulseAudio)
 
-### Linux
+eqTrainer now supports Linux!
 
-Currently looking for a way to add Linux Support. Stay tuned!
+Due to a limitation of Flutter framework, the Audio Editor and Auto-Conversion feature is not available for now.
 
-### Windows
+You must use audio tracks in mp3 / flac / wav extensions.
 
-Since Original 'How to Listen' from Harman International is working fine on Windows, adding Windows support to eqTrainer is low on priorty as for now.
+### Windows (WASAPI, Vista+)
+
+eqTrainer now supports Windows Vista+!
+
+Due to a limitation of Flutter framework, the Audio Editor and Auto-Conversion feature is not available for now.
+
+You must use audio tracks in mp3 / flac / wav extensions.
+
+## Download
+
+Please refer to [Release Section][RELEASE].
 
 ## Localization
 
@@ -96,9 +106,8 @@ If you like this project, please consider donating!
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B1N764X)
 
-[PayPal(Global)][PAYPAL] / [Toss(Korean)][TOSS]
+[PayPal][PAYPAL]
 
 [H2LLink]: http://harmanhowtolisten.blogspot.com/ "How to Listen"
 [RELEASE]: https://github.com/potatosalad775/eqTrainer/releases/latest
 [PAYPAL]: https://paypal.me/potatosalad775
-[TOSS]: https://toss.me/감자샐러드

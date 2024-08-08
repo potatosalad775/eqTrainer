@@ -1,0 +1,17 @@
+output: dist/
+
+releases:
+  - name: release
+    jobs:
+      - name: release-linux-deb
+        package:
+          platform: linux
+          target: deb
+      - name: release-linux-rpm
+        package:
+          platform: linux
+          target: rpm
+
+# Run
+# flutter_distributor release --name=release --jobs=release-linux-deb
+# flutter_distributor release --name=release --jobs=release-linux-rpm

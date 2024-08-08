@@ -307,3 +307,4 @@ app.*.map.json
 /ios/Podfile.lock
 /macos/Podfile.lock
 /devtools_options.yaml
+/dist/
