@@ -189,8 +189,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: win32
-      resolved-ref: "3c1d10f2a2f69683fc05f659b696db444ac65569"
+      ref: main
+      resolved-ref: f717f52e8e4b6595a713171af02cc01b6ed837e8
       url: "https://github.com/potatosalad775/coast_audio.git"
     source: git
     version: "1.0.0"
