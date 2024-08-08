@@ -280,7 +280,7 @@ class AudioPlayer {
     this.bufferDuration = const AudioTime(1.0),
     AudioDeviceId? initialDeviceId,
   }) : _decoderNode = DecoderNode(decoder: decoder),
-        _volumeNode = VolumeNode(volume: -8),
+        _volumeNode = VolumeNode(volume: 0.9),
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
             filter: PeakingEQFilter(
