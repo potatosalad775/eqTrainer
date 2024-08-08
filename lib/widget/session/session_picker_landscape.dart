@@ -17,6 +17,7 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
   Widget build(BuildContext context) {
     final freqData = context.read<SessionFrequencyData>();
     final sessionState = context.read<SessionStateData>();
+    final selectedPickerValue = context.select<SessionStateData, int>((s) => s.selectedPickerNum);
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       width: (MediaQuery.of(context).size.width * reactiveElementData.sessionPickerLandscapeWidth).clamp(80, 120),
@@ -26,10 +27,10 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
           // increase currentPickerValue, which represents index of selected graph
           ElevatedButton(
             onPressed: () {
-              if(sessionState.selectedPickerNum > 1) {
+              if(selectedPickerValue > 1) {
                 setState(() {
                   sessionState.selectedPickerNum -= 1;
-                  freqData.updatePickerValue(sessionState.selectedPickerNum);
+                  freqData.updatePickerValue(selectedPickerValue);
                 });
               }
             },
@@ -44,7 +45,7 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
           ),
           // horizontal scrollable number picker for currentPickerValue
           NumberPicker(
-            value: sessionState.selectedPickerNum,
+            value: selectedPickerValue,
             minValue: 1,
             maxValue: freqData.graphBarDataList.length,
             step: 1,
@@ -69,10 +70,10 @@ class _SessionPickerLandscapeState extends State<SessionPickerLandscape> {
           // decrease currentPickerValue, which represents index of selected graph
           ElevatedButton(
             onPressed: () {
-              if(sessionState.selectedPickerNum < freqData.graphBarDataList.length) {
+              if(selectedPickerValue < freqData.graphBarDataList.length) {
                 setState(() {
                   sessionState.selectedPickerNum += 1;
-                  freqData.updatePickerValue(sessionState.selectedPickerNum);
+                  freqData.updatePickerValue(selectedPickerValue);
                 });
               }
             },
