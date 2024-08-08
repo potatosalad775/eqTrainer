@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:coast_audio/experimental.dart';
 import 'package:eq_trainer/player/peaking_eq_filter.dart';
@@ -229,16 +230,12 @@ class PlayerIsolate extends ChangeNotifier {
 
     // Initialize the audio player with the specified file or buffer
     final AudioInputDataSource dataSource;
-    if (message.path != null) {
-      dataSource = AudioFileDataSource(file: File(message.path!), mode: FileMode.read);
-    } else {
-      dataSource = AudioMemoryDataSource(buffer: message.content!);
-    }
+    dataSource = AudioFileDataSource(file: File(message.path!), mode: FileMode.read);
 
-    final player = AudioPlayer(
-      context: AudioDeviceContext(backends: [message.backend]),
-      decoder: MaAudioDecoder(dataSource: dataSource),
-      initialDeviceId: message.outputDeviceId,
+    final player = AudioPlayer.findDecoder(
+      backend: message.backend,
+      dataSource: dataSource,
+      deviceId: message.outputDeviceId,
     );
 
     messenger.listenRequest<PlayerHostRequest>(
@@ -282,7 +279,8 @@ class AudioPlayer {
     required AudioDecoder decoder,
     this.bufferDuration = const AudioTime(1.0),
     AudioDeviceId? initialDeviceId,
-  })  : _decoderNode = DecoderNode(decoder: decoder),
+  }) : _decoderNode = DecoderNode(decoder: decoder),
+        _volumeNode = VolumeNode(volume: -8),
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
             filter: PeakingEQFilter(
@@ -299,12 +297,37 @@ class AudioPlayer {
             deviceId: initialDeviceId,
           ),
         ) {
-    _decoderNode.outputBus.connect(_peakingEQNode.inputBus);
+    _decoderNode.outputBus.connect(_volumeNode.inputBus);
+    _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
     _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
     _peakingEQNode.bypass = true;
     _playbackNode.device.notification.listen((notification) {
       //print('[AudioPlayer#${_playbackNode.device.resourceId}] Notification(type: ${notification.type.name}, state: ${notification.state.name})');
     });
+  }
+
+  factory AudioPlayer.findDecoder({
+    required AudioDeviceBackend backend,
+    required AudioInputDataSource dataSource,
+    AudioDeviceId? deviceId,
+  }) {
+    // Find the decoder by trying to decode the audio data with different decoders
+    AudioDecoder decoder;
+    try {
+      decoder = WavAudioDecoder(dataSource: dataSource);
+    } on Exception catch (_) {
+      try {
+        decoder = MaAudioDecoder(dataSource: dataSource, expectedSampleFormat: SampleFormat.int32);
+      } on Exception catch (e) {
+        throw Exception('Could not find the decoder.\nInner exception: $e');
+      }
+    }
+
+    return AudioPlayer(
+      context: AudioDeviceContext(backends: [backend]),
+      decoder: decoder,
+      initialDeviceId: deviceId,
+    );
   }
 
   // The AudioDeviceContext is used to create the playback device on the specified backend(platform)
@@ -313,6 +336,8 @@ class AudioPlayer {
   final AudioTime bufferDuration;
 
   final DecoderNode _decoderNode;
+
+  final VolumeNode _volumeNode;
 
   final PeakingEQNode _peakingEQNode;
 
@@ -403,6 +428,11 @@ class AudioPlayer {
   }
 
   void setEQGain(double value) {
+    if(value < 0) {
+      _volumeNode.volume = pow(10, (value + 2) / 20.0).toDouble();
+    } else {
+      _volumeNode.volume = pow(10, (0 - value - 2) / 20.0).toDouble();
+    }
     _peakingEQNode.filter.update(gainDb: value);
   }
 
