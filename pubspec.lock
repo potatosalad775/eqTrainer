@@ -795,7 +795,7 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: f070aefc698952c73a8c671e6577891c97619b25
+      resolved-ref: "4c74b765dcb05a8a6be279157d293f407eff60f4"
       url: "https://github.com/potatosalad775/NumberPicker_Flutter.git"
     source: git
     version: "2.1.2"
