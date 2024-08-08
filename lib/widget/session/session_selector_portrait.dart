@@ -112,14 +112,16 @@ class SessionSelectorPortrait extends StatelessWidget {
             // Increase or Decrease the number of 'bands'
             // ... if 'sessionPoint' hits the threshold
             // ... when the num of band is changed, recalculate the graph frequency data.
-            if (stateData.currentSessionPoint == sessionParameter.threshold) {
+            if (stateData.currentSessionPoint == sessionParameter.threshold && sessionParameter.startingBand < 25) {
               stateData.currentSessionPoint = 0;
+              stateData.selectedPickerNum = 1;
               sessionParameter.startingBand++;
               await freqData.initSessionFreqData(sessionParameter: sessionParameter);
             }
-            else if (stateData.currentSessionPoint == (0 - sessionParameter.threshold)) {
+            else if (stateData.currentSessionPoint == (0 - sessionParameter.threshold) && sessionParameter.startingBand > 2) {
               stateData.currentSessionPoint = 0;
-              if(sessionParameter.startingBand > 2) sessionParameter.startingBand--;
+              stateData.selectedPickerNum = 1;
+              sessionParameter.startingBand--;
               await freqData.initSessionFreqData(sessionParameter: sessionParameter);
             }
             // Initialize Session by selecting random index and more.
