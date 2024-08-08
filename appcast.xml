@@ -2,6 +2,15 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
     <channel>
         <title>eqTrainer - Appcast</title>
+
+        <item>
+            <title>v2.2.1</title>
+            <link>https://github.com/potatosalad775/eqTrainer</link>
+            <description>Bug Fixes and Improvements.</description>
+            <pubDate>Fri, 08 Aug 2024 18:35:33 +0800</pubDate>
+            <enclosure url="https://github.com/potatosalad775/eqTrainer/releases/tag/v2.2.1" sparkle:version="2.2.1" />
+        </item>
+
         <item>
             <title>v2.2.0</title>
             <link>https://github.com/potatosalad775/eqTrainer</link>
