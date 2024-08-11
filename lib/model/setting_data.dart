@@ -1,4 +1,3 @@
-import 'package:coast_audio/coast_audio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 part 'setting_data.g.dart';
@@ -6,7 +5,7 @@ part 'setting_data.g.dart';
 @HiveType(typeId: 1)
 class BackendData {
   @HiveField(0, defaultValue: [])
-  List<AudioDeviceBackend> backendList;
+  List<String> backendList;
 
   BackendData(
     this.backendList,

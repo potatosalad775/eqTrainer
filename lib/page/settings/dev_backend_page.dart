@@ -16,12 +16,19 @@ class DevBackendPage extends StatefulWidget {
 
 class _DevBackendPageState extends State<DevBackendPage> {
   final backends = <AudioDeviceBackend, bool>{};
+  List<AudioDeviceBackend> supportedBackends = [];
 
   @override
   void initState() {
     super.initState();
+    if(Platform.isMacOS || Platform.isIOS) supportedBackends += [AudioDeviceBackend.coreAudio];
+    if(Platform.isAndroid) supportedBackends += [AudioDeviceBackend.aaudio, AudioDeviceBackend.openSLES];
+    if(Platform.isWindows) supportedBackends += [AudioDeviceBackend.wasapi];
+    if(Platform.isLinux) supportedBackends += [AudioDeviceBackend.alsa, AudioDeviceBackend.pulseAudio, AudioDeviceBackend.jack];
+    supportedBackends += [AudioDeviceBackend.dummy];
+
     if(backendList.isEmpty) {
-      for (final backend in AudioDeviceBackend.values) {
+      for (final backend in supportedBackends) {
         backends[backend] = switch (backend) {
           AudioDeviceBackend.coreAudio => Platform.isMacOS || Platform.isIOS,
           AudioDeviceBackend.aaudio => Platform.isAndroid,
@@ -34,15 +41,15 @@ class _DevBackendPageState extends State<DevBackendPage> {
         };
       }
     } else {
-      for (final backend in AudioDeviceBackend.values) {
+      for (final backend in supportedBackends) {
         backends[backend] = switch (backend) {
-          AudioDeviceBackend.coreAudio => backendList.contains(AudioDeviceBackend.coreAudio),
-          AudioDeviceBackend.aaudio => backendList.contains(AudioDeviceBackend.aaudio),
-          AudioDeviceBackend.openSLES => backendList.contains(AudioDeviceBackend.openSLES),
-          AudioDeviceBackend.wasapi => backendList.contains(AudioDeviceBackend.wasapi),
-          AudioDeviceBackend.alsa => backendList.contains(AudioDeviceBackend.alsa),
-          AudioDeviceBackend.pulseAudio => backendList.contains(AudioDeviceBackend.pulseAudio),
-          AudioDeviceBackend.jack => backendList.contains(AudioDeviceBackend.jack),
+          AudioDeviceBackend.coreAudio => backendList.contains("coreAudio"),
+          AudioDeviceBackend.aaudio => backendList.contains("aaudio"),
+          AudioDeviceBackend.openSLES => backendList.contains("openSLES"),
+          AudioDeviceBackend.wasapi => backendList.contains("wasapi"),
+          AudioDeviceBackend.alsa => backendList.contains("alsa"),
+          AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
+          AudioDeviceBackend.jack => backendList.contains("jack"),
           AudioDeviceBackend.dummy => true,
         };
       }
@@ -57,10 +64,10 @@ class _DevBackendPageState extends State<DevBackendPage> {
       ),
       body: ListView.builder(
         shrinkWrap: true,
-        itemCount: AudioDeviceBackend.values.length + 1,
+        itemCount: supportedBackends.length + 1,
         itemBuilder: (context, index) {
-          if(index != AudioDeviceBackend.values.length) {
-            final backend = AudioDeviceBackend.values[index];
+          if(index != supportedBackends.length) {
+            final backend = supportedBackends[index];
             return CheckboxListTile.adaptive(
               value: backends[backend],
               title: Text(
@@ -121,9 +128,20 @@ class _DevBackendPageState extends State<DevBackendPage> {
               return;
             }
             // Save Backend List
-            backendList = backends.entries.where((e) => e.value).map((e) => e.key).toList();
+            final selectedBackendList = backends.entries.where((e) => e.value).map((e) =>
+              switch(e.key) {
+                AudioDeviceBackend.coreAudio => 'coreAudio',
+                AudioDeviceBackend.aaudio => 'aaudio',
+                AudioDeviceBackend.openSLES => 'openSLES',
+                AudioDeviceBackend.wasapi => 'wasapi',
+                AudioDeviceBackend.alsa => 'alsa',
+                AudioDeviceBackend.pulseAudio => 'pulseAudio',
+                AudioDeviceBackend.jack => 'jack',
+                AudioDeviceBackend.dummy => 'dummy',
+              }
+            ).toList();
             Hive.openBox<BackendData>(backendBoxName).then((backendBox) => {
-              backendBox.put(backendKey, BackendData(backendList))
+              backendBox.put(backendKey, BackendData(selectedBackendList))
             });
             // Notify
             ScaffoldMessenger.of(context).showSnackBar(

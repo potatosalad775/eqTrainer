@@ -17,7 +17,7 @@ class BackendDataAdapter extends TypeAdapter<BackendData> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return BackendData(
-      fields[0] == null ? [] : (fields[0] as List).cast<AudioDeviceBackend>(),
+      fields[0] == null ? [] : (fields[0] as List).cast<String>(),
     );
   }
 

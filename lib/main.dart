@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:coast_audio/coast_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -185,7 +184,7 @@ late Directory appSupportDir;
 late Directory audioClipDir;
 
 //AndroidAudioBackend? androidAudioBackend;
-late final List<AudioDeviceBackend> backendList;
+late List<String> backendList;
 late final MiscSettings savedMiscSettingsValue;
 Source? installationSource;
 

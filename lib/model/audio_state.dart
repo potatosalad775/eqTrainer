@@ -21,20 +21,25 @@ final class AudioState extends ChangeNotifier {
     );
   }
 
-  factory AudioState.initialize({ required List<AudioDeviceBackend> backendList }) {
+  factory AudioState.initialize({ required List<String> backendList }) {
     final AudioDeviceContext deviceContext;
+    final backends = <AudioDeviceBackend, bool>{};
 
     if(backendList.isNotEmpty) {
-      try {
-        deviceContext = AudioDeviceContext(
-          backends: backendList,
-        );
-      } on MaException catch (e) {
-        throw Exception([e.toString()]);
+      for (final backend in AudioDeviceBackend.values) {
+        backends[backend] = switch (backend) {
+          AudioDeviceBackend.coreAudio => backendList.contains("coreAudio"),
+          AudioDeviceBackend.aaudio => backendList.contains("aaudio"),
+          AudioDeviceBackend.openSLES => backendList.contains("openSLES"),
+          AudioDeviceBackend.wasapi => backendList.contains("wasapi"),
+          AudioDeviceBackend.alsa => backendList.contains("alsa"),
+          AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
+          AudioDeviceBackend.jack => backendList.contains("jack"),
+          AudioDeviceBackend.dummy => true,
+        };
       }
     } else {
       // Initialize Default Backend
-      final backends = <AudioDeviceBackend, bool>{};
       for (final backend in AudioDeviceBackend.values) {
         backends[backend] = switch (backend) {
           AudioDeviceBackend.coreAudio => Platform.isIOS || Platform.isMacOS,
@@ -47,14 +52,14 @@ final class AudioState extends ChangeNotifier {
           AudioDeviceBackend.dummy => true,
         };
       }
+    }
 
-      try {
-        deviceContext = AudioDeviceContext(
+    try {
+      deviceContext = AudioDeviceContext(
           backends: backends.entries.where((e) => e.value).map((e) => e.key).toList()
-        );
-      } on MaException catch (e) {
-        throw Exception([e.toString()]);
-      }
+      );
+    } on MaException catch (e) {
+      throw Exception([e.toString()]);
     }
 
     return AudioState(

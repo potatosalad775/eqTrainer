@@ -21,10 +21,7 @@ class DevSettingsPage extends StatelessWidget {
                 child: SettingsCard(
                   icon: Icons.build,
                   title: "DEV_SETTING_CARD_BACKEND_TITLE".tr(),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.keyboard_arrow_right),
-                    onPressed: () {},
-                  ),
+                  trailing: const Icon(Icons.keyboard_arrow_right),
                 ),
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevBackendPage()));
