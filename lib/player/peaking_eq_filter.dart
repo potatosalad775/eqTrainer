@@ -14,8 +14,22 @@ class PeakingEQFilter {
        _q = q,
        _frequency = frequency
   {
-    final config = _interop.bindings.ma_peak2_config_init(format.sampleFormat.maFormat, format.channels, format.sampleRate, _gainDb, _q, _frequency);
+    final config = _interop.bindings.ma_peak2_config_init(
+        format.sampleFormat.maFormat,
+        format.channels,
+        format.sampleRate,
+        _gainDb.toDouble(),  // Ensure we're passing a 64-bit double
+        _q.toDouble(),
+        _frequency.toDouble(),
+    );
     _pConfig.ref = config;
+
+    print('Format: ${format.sampleFormat.maFormat}');
+    print('Channels: ${format.channels}');
+    print('Sample Rate: ${format.sampleRate}');
+    print('Gain dB: $_gainDb');
+    print('Q: $_q');
+    print('Frequency: $_frequency');
 
     _interop.bindings.ma_peak2_init(_pConfig, nullptr, _pFilter).throwMaResultIfNeeded();
 

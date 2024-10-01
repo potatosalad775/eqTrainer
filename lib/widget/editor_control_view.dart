@@ -234,9 +234,8 @@ class _EditorControlViewState extends State<EditorControlView> {
 Future<void> makeAudioClip(String targetFilePath, double clipStartSec, double clipEndSec, bool edit) async {
   DateTime dt = DateTime.now();
   String audioClipFileName = "${dt.year}${dt.month}${dt.day}${dt.hour}${dt.minute}${dt.second}";
-  String audioClipExtension = p.extension(targetFilePath);
-  String audioClipDirString = "${audioClipDir.path}/$audioClipFileName$audioClipExtension";
-  if (Platform.isWindows) audioClipDirString = audioClipDirString.replaceAll('/', '\\');
+  String audioClipExtension = p.extension(targetFilePath).toLowerCase();
+  String audioClipDirString = "${audioClipDir.path}${Platform.pathSeparator}$audioClipFileName$audioClipExtension";
 
   if (audioClipExtension != ".wav" && audioClipExtension != ".mp3" && audioClipExtension != ".flac") {
     audioClipExtension = ".flac";

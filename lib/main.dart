@@ -8,7 +8,6 @@ import 'package:upgrader/upgrader.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:store_checker/store_checker.dart';
 import 'package:window_size/window_size.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
@@ -22,7 +21,6 @@ Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  MediaKit.ensureInitialized();
   if (Platform.isAndroid) installationSource = await StoreChecker.getSource;
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     setWindowTitle('eqTrainer');
