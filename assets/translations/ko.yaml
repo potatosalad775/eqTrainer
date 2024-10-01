@@ -74,8 +74,10 @@
   "PLAYLIST_AUDIO_ALERT_TITLE": "오디오 클립 관리",
   "PLAYLIST_AUDIO_ALERT_ACTION_DELETE": "삭제",
   "PLAYLIST_FOOTER": "원형 체크박스를 드래그하여 순서를 바꿀 수 있습니다.",
-  "PLAYLIST_FOOTER_WINLINUX_1": "mp3 / wav / flac 오디오 파일만 사용할 수 있습니다.",
-  "PLAYLIST_FOOTER_WINLINUX_2": "사용 중인 플랫폼에서는 현재 오디오 편집 기능이 제공되지 않습니다.",
+  "PLAYLIST_FOOTER_WIN_1": "wav 오디오 파일만 사용할 수 있습니다.",
+  "PLAYLIST_FOOTER_WIN_2": "사용 중인 플랫폼에서는 현재 오디오 편집 기능이 제공되지 않습니다.",
+  "PLAYLIST_FOOTER_LINUX_1": "mp3 / wav / flac 오디오 파일만 사용할 수 있습니다.",
+  "PLAYLIST_FOOTER_LINUX_2": "사용 중인 플랫폼에서는 현재 오디오 편집 기능이 제공되지 않습니다.",
 
   # Import Audio Page
   "IMPORT_APPBAR_TITLE": "오디오 불러오기",

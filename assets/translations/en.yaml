@@ -74,8 +74,10 @@
   "PLAYLIST_AUDIO_ALERT_TITLE": "Manage Audio Clip",
   "PLAYLIST_AUDIO_ALERT_ACTION_DELETE": "Delete",
   "PLAYLIST_FOOTER": "You can re-order playlist by dragging circular checkbox.",
-  "PLAYLIST_FOOTER_WINLINUX_1": "Only mp3 / wav / flac files are allowed.",
-  "PLAYLIST_FOOTER_WINLINUX_2": "Audio Clip editor is not available in this platform at the moment.",
+  "PLAYLIST_FOOTER_WIN_1": "Only wav files are allowed.",
+  "PLAYLIST_FOOTER_WIN_2": "Audio Clip editor is not available in this platform at the moment.",
+  "PLAYLIST_FOOTER_LINUX_1": "Only mp3 / wav / flac files are allowed.",
+  "PLAYLIST_FOOTER_LINUX_2": "Audio Clip editor is not available in this platform at the moment.",
 
   # Import Audio Page
   "IMPORT_APPBAR_TITLE": "Audio Import",
