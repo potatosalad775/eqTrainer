@@ -24,13 +24,6 @@ class PeakingEQFilter {
     );
     _pConfig.ref = config;
 
-    print('Format: ${format.sampleFormat.maFormat}');
-    print('Channels: ${format.channels}');
-    print('Sample Rate: ${format.sampleRate}');
-    print('Gain dB: $_gainDb');
-    print('Q: $_q');
-    print('Frequency: $_frequency');
-
     _interop.bindings.ma_peak2_init(_pConfig, nullptr, _pFilter).throwMaResultIfNeeded();
 
     _interop.onInitialized();
