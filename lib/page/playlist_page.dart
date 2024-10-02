@@ -140,14 +140,10 @@ class _PlaylistPageState extends State<PlaylistPage> {
                       const Text("PLAYLIST_FOOTER").tr(),
                       if (Platform.isWindows || Platform.isLinux)
                         const SizedBox(height: 12),
-                      if (Platform.isWindows)
-                        const Text("PLAYLIST_FOOTER_WIN_1").tr(),
-                      if (Platform.isWindows)
-                        const Text("PLAYLIST_FOOTER_WIN_2").tr(),
-                      if (Platform.isLinux)
-                        const Text("PLAYLIST_FOOTER_LINUX_1").tr(),
-                      if (Platform.isLinux)
-                        const Text("PLAYLIST_FOOTER_LINUX_2").tr(),
+                      if (Platform.isWindows || Platform.isLinux)
+                        const Text("PLAYLIST_FOOTER_WINLINUX_1").tr(),
+                      if (Platform.isWindows || Platform.isLinux)
+                        const Text("PLAYLIST_FOOTER_WINLINUX_2").tr(),
                     ],
                   ),
                 ),

@@ -140,12 +140,7 @@ class _ImportPageState extends State<ImportPage> {
         'm4a'
       ];
     } else {
-      // TODO: Windows only supports wav format for now - should be fixed later
-      if (Platform.isWindows) {
-        allowedExtensions = ['wav'];
-      } else {
-        allowedExtensions = ['wav', 'mp3', 'flac'];
-      }
+      allowedExtensions = ['wav', 'mp3', 'flac'];
     }
 
     FilePickerResult? importResult = await FilePicker.platform.pickFiles(
