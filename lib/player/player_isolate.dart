@@ -114,6 +114,7 @@ class PlayerIsolate extends ChangeNotifier {
   final _isolate = AudioIsolate<_PlayerMessage>(_worker);
 
   bool get isLaunched => _isolate.isLaunched;
+  Timer? _playerStateUpdateTimer;
 
   Future<void> launch({
     required AudioDeviceBackend backend,
@@ -128,7 +129,7 @@ class PlayerIsolate extends ChangeNotifier {
         content: null,
       ),
     );
-    _startPlayerStateUpdateTimer(milliseconds: 200);
+    _startPlayerStateUpdateTimer(milliseconds: 500);
   }
 
   Future<void> attach() {
@@ -184,9 +185,8 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.request(const PlayerHostRequestGetEqState());
   }
 
-  Timer? _playerStateUpdateTimer;
-
   void _startPlayerStateUpdateTimer({required int milliseconds}) {
+    _playerStateUpdateTimer?.cancel();
     _playerStateUpdateTimer = Timer.periodic(Duration(milliseconds: milliseconds), (_) {
       _playerStateUpdate();
     });
@@ -206,12 +206,22 @@ class PlayerIsolate extends ChangeNotifier {
       getEqState(),
     ]);
 
-    if(results[0] != null && results[0] != _lastState) _lastState = results[0] as PlayerStateResponse?;
-    if(results[1] != null && results[1] != _lastPosition) _lastPosition = results[1] as AudioTime?;
-    if(results[2] != null && results[2] != _lastDuration) _lastDuration = results[2] as AudioTime?;
-    if(results[3] != null && results[3] != _lastEQState) _lastEQState = results[3] as bool?;
-
-    notifyListeners();
+    if(results[0] != null && results[0] != _lastState) {
+      _lastState = results[0] as PlayerStateResponse?;
+      notifyListeners();
+    }
+    if(results[1] != null && results[1] != _lastPosition) {
+      _lastPosition = results[1] as AudioTime?;
+      notifyListeners();
+    }
+    if(results[2] != null && results[2] != _lastDuration) {
+      _lastDuration = results[2] as AudioTime?;
+      notifyListeners();
+    }
+    if(results[3] != null && results[3] != _lastEQState) {
+      _lastEQState = results[3] as bool?;
+      notifyListeners();
+    }
   }
 
   PlayerStateResponse get fetchPlayerState => _lastState ?? const PlayerStateResponse(
@@ -301,9 +311,11 @@ class AudioPlayer {
     _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
     _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
     _peakingEQNode.bypass = true;
+    /*
     _playbackNode.device.notification.listen((notification) {
-      //print('[AudioPlayer#${_playbackNode.device.resourceId}] Notification(type: ${notification.type.name}, state: ${notification.state.name})');
+      print('[AudioPlayer#${_playbackNode.device.resourceId}] Notification(type: ${notification.type.name}, state: ${notification.state.name})');
     });
+    */
   }
 
   factory AudioPlayer.findDecoder({
@@ -396,25 +408,24 @@ class AudioPlayer {
     }
 
     _playbackNode.device.start();
+    
+    final bufferFrames = bufferDuration.computeFrames(_decoderNode.decoder.outputFormat);
+    final buffer = AllocatedAudioFrames(
+      length: bufferFrames,
+      format: _decoderNode.decoder.outputFormat,
+    );
 
     // runWithBuffer is a helper method that runs the specified callback with the audio buffer
     // This code will run the callback every 0.9 seconds and read the audio data from the decoder
     AudioIntervalClock(AudioTime(bufferDuration.seconds * 0.9)).runWithBuffer(
-      frames: AllocatedAudioFrames(
-        length: bufferDuration.computeFrames(_decoderNode.decoder.outputFormat),
-        format: _decoderNode.decoder.outputFormat,
-      ),
+      frames: buffer,
       onTick: (_, buffer) {
-        final result = _playbackNode.outputBus.read(buffer);
-        if (result.isEnd) {
-          return false;
-        }
-
         if (!_playbackNode.device.isStarted) {
           return false;
         }
 
-        return true;
+        final result = _playbackNode.outputBus.read(buffer);
+        return !result.isEnd;
       },
     );
   }
