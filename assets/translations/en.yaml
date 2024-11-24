@@ -148,4 +148,8 @@
   "UPDATE_ALERT_MESSAGE_PROMPT": "Do you want to install the updated app?",
   "UPDATE_ALERT_RELEASE_NOTE": "Release Note",
   "UPDATE_ALERT_MESSAGE_TITLE": "Update Available",
+
+  # Player Error Alert
+  "ERROR_PLAYER_ALERT_CONTENT": "Error occurred while playing audio",
+  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "Okay",
 }

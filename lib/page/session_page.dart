@@ -65,7 +65,7 @@ class _SessionPageState extends State<SessionPage> {
       ],
       child: PopScope(
         canPop: false,
-        onPopInvoked: (didPop) {
+        onPopInvokedWithResult: (didPop, _) {
           if(!didPop) _onPop();
         },
         child: Scaffold(

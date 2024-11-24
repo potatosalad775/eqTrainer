@@ -5,6 +5,7 @@ import 'package:coast_audio/coast_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_state.dart';
+import 'package:eq_trainer/model/error.dart';
 
 class PlaylistControlView extends StatelessWidget {
   const PlaylistControlView({super.key, required this.filePath});
@@ -26,21 +27,17 @@ class PlaylistControlView extends StatelessWidget {
         final playerDuration = context.select<PlaylistPlayer, AudioTime>((p) => p.fetchDuration);
         final playerState = context.select<PlaylistPlayer, PlayerStateResponse>((p) => p.fetchPlayerState);
 
-        // if player already have file opened
-        if(!playlistPlayer.isFileOpened) {
-          // Open Selected Clip
+        if(!playlistPlayer.isLaunched) {
           playlistPlayer.launch(
             backend: audioState.backend,
             outputDeviceId: audioState.outputDevice?.id,
             path: filePath,
           );
-          // Mark Flag
-          playlistPlayer.isFileOpened = true;
         }
 
         return PopScope(
           canPop: true,
-          onPopInvoked: (_) {
+          onPopInvokedWithResult: (_, __) {
             playlistPlayer.pause();
           },
           child: Card(
@@ -81,7 +78,18 @@ class PlaylistControlView extends StatelessWidget {
                         if (playerState.isPlaying) {
                           player.pause();
                         } else {
-                          player.play();
+                          player.play().onError((e, _) {
+                            if(context.mounted) {
+                              showPlayerErrorDialog(context,
+                                action: () {
+                                  player.shutdown();
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).pop();
+                                },
+                                error: e
+                              );
+                            }
+                          });
                         }
                       },
                       iconSize: 64,
@@ -111,8 +119,5 @@ class PlaylistControlView extends StatelessWidget {
 }
 
 class PlaylistPlayer extends PlayerIsolate {
-  // State containing whether file is open or not
-  bool isFileOpened = false;
-
   PlaylistPlayer();
 }

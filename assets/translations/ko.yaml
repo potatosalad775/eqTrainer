@@ -148,4 +148,8 @@
   "UPDATE_ALERT_MESSAGE_PROMPT": "업데이트된 앱을 설치하시겠습니까?",
   "UPDATE_ALERT_RELEASE_NOTE": "변경사항",
   "UPDATE_ALERT_MESSAGE_TITLE": "업데이트 가능",
+
+  # Player Error Alert
+  "ERROR_PLAYER_ALERT_CONTENT": "오디오 재생 중 오류가 발생했습니다",
+  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "확인",
 }

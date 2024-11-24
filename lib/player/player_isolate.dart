@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
+import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:coast_audio/experimental.dart';
 import 'package:eq_trainer/player/peaking_eq_filter.dart';
 import 'package:eq_trainer/player/peaking_eq_node.dart';
-import 'package:equatable/equatable.dart';
-import 'package:flutter/foundation.dart';
 
 sealed class PlayerHostRequest {
   const PlayerHostRequest();
@@ -407,7 +407,12 @@ class AudioPlayer {
       return;
     }
 
-    _playbackNode.device.start();
+    try {
+      _playbackNode.device.start();
+    } catch (e) {
+      debugPrint("Error while starting device : $e");
+      throw Exception('DeviceInitException : $e');
+    }
     
     final bufferFrames = bufferDuration.computeFrames(_decoderNode.decoder.outputFormat);
     final buffer = AllocatedAudioFrames(

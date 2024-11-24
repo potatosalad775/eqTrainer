@@ -9,6 +9,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_clip.dart';
+import 'package:eq_trainer/model/error.dart';
 import 'package:eq_trainer/page/import_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
 
@@ -20,7 +21,6 @@ class EditorControlView extends StatefulWidget {
 }
 
 class _EditorControlViewState extends State<EditorControlView> {
-
   @override
   Widget build(BuildContext context) {
     // Providers
@@ -104,7 +104,18 @@ class _EditorControlViewState extends State<EditorControlView> {
                 if (playerState.isPlaying) {
                   player.pause();
                 } else {
-                  player.play();
+                  player.play().onError((e, _) {
+                    if(context.mounted) {
+                      showPlayerErrorDialog(context,
+                        action: () {
+                          player.shutdown();
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pop();
+                        },
+                        error: e
+                      );
+                    }
+                  });
                 }
               },
               iconSize: 64,

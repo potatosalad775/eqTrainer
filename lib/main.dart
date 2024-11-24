@@ -90,6 +90,12 @@ class AppState extends State<App> {
   }
 
   @override
+  void dispose() {
+    _audioState.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Detect Device Screen Info
     final deviceScreenData = MediaQueryData.fromView(View.of(context));

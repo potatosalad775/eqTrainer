@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
+import 'package:eq_trainer/model/error.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/page/session_page.dart';
@@ -85,7 +86,18 @@ class SessionControl extends StatelessWidget {
                 if (playerState.isPlaying) {
                   player.pause();
                 } else {
-                  player.play();
+                  player.play().onError((e, _) {
+                    if(context.mounted) {
+                      showPlayerErrorDialog(context,
+                        action: () {
+                          player.shutdown();
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pop();
+                        },
+                        error: e
+                      );
+                    }
+                  });
                 }
               },
               iconSize: 64,

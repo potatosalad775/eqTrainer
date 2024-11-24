@@ -11,7 +11,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/widget/editor_control_view.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
-//import 'package:eq_trainer/model/log_error.dart';
+//import 'package:eq_trainer/model/error.dart';
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -46,7 +46,7 @@ class _ImportPageState extends State<ImportPage> {
       ],
       child: PopScope(
         canPop: false,
-        onPopInvoked: (didPop) {
+        onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _onPop();
         },
         child: Scaffold(
@@ -101,13 +101,13 @@ class _ImportPageState extends State<ImportPage> {
                   );
                 } else {
                   clipDivProvider.clipEndTime = importPlayer.fetchDuration;
-                  return const Column(
+                  return Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       EditorControlView(),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                     ],
                   );
                 }
@@ -171,10 +171,10 @@ class _ImportPageState extends State<ImportPage> {
       }
     } else {
       _loadAudioFile(audioState, filePath).then((duration) => {
-            makeAudioClip(filePath, 0, duration.seconds, false).then((_) {
-              Navigator.of(context).pop();
-            })
-          });
+        makeAudioClip(filePath, 0, duration.seconds, false).then((_) {
+          Navigator.of(context).pop();
+        })
+      });
     }
   }
 
