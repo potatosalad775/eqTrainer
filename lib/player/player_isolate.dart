@@ -287,7 +287,7 @@ class AudioPlayer {
   AudioPlayer({
     required this.context,
     required AudioDecoder decoder,
-    this.bufferDuration = const AudioTime(1.0),
+    this.bufferDuration = const AudioTime(1.7),
     AudioDeviceId? initialDeviceId,
   }) : _decoderNode = DecoderNode(decoder: decoder),
         _volumeNode = VolumeNode(volume: 0.9),
@@ -422,7 +422,7 @@ class AudioPlayer {
 
     // runWithBuffer is a helper method that runs the specified callback with the audio buffer
     // This code will run the callback every 0.9 seconds and read the audio data from the decoder
-    AudioIntervalClock(AudioTime(bufferDuration.seconds * 0.9)).runWithBuffer(
+    AudioIntervalClock(AudioTime(bufferDuration.seconds * 0.8)).runWithBuffer(
       frames: buffer,
       onTick: (_, buffer) {
         if (!_playbackNode.device.isStarted) {
