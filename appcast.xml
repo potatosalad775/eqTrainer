@@ -4,6 +4,14 @@
         <title>eqTrainer - Appcast</title>
 
         <item>
+            <title>v2.2.4</title>
+            <link>https://github.com/potatosalad775/eqTrainer</link>
+            <description>Performance and Feature Improvements.</description>
+            <pubDate>Wed, 27 Nov 2024 18:49:33 +0800</pubDate>
+            <enclosure url="https://github.com/potatosalad775/eqTrainer/releases/tag/v2.2.4" sparkle:version="2.2.4" />
+        </item>
+
+        <item>
             <title>v2.2.3</title>
             <link>https://github.com/potatosalad775/eqTrainer</link>
             <description>Bug Fixes and Improvements.</description>
