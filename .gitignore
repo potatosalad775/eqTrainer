@@ -276,9 +276,11 @@ fabric.properties
 *.pyc
 .DS_Store
 .atom/
+.build/
 .buildlog/
 .history
 .svn/
+.swiftpm/
 migrate_working_dir/
 
 # The .vscode folder contains launch configuration and tasks you configure in

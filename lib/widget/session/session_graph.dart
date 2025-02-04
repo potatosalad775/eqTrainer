@@ -203,7 +203,7 @@ class SessionGraph extends StatelessWidget {
             if(render) {
               return SideTitleWidget(
                 space: 1,
-                axisSide: meta.axisSide,
+                meta: meta,
                 child: Text(
                   text,
                   style: TextStyle(

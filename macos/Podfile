@@ -30,7 +30,7 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  pod 'CoastAudio', :git => 'https://github.com/potatosalad775/coast_audio.git', :branch => '240803'
+  pod 'CoastAudio', :git => 'https://github.com/potatosalad775/coast_audio.git', :branch => 'mac_and_win'
 
   flutter_install_all_macos_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do

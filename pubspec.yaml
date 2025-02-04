@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.2.4+241124
+version: 2.2.5+250204
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -43,7 +43,7 @@ dependencies:
   ffmpeg_kit_flutter_audio: ^6.0.3
   path: any
   easy_dynamic_theme: ^2.3.1
-  fl_chart: ^0.69.2
+  fl_chart: ^0.70.2
   easy_localization: ^3.0.2
   easy_localization_loader: ^2.0.1
   another_flushbar: ^1.12.30
@@ -66,7 +66,7 @@ dependencies:
   coast_audio:
     git:
       url: https://github.com/potatosalad775/coast_audio.git
-      ref: main
+      ref: mac_and_win
 
 dev_dependencies:
   flutter_test:
