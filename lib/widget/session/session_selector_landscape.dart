@@ -148,7 +148,10 @@ class SessionSelectorLandscape extends StatelessWidget {
             foregroundColor: Theme.of(context).colorScheme.onTertiary,
             minimumSize: const Size.fromHeight(60),
           ),
-          icon: const Icon(Icons.next_plan_outlined),
+          icon: Icon(
+            Icons.next_plan_outlined,
+            color: Theme.of(context).colorScheme.onTertiary,
+          ),
           label: Text(
             "SESSION_BUTTON_SUBMIT".tr(),
             style: filterButtonStyle,

@@ -143,7 +143,10 @@ class SessionSelectorPortrait extends StatelessWidget {
             minimumSize: const Size(50, 50),
             shape: const CircleBorder(),
           ),
-          child: const Icon(Icons.next_plan_outlined),
+          child: Icon(
+            Icons.next_plan_outlined,
+            color: Theme.of(context).colorScheme.onTertiary,
+          ),
         ),
       ],
     );

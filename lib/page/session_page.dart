@@ -3,6 +3,7 @@ import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/page/result_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:eq_trainer/widget/device_dropdown.dart';
@@ -119,13 +120,12 @@ class _SessionPageState extends State<SessionPage> {
                 );
               } else if (sessionState.sessionState == SessionState.ready) {
                 return SafeArea(
-                  child: (MediaQuery.of(context).size.shortestSide > 550
-                      && MediaQuery.of(context).size.longestSide > 800
-                      && MediaQuery.of(context).orientation == Orientation.landscape)
-                  // 'Landscape View' if device has large display
-                      ? sessionViewLandscape()
-                  // ...else use 'Portrait View'
-                      : sessionViewPortrait(context),
+                  child: (MediaQuery.of(context).size.width < MediaQuery.of(context).size.height
+                      && MediaQuery.of(context).orientation == Orientation.portrait)
+                  // 'Portrait View'
+                      ? sessionViewPortrait()
+                  // 'Landscape View'
+                      : sessionViewLandscape(),
                 );
               } else if (sessionState.sessionState == SessionState.loading) {
                 return const Center(
@@ -154,48 +154,55 @@ class _SessionPageState extends State<SessionPage> {
 
   Widget sessionViewLandscape() {
     final audioState = Provider.of<AudioState>(context, listen: false);
-    return Row(
-      children: [
-        const Flexible(
-          child: SessionGraph()
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: reactiveElementData.maximumWidgetWidth * 3,
         ),
-        Flexible(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              const SessionPickerLandscape(),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      const DeviceDropdown(),
-                      const Spacer(),
-                      const SessionPositionSlider(),
-                      SessionControl(player: player, sessionPlaylist: sessionPlaylist),
-                      const SizedBox(height: 32),
-                      SessionSelectorLandscape(
-                        player: player,
-                        audioState: audioState,
-                        sessionModel: sessionModel,
-                        freqData: sessionFreqData,
-                        stateData: sessionState,
-                        resultData: sessionResult,
-                        sessionPlaylist: sessionPlaylist,
+        child: Row(
+          children: [
+            const Flexible(
+              child: SessionGraph()
+            ),
+            Flexible(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const SessionPickerLandscape(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          const DeviceDropdown(),
+                          const Spacer(),
+                          const SessionPositionSlider(),
+                          SessionControl(player: player, sessionPlaylist: sessionPlaylist),
+                          const SizedBox(height: 32),
+                          SessionSelectorLandscape(
+                            player: player,
+                            audioState: audioState,
+                            sessionModel: sessionModel,
+                            freqData: sessionFreqData,
+                            stateData: sessionState,
+                            resultData: sessionResult,
+                            sessionPlaylist: sessionPlaylist,
+                          ),
+                        ],
                       ),
-                    ],
+                    )
                   ),
-                )
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget sessionViewPortrait(BuildContext context) {
+  Widget sessionViewPortrait() {
     final audioState = Provider.of<AudioState>(context, listen: false);
     return Column(
       children: [

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_audio/return_code.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/widget/editor_control_view.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
@@ -54,64 +55,72 @@ class _ImportPageState extends State<ImportPage> {
             title: Text("IMPORT_APPBAR_TITLE".tr()),
           ),
           body: SafeArea(
-            child: ValueListenableBuilder<ImportPageState>(
-              valueListenable: importPageState,
-              builder: (context, value, _) {
-                if (value == ImportPageState.error ||
-                    value == ImportPageState.timeout) {
-                  return AlertDialog(
-                    title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                    content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
-                      )
-                    ],
-                  );
-                } else if (value == ImportPageState.aborted) {
-                  return AlertDialog(
-                    content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
-                      )
-                    ],
-                  );
-                } else if (value == ImportPageState.converting) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 20),
-                        const Text("IMPORT_CONVERTING_1").tr(),
-                        const Text("IMPORT_CONVERTING_2").tr(),
-                      ],
-                    ),
-                  );
-                } else if (value == ImportPageState.loading) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                } else {
-                  clipDivProvider.clipEndTime = importPlayer.fetchDuration;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const SizedBox(height: 8),
-                      EditorControlView(),
-                      const SizedBox(height: 16),
-                    ],
-                  );
-                }
-              },
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: reactiveElementData.maximumWidgetWidth,
+                ),
+                child: ValueListenableBuilder<ImportPageState>(
+                  valueListenable: importPageState,
+                  builder: (context, value, _) {
+                    if (value == ImportPageState.error ||
+                        value == ImportPageState.timeout) {
+                      return AlertDialog(
+                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                        content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
+                          )
+                        ],
+                      );
+                    } else if (value == ImportPageState.aborted) {
+                      return AlertDialog(
+                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                        content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
+                          )
+                        ],
+                      );
+                    } else if (value == ImportPageState.converting) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 20),
+                            const Text("IMPORT_CONVERTING_1").tr(),
+                            const Text("IMPORT_CONVERTING_2").tr(),
+                          ],
+                        ),
+                      );
+                    } else if (value == ImportPageState.loading) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    } else {
+                      clipDivProvider.clipEndTime = importPlayer.fetchDuration;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const SizedBox(height: 8),
+                          EditorControlView(),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ),
             ),
           ),
         ),
@@ -147,6 +156,8 @@ class _ImportPageState extends State<ImportPage> {
       type: FileType.custom,
       allowedExtensions: allowedExtensions,
     );
+
+    debugPrint(importResult.toString());
 
     // if file selection was aborted
     if (importResult == null) {
@@ -273,6 +284,7 @@ class _ImportPageState extends State<ImportPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
+        title: Text("IMPORT_ALERT_EXIT_TITLE".tr()),
         content: Text("IMPORT_ALERT_EXIT_CONTENT".tr()),
         actions: [
           TextButton(

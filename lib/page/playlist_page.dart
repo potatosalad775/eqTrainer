@@ -91,27 +91,25 @@ class _PlaylistPageState extends State<PlaylistPage> {
                               icon: const Icon(Icons.play_arrow),
                             ),
                             // More Menu Button
-                            IconButton(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => SimpleDialog(
-                                    title:
-                                        Text("PLAYLIST_AUDIO_ALERT_TITLE".tr()),
-                                    children: [
-                                      TextButton(
-                                        onPressed: () {
-                                          box.deleteAt(index);
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: Text(
-                                            "PLAYLIST_AUDIO_ALERT_ACTION_DELETE"
-                                                .tr()),
-                                      ),
-                                    ],
-                                  ),
-                                );
+                            PopupMenuButton<int>(
+                              onSelected: (value) async {
+                                if (value == 1) {
+                                  bool? confirmDelete = await showDialog<bool>(
+                                    context: context,
+                                    builder: (context) => _deleteAlertDialog(),
+                                  );
+                                  if (confirmDelete == true) {
+                                    box.deleteAt(index);
+                                  }
+                                }
                               },
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: 1,
+                                  child: Text(
+                                    "PLAYLIST_AUDIO_ACTION_DELETE".tr()),
+                                ),
+                              ],
                               icon: const Icon(Icons.more_vert),
                             ),
                           ],
@@ -157,6 +155,27 @@ class _PlaylistPageState extends State<PlaylistPage> {
               MaterialPageRoute(builder: (context) => const ImportPage()));
         },
       ),
+    );
+  }
+
+  Widget _deleteAlertDialog() {
+    return AlertDialog(
+      title: Text("PLAYLIST_AUDIO_ALERT_DELETE_TITLE".tr()),
+      content: Text("PLAYLIST_AUDIO_ALERT_DELETE_CONTENT".tr()),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(false);
+          },
+          child: Text("PLAYLIST_AUDIO_ALERT_DELETE_NO".tr()),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(true);
+          },
+          child: Text("PLAYLIST_AUDIO_ALERT_DELETE_YES".tr()),
+        ),
+      ],
     );
   }
 }

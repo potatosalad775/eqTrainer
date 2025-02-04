@@ -40,77 +40,75 @@ class PlaylistControlView extends StatelessWidget {
           onPopInvokedWithResult: (_, __) {
             playlistPlayer.pause();
           },
-          child: Card(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(0, 16, 0, 32),
-              children: [
-                // Slider
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(30, 10, 30, 10),
-                  child: ProgressBar(
-                    barHeight: 12,
-                    timeLabelPadding: 8,
-                    progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
-                    total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
-                    onSeek: (position) async {
-                      player.seek(AudioTime.fromDuration(position));
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(0, 16, 0, 32),
+            children: [
+              // Slider
+              Padding(
+                padding: const EdgeInsets.fromLTRB(30, 30, 30, 10),
+                child: ProgressBar(
+                  barHeight: 12,
+                  timeLabelPadding: 8,
+                  progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
+                  total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
+                  onSeek: (position) async {
+                    player.seek(AudioTime.fromDuration(position));
+                  },
+                ),
+              ),
+              // Audio Control Button Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Skip Previous
+                  IconButton(
+                    onPressed: () {
+                      player.seek(AudioTime.zero);
                     },
+                    iconSize: 56,
+                    icon: const Icon(Icons.skip_previous),
+                    enableFeedback: false,
                   ),
-                ),
-                // Audio Control Button Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Skip Previous
-                    IconButton(
-                      onPressed: () {
-                        player.seek(AudioTime.zero);
-                      },
-                      iconSize: 56,
-                      icon: const Icon(Icons.skip_previous),
-                      enableFeedback: false,
-                    ),
-                    SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
-                    // Play Pause
-                    IconButton(
-                      onPressed: () {
-                        if (playerState.isPlaying) {
-                          player.pause();
-                        } else {
-                          player.play().onError((e, _) {
-                            if(context.mounted) {
-                              showPlayerErrorDialog(context,
-                                action: () {
-                                  player.shutdown();
-                                  Navigator.of(context).pop();
-                                  Navigator.of(context).pop();
-                                },
-                                error: e
-                              );
-                            }
-                          });
-                        }
-                      },
-                      iconSize: 64,
-                      icon: Icon(playerState.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
-                      enableFeedback: false,
-                    ),
-                    SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
-                    // Close
-                    IconButton(
-                      onPressed: () {
+                  SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
+                  // Play Pause
+                  IconButton(
+                    onPressed: () {
+                      if (playerState.isPlaying) {
                         player.pause();
-                        Navigator.of(context).pop();
-                      },
-                      iconSize: 56,
-                      icon: const Icon(Icons.close),
-                      enableFeedback: false,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                      } else {
+                        player.play().onError((e, _) {
+                          if(context.mounted) {
+                            showPlayerErrorDialog(context,
+                              action: () {
+                                player.shutdown();
+                                Navigator.of(context).pop();
+                                Navigator.of(context).pop();
+                              },
+                              error: e
+                            );
+                          }
+                        });
+                      }
+                    },
+                    iconSize: 64,
+                    icon: Icon(playerState.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
+                    enableFeedback: false,
+                  ),
+                  SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
+                  // Close
+                  IconButton(
+                    onPressed: () {
+                      player.pause();
+                      Navigator.of(context).pop();
+                    },
+                    iconSize: 56,
+                    icon: const Icon(Icons.close),
+                    enableFeedback: false,
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },

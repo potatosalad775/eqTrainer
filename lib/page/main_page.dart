@@ -14,7 +14,6 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-
   List<List<String>> pageTitle = [
     ["MAIN_APPBAR_TITLE_CONFIG_1", "MAIN_APPBAR_TITLE_CONFIG_2"],
     ["MAIN_APPBAR_TITLE_PLAYLIST_1", "MAIN_APPBAR_TITLE_PLAYLIST_2"],
@@ -30,47 +29,90 @@ class _MainPageState extends State<MainPage> {
         centerTitle: false,
         scrolledUnderElevation: 4,
         shadowColor: Theme.of(context).colorScheme.shadow,
-        toolbarHeight: (MediaQuery.of(context).size.height * reactiveElementData.appbarHeight).clamp(56, 150),
+        toolbarHeight: (MediaQuery.of(context).size.height *
+                reactiveElementData.appbarHeight)
+            .clamp(56, 150),
+        titleSpacing: 13 +
+            (MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
+            ? 0
+            : (MediaQuery.of(context).size.width -
+                reactiveElementData.maximumWidgetWidth) / 2
+            ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               tr(pageTitle[navBarProvider.currentIndex][0], context: context),
               style: TextStyle(
-                fontSize: (MediaQuery.of(context).size.height * reactiveElementData.appbarFontSize).clamp(14, 48),
+                fontSize: (MediaQuery.of(context).size.height *
+                        reactiveElementData.appbarFontSize)
+                    .clamp(14, 48),
               ),
             ),
             Text(
               tr(pageTitle[navBarProvider.currentIndex][1], context: context),
               style: TextStyle(
-                fontSize: (MediaQuery.of(context).size.height * reactiveElementData.appbarFontSize).clamp(14, 48),
+                fontSize: (MediaQuery.of(context).size.height *
+                        reactiveElementData.appbarFontSize)
+                    .clamp(14, 48),
                 fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
       ),
-      body: IndexedStack(
-        index: navBarProvider.currentIndex,
-        children: const [
-          ConfigPage(),
-          PlaylistPage(),
-          SettingsPage(),
-        ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: reactiveElementData.maximumWidgetWidth,
+          ),
+          child: IndexedStack(
+            index: navBarProvider.currentIndex,
+            children: const [
+              ConfigPage(),
+              PlaylistPage(),
+              SettingsPage(),
+            ],
+          ),
+        ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navBarProvider.currentIndex,
-        onDestinationSelected: (index) {
-          navBarProvider.currentIndex = index;
-        },
-        height: (MediaQuery.of(context).size.height * reactiveElementData.navbarHeight).clamp(56, 80),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.home), label: "MAIN_NAVBAR_MAIN".tr()),
-          NavigationDestination(icon: const Icon(Icons.music_note), label: "MAIN_NAVBAR_PLAYLIST".tr()),
-          NavigationDestination(icon: const Icon(Icons.settings), label: "MAIN_NAVBAR_SETTINGS".tr()),
-        ],
-        //backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
-        //selectedItemColor: Theme.of(context).colorScheme.surfaceTint,
+      bottomNavigationBar: Padding(
+        padding: MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
+            ? const EdgeInsets.all(0)
+            : EdgeInsets.only(
+                left: (MediaQuery.of(context).size.width - reactiveElementData.maximumWidgetWidth) / 2,
+                right: (MediaQuery.of(context).size.width - reactiveElementData.maximumWidgetWidth) / 2,
+              ),
+        child: Material(
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: navBarProvider.currentIndex,
+            onDestinationSelected: (index) {
+              navBarProvider.currentIndex = index;
+            },
+            height: (MediaQuery.of(context).size.height *
+                    reactiveElementData.navbarHeight)
+                .clamp(56, 80),
+            destinations: [
+              NavigationDestination(
+                  icon: const Icon(Icons.home), label: "MAIN_NAVBAR_MAIN".tr()),
+              NavigationDestination(
+                  icon: const Icon(Icons.music_note),
+                  label: "MAIN_NAVBAR_PLAYLIST".tr()),
+              NavigationDestination(
+                  icon: const Icon(Icons.settings),
+                  label: "MAIN_NAVBAR_SETTINGS".tr()),
+            ],
+            backgroundColor: Colors.transparent,
+            //selectedItemColor: Theme.of(context).colorScheme.surfaceTint,
+          ),
+        ),
       ),
     );
   }

@@ -71,15 +71,20 @@
 
   # Playlist Page
   "PLAYLIST_EMPTY_TEXT": "No Audio Clip Found",
-  "PLAYLIST_AUDIO_ALERT_TITLE": "Manage Audio Clip",
-  "PLAYLIST_AUDIO_ALERT_ACTION_DELETE": "Delete",
   "PLAYLIST_FOOTER": "You can re-order playlist by dragging circular checkbox.",
   "PLAYLIST_FOOTER_WINLINUX_1": "Only mp3 / wav / flac files are allowed.",
   "PLAYLIST_FOOTER_WINLINUX_2": "Audio Clip editor is not available in this platform at the moment.",
+  "PLAYLIST_AUDIO_ACTION_DELETE": "Delete",
+  ## Alert Dialog - Deleting Audio Clip
+  "PLAYLIST_AUDIO_ALERT_DELETE_TITLE": "Alert",
+  "PLAYLIST_AUDIO_ALERT_DELETE_CONTENT": "Are you sure you wanna delete the audio clip?",
+  "PLAYLIST_AUDIO_ALERT_DELETE_YES": "Yes",
+  "PLAYLIST_AUDIO_ALERT_DELETE_NO": "No",
 
   # Import Audio Page
   "IMPORT_APPBAR_TITLE": "Audio Import",
   ## Alert Dialog - Exiting Page
+  "IMPORT_ALERT_EXIT_TITLE": "Alert",
   "IMPORT_ALERT_EXIT_CONTENT": "Are you sure you wanna exit and discard audio clip?",
   "IMPORT_ALERT_EXIT_YES": "Yes",
   "IMPORT_ALERT_EXIT_NO": "No",

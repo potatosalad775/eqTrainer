@@ -29,4 +29,5 @@ class ReactiveElementData {
   double get cardDropDownMenuHeight => 0.4;
   double get controlSpacer => 0.05;
   double get sessionPickerLandscapeWidth => 0.1;
+  double get maximumWidgetWidth => 600;
 }

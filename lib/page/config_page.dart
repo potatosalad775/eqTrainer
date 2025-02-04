@@ -69,9 +69,10 @@ class ConfigPage extends StatelessWidget {
                             )
                         ));
                       },
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.play_arrow,
                         size: 35,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                       label: Text(
                         "CONFIG_BUTTON_START".tr(),
