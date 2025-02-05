@@ -1,0 +1,183 @@
+name: Build App
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: 3.27.3
+
+      - name: Get Keystore
+        id: android_keystore
+        uses: timheuer/base64-to-file@v1.2.4
+        with:
+          fileName: keystore.jks
+          encodedString: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Create key properties
+        run: |
+          echo "storeFile=${{ steps.android_keystore.outputs.filePath }}" > android/key.properties
+          echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> android/key.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+
+      - name: Install Dependencies
+        run: |
+          flutter clean
+          flutter pub get
+          
+      - name: Build APK
+        run: |
+          flutter build appbundle --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-android
+          path: build/app/outputs/bundle/release/*
+
+  build-iOS:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: 3.27.3
+
+      - name: Setup Podfile
+        run: |
+          cd ios
+          rm Podfile.lock
+          flutter clean
+          flutter pub get
+          pod install
+          cd ..
+
+      - name: Build iOS
+        run: |
+          flutter build ios --release --no-codesign
+          mkdir -p Payload
+          mv build/ios/iphoneos/Runner.app Payload
+          zip -r -y Payload.zip Payload/Runner.app
+          mv Payload.zip build/ios/Payload.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-iOS
+          path: build/ios/Payload.ipa
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: 3.27.3
+
+      - name: Build Windows
+        run: |
+          flutter clean
+          flutter build windows --release
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-windows
+          path: build/windows/x64/runner/*
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: 3.27.3
+
+      - name: Setup Podfile
+        run: |
+          cd macos
+          rm Podfile.lock
+          flutter clean
+          flutter pub get
+          pod install
+          cd ..
+
+      - name: Build macOS
+        run: |
+          flutter build macos --release
+
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          cd build/macos/Build/Products/Release
+          create-dmg \
+            --volname "eq_trainer" \
+            --window-pos 200 120 \
+            --window-size 800 529 \
+            --icon-size 130 \
+            --text-size 14 \
+            --icon "eq_trainer.app" 260 250 \
+            --hide-extension "eq_trainer.app" \
+            --app-drop-link 540 250 \
+            --hdiutil-quiet \
+            "eq_trainer.dmg" \
+            "eq_trainer.app"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-macOS
+          path: build/macos/Build/Products/Release/eq_trainer.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+  
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+  
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: 3.27.3
+  
+      - name: Enable flutter_distributor
+        run: |
+          dart pub global activate flutter_distributor
+          
+      - name: Build Deb
+        run: |
+          $HOME/.pub-cache/bin/flutter_distributor release --name=release --jobs=release-linux-deb
+  
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-linux
+          path: dist/*
