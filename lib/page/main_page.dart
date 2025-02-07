@@ -23,6 +23,10 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     var navBarProvider = Provider.of<NavBarProvider>(context);
+    // Add bottom padding if device doesn't already have it.
+    double bottomPaddingValue = MediaQuery.of(context).viewPadding.bottom == 0 ? 11 : 0;
+    double sidePaddingValue = MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
+        ? 0 : (MediaQuery.of(context).size.width - reactiveElementData.maximumWidgetWidth) / 2;
 
     return Scaffold(
       appBar: AppBar(
@@ -77,19 +81,15 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
       bottomNavigationBar: Padding(
-        padding: MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
-            ? const EdgeInsets.all(0)
-            : EdgeInsets.only(
-                left: (MediaQuery.of(context).size.width - reactiveElementData.maximumWidgetWidth) / 2,
-                right: (MediaQuery.of(context).size.width - reactiveElementData.maximumWidgetWidth) / 2,
-              ),
+        padding: EdgeInsets.only(
+          bottom: bottomPaddingValue,
+          left: 11 + sidePaddingValue,
+          right: 11 + sidePaddingValue,
+        ),
         child: Material(
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
           shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+            borderRadius: BorderRadius.all(Radius.circular(14)),
           ),
           child: NavigationBar(
             selectedIndex: navBarProvider.currentIndex,

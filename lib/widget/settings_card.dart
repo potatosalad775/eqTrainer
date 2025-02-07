@@ -17,6 +17,7 @@ class SettingsCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(3),
       child: Card(
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         color: Theme.of(context).colorScheme.surfaceContainer,
         child: ListTile(

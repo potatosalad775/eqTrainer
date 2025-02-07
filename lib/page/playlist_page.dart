@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -28,92 +29,92 @@ class _PlaylistPageState extends State<PlaylistPage> {
             } else {
               return ReorderableListView.builder(
                 buildDefaultDragHandles: false,
-                padding: const EdgeInsets.all(5),
                 itemCount: box.values.length,
                 itemBuilder: (context, index) {
                   AudioClip? currentClip = box.getAt(index);
                   Duration clipDuration = Duration(
                       milliseconds: (currentClip!.duration * 1000).toInt());
-                  return Padding(
+                  return Card(
                     key: Key("$index"),
-                    padding: const EdgeInsets.all(3),
-                    child: Card(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      color: Theme.of(context).colorScheme.surfaceContainer,
-                      child: ListTile(
-                        minLeadingWidth: 0,
-                        title: Text(
-                          currentClip.ogAudioName,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.fade,
+                    elevation: 0,
+                    margin: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    child: ListTile(
+                      minLeadingWidth: 0,
+                      minVerticalPadding: 12,
+                      contentPadding: EdgeInsets.fromLTRB(14, 0, 14, 0),
+                      title: Text(
+                        currentClip.ogAudioName,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
+                      ),
+                      subtitle:
+                          Text(clipDuration.toString().substring(2, 10)),
+                      leading: ReorderableDragStartListener(
+                        index: index,
+                        child: IconButton(
+                          onPressed: () {
+                            currentClip.isEnabled = !currentClip.isEnabled;
+                            box.putAt(index, currentClip);
+                          },
+                          icon: Icon(currentClip.isEnabled
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked),
                         ),
-                        subtitle:
-                            Text(clipDuration.toString().substring(2, 10)),
-                        leading: ReorderableDragStartListener(
-                          index: index,
-                          child: IconButton(
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Play Button
+                          IconButton(
                             onPressed: () {
-                              currentClip.isEnabled = !currentClip.isEnabled;
-                              box.putAt(index, currentClip);
+                              // Show popup screen
+                              showModalBottomSheet(
+                                  isDismissible: false,
+                                  enableDrag: false,
+                                  useSafeArea: true,
+                                  context: context,
+                                  isScrollControlled: true,
+                                  builder: (context) {
+                                    if (Platform.isWindows) {
+                                      return PlaylistControlView(
+                                          filePath:
+                                              "${audioClipDir.path}\\${box.getAt(index)?.fileName}");
+                                    } else {
+                                      return PlaylistControlView(
+                                          filePath:
+                                              "${audioClipDir.path}/${box.getAt(index)?.fileName}");
+                                    }
+                                  });
                             },
-                            icon: Icon(currentClip.isEnabled
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_unchecked),
+                            icon: const Icon(Icons.play_arrow),
                           ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Play Button
-                            IconButton(
-                              onPressed: () {
-                                // Show popup screen
-                                showModalBottomSheet(
-                                    isDismissible: false,
-                                    enableDrag: false,
-                                    useSafeArea: true,
-                                    context: context,
-                                    isScrollControlled: true,
-                                    builder: (context) {
-                                      if (Platform.isWindows) {
-                                        return PlaylistControlView(
-                                            filePath:
-                                                "${audioClipDir.path}\\${box.getAt(index)?.fileName}");
-                                      } else {
-                                        return PlaylistControlView(
-                                            filePath:
-                                                "${audioClipDir.path}/${box.getAt(index)?.fileName}");
-                                      }
-                                    });
-                              },
-                              icon: const Icon(Icons.play_arrow),
-                            ),
-                            // More Menu Button
-                            PopupMenuButton<int>(
-                              onSelected: (value) async {
-                                if (value == 1) {
-                                  bool? confirmDelete = await showDialog<bool>(
-                                    context: context,
-                                    builder: (context) => _deleteAlertDialog(),
-                                  );
-                                  if (confirmDelete == true) {
-                                    box.deleteAt(index);
-                                  }
+                          // More Menu Button
+                          PopupMenuButton<int>(
+                            onSelected: (value) async {
+                              if (value == 1) {
+                                bool? confirmDelete = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => _deleteAlertDialog(),
+                                );
+                                if (confirmDelete == true) {
+                                  box.deleteAt(index);
                                 }
-                              },
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  value: 1,
-                                  child: Text(
-                                    "PLAYLIST_AUDIO_ACTION_DELETE".tr()),
-                                ),
-                              ],
-                              icon: const Icon(Icons.more_vert),
-                            ),
-                          ],
-                        ),
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: 1,
+                                child: Text(
+                                  "PLAYLIST_AUDIO_ACTION_DELETE".tr()),
+                              ),
+                            ],
+                            icon: const Icon(Icons.more_vert),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -131,7 +132,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   });
                 },
                 footer: Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -145,6 +146,8 @@ class _PlaylistPageState extends State<PlaylistPage> {
                     ],
                   ),
                 ),
+                padding: const EdgeInsets.fromLTRB(13, 4, 13, 0),
+                proxyDecorator: _proxyDecorator,
               );
             }
           }),
@@ -176,6 +179,28 @@ class _PlaylistPageState extends State<PlaylistPage> {
           child: Text("PLAYLIST_AUDIO_ALERT_DELETE_YES".tr()),
         ),
       ],
+    );
+  }
+
+  Widget _proxyDecorator(
+      Widget child, int index, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (BuildContext context, Widget? child) {
+        final double animValue = Curves.easeInOut.transform(animation.value);
+        final double elevation = lerpDouble(1, 6, animValue)!;
+        final double scale = lerpDouble(1, 1.04, animValue)!;
+        return Transform.scale(
+          scale: scale,
+          // Create a Card based on the color and the content of the dragged one
+          // and set its elevation to the animated value.
+          child: Card(
+            elevation: elevation,
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }

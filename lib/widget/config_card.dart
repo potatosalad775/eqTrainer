@@ -23,13 +23,15 @@ class _ConfigCardState extends State<ConfigCard> {
     final configCardInfo = ConfigCardInfo(type: widget.cardType);
 
     return Padding(
-      padding: const EdgeInsets.all(3.0),
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       child: Card(
+        elevation: 0,
         clipBehavior: Clip.antiAliasWithSaveLayer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         color: Theme.of(context).colorScheme.surfaceContainer,
         child: ListTile(
-          contentPadding: const EdgeInsets.fromLTRB(15, 0, 15, 0),
+          minVerticalPadding: 12,
+          contentPadding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           title: Text(
             configCardInfo.title,
             style: TextStyle(

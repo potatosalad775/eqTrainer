@@ -19,7 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     var themeMode = EasyDynamicTheme.of(context).themeMode;
     return ListView(
-      padding: const EdgeInsets.all(5),
+      padding: const EdgeInsets.fromLTRB(5, 0, 5, 5),
       children: [
         // Language Drop Down Menu
         SettingsCard(

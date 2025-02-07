@@ -10,8 +10,9 @@ import 'package:ffmpeg_kit_flutter_audio/return_code.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/widget/editor_control_view.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:eq_trainer/widget/editor_control_view.dart';
+import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
 //import 'package:eq_trainer/model/error.dart';
 
 class ImportPage extends StatefulWidget {
@@ -55,71 +56,66 @@ class _ImportPageState extends State<ImportPage> {
             title: Text("IMPORT_APPBAR_TITLE".tr()),
           ),
           body: SafeArea(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: reactiveElementData.maximumWidgetWidth,
-                ),
-                child: ValueListenableBuilder<ImportPageState>(
-                  valueListenable: importPageState,
-                  builder: (context, value, _) {
-                    if (value == ImportPageState.error ||
-                        value == ImportPageState.timeout) {
-                      return AlertDialog(
-                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                        content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
-                          )
-                        ],
-                      );
-                    } else if (value == ImportPageState.aborted) {
-                      return AlertDialog(
-                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                        content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
-                          )
-                        ],
-                      );
-                    } else if (value == ImportPageState.converting) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 20),
-                            const Text("IMPORT_CONVERTING_1").tr(),
-                            const Text("IMPORT_CONVERTING_2").tr(),
-                          ],
-                        ),
-                      );
-                    } else if (value == ImportPageState.loading) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    } else {
-                      clipDivProvider.clipEndTime = importPlayer.fetchDuration;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.end,
+            child: MaxWidthCenterBox(
+              child: ValueListenableBuilder<ImportPageState>(
+                valueListenable: importPageState,
+                builder: (context, value, _) {
+                  if (value == ImportPageState.error ||
+                      value == ImportPageState.timeout) {
+                    return AlertDialog(
+                      title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                      content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
+                        )
+                      ],
+                    );
+                  } else if (value == ImportPageState.aborted) {
+                    return AlertDialog(
+                      title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                      content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
+                        )
+                      ],
+                    );
+                  } else if (value == ImportPageState.converting) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 8),
-                          EditorControlView(),
-                          const SizedBox(height: 16),
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 20),
+                          const Text("IMPORT_CONVERTING_1").tr(),
+                          const Text("IMPORT_CONVERTING_2").tr(),
                         ],
-                      );
-                    }
-                  },
-                ),
+                      ),
+                    );
+                  } else if (value == ImportPageState.loading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  } else {
+                    clipDivProvider.clipEndTime = importPlayer.fetchDuration;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        const SizedBox(height: 8),
+                        EditorControlView(),
+                        const SizedBox(height: 16),
+                      ],
+                    );
+                  }
+                },
               ),
             ),
           ),

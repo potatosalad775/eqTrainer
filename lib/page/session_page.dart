@@ -1,9 +1,6 @@
-import 'package:eq_trainer/model/session/session_playlist.dart';
-import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/page/result_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:eq_trainer/widget/device_dropdown.dart';
@@ -14,7 +11,10 @@ import 'package:eq_trainer/widget/session/session_picker_portrait.dart';
 import 'package:eq_trainer/widget/session/session_picker_landscape.dart';
 import 'package:eq_trainer/widget/session/session_control.dart';
 import 'package:eq_trainer/widget/session/session_selector_portrait.dart';
+import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
 import 'package:eq_trainer/model/audio_state.dart';
+import 'package:eq_trainer/model/session/session_playlist.dart';
+import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
@@ -101,6 +101,7 @@ class _SessionPageState extends State<SessionPage> {
                 }
               ),
             ],
+            elevation: 10,
             // ADD PLAYER STOP BUTTON
           ),
           body: Consumer<SessionStateData>(
@@ -154,50 +155,46 @@ class _SessionPageState extends State<SessionPage> {
 
   Widget sessionViewLandscape() {
     final audioState = Provider.of<AudioState>(context, listen: false);
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: reactiveElementData.maximumWidgetWidth * 3,
-        ),
-        child: Row(
-          children: [
-            const Flexible(
-              child: SessionGraph()
+    return MaxWidthCenterBox(
+      ratio: 3,
+      child: Row(
+        children: [
+          const Flexible(
+            child: SessionGraph()
+          ),
+          Flexible(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const SessionPickerLandscape(),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        const DeviceDropdown(),
+                        const Spacer(),
+                        const SessionPositionSlider(),
+                        SessionControl(player: player, sessionPlaylist: sessionPlaylist),
+                        const SizedBox(height: 32),
+                        SessionSelectorLandscape(
+                          player: player,
+                          audioState: audioState,
+                          sessionModel: sessionModel,
+                          freqData: sessionFreqData,
+                          stateData: sessionState,
+                          resultData: sessionResult,
+                          sessionPlaylist: sessionPlaylist,
+                        ),
+                      ],
+                    ),
+                  )
+                ),
+              ],
             ),
-            Flexible(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  const SessionPickerLandscape(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          const DeviceDropdown(),
-                          const Spacer(),
-                          const SessionPositionSlider(),
-                          SessionControl(player: player, sessionPlaylist: sessionPlaylist),
-                          const SizedBox(height: 32),
-                          SessionSelectorLandscape(
-                            player: player,
-                            audioState: audioState,
-                            sessionModel: sessionModel,
-                            freqData: sessionFreqData,
-                            stateData: sessionState,
-                            resultData: sessionResult,
-                            sessionPlaylist: sessionPlaylist,
-                          ),
-                        ],
-                      ),
-                    )
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

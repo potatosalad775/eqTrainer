@@ -6,6 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/setting_data.dart';
+import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
 
 class DevBackendPage extends StatefulWidget {
   const DevBackendPage({super.key});
@@ -62,48 +63,50 @@ class _DevBackendPageState extends State<DevBackendPage> {
       appBar: AppBar(
         title: const Text("DEV_SETTING_BACKEND_APPBAR").tr(),
       ),
-      body: ListView.builder(
-        shrinkWrap: true,
-        itemCount: supportedBackends.length + 1,
-        itemBuilder: (context, index) {
-          if(index != supportedBackends.length) {
-            final backend = supportedBackends[index];
-            return CheckboxListTile.adaptive(
-              value: backends[backend],
-              title: Text(
-                switch (backend) {
-                  AudioDeviceBackend.coreAudio => 'Core Audio',
-                  AudioDeviceBackend.aaudio => 'AAudio',
-                  AudioDeviceBackend.openSLES => 'OpenSL ES',
-                  AudioDeviceBackend.wasapi => 'WASAPI',
-                  AudioDeviceBackend.alsa => 'ALSA',
-                  AudioDeviceBackend.pulseAudio => 'PulseAudio',
-                  AudioDeviceBackend.jack => 'JACK',
-                  AudioDeviceBackend.dummy => 'Dummy',
+      body: MaxWidthCenterBox(
+        child: ListView.builder(
+          shrinkWrap: false,
+          itemCount: supportedBackends.length + 1,
+          itemBuilder: (context, index) {
+            if(index != supportedBackends.length) {
+              final backend = supportedBackends[index];
+              return CheckboxListTile.adaptive(
+                value: backends[backend],
+                title: Text(
+                  switch (backend) {
+                    AudioDeviceBackend.coreAudio => 'Core Audio',
+                    AudioDeviceBackend.aaudio => 'AAudio',
+                    AudioDeviceBackend.openSLES => 'OpenSL ES',
+                    AudioDeviceBackend.wasapi => 'WASAPI',
+                    AudioDeviceBackend.alsa => 'ALSA',
+                    AudioDeviceBackend.pulseAudio => 'PulseAudio',
+                    AudioDeviceBackend.jack => 'JACK',
+                    AudioDeviceBackend.dummy => 'Dummy',
+                  },
+                ),
+                subtitle: Text(
+                  switch (backend) {
+                    AudioDeviceBackend.coreAudio => 'macOS, iOS',
+                    AudioDeviceBackend.aaudio => 'Android 8+',
+                    AudioDeviceBackend.openSLES => 'Android 4.1+',
+                    AudioDeviceBackend.wasapi => 'Windows Vista+',
+                    AudioDeviceBackend.alsa => 'Linux',
+                    AudioDeviceBackend.pulseAudio => 'Linux',
+                    AudioDeviceBackend.jack => 'Linux',
+                    AudioDeviceBackend.dummy => 'All platforms',
+                  },
+                ),
+                onChanged: (isChecked) {
+                  setState(() {
+                    backends[backend] = isChecked!;
+                  });
                 },
-              ),
-              subtitle: Text(
-                switch (backend) {
-                  AudioDeviceBackend.coreAudio => 'macOS, iOS',
-                  AudioDeviceBackend.aaudio => 'Android 8+',
-                  AudioDeviceBackend.openSLES => 'Android 4.1+',
-                  AudioDeviceBackend.wasapi => 'Windows Vista+',
-                  AudioDeviceBackend.alsa => 'Linux',
-                  AudioDeviceBackend.pulseAudio => 'Linux',
-                  AudioDeviceBackend.jack => 'Linux',
-                  AudioDeviceBackend.dummy => 'All platforms',
-                },
-              ),
-              onChanged: (isChecked) {
-                setState(() {
-                  backends[backend] = isChecked!;
-                });
-              },
-            );
-          } else {
-            return Container(height: 80);
-          }
-        },
+              );
+            } else {
+              return Container(height: 80);
+            }
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: backends.values.any((v) => v)

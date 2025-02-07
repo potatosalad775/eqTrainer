@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/widget/settings_card.dart';
+import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
 import 'package:eq_trainer/page/settings/dev_backend_page.dart';
 
 class DevSettingsPage extends StatelessWidget {
@@ -12,28 +13,30 @@ class DevSettingsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("DEV_SETTING_APPBAR_TITLE").tr(),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(5),
-        children: [
-          Column(
-            children: [
-              GestureDetector(
-                child: SettingsCard(
-                  icon: Icons.build,
-                  title: "DEV_SETTING_CARD_BACKEND_TITLE".tr(),
-                  trailing: const Icon(Icons.keyboard_arrow_right),
+      body: MaxWidthCenterBox(
+        child: ListView(
+          padding: const EdgeInsets.all(5),
+          children: [
+            Column(
+              children: [
+                GestureDetector(
+                  child: SettingsCard(
+                    icon: Icons.build,
+                    title: "DEV_SETTING_CARD_BACKEND_TITLE".tr(),
+                    trailing: const Icon(Icons.keyboard_arrow_right),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevBackendPage()));
+                  },
                 ),
-                onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevBackendPage()));
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: const Text("DEV_SETTING_CARD_BACKEND_DESC").tr(),
-              )
-            ],
-          )
-        ],
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: const Text("DEV_SETTING_CARD_BACKEND_DESC").tr(),
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
   }

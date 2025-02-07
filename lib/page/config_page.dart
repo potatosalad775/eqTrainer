@@ -24,15 +24,15 @@ class ConfigPage extends StatelessWidget {
       value: sessionParameter,
       child: ListView.builder(
         shrinkWrap: true,
-        padding: const EdgeInsets.all(5),
         itemCount: cardTypeList.length + 1,
         itemBuilder: (BuildContext context, int index) {
           if(index != cardTypeList.length) {
             return ConfigCard(cardType: cardTypeList[index]);
           } else {
             return Padding(
-              padding: const EdgeInsets.all(7),
+              padding: const EdgeInsets.fromLTRB(13, 3, 13, 10),
               child: Row(
+                spacing: 12,
                 children: [
                   IconButton(
                     onPressed: () {
@@ -47,7 +47,7 @@ class ConfigPage extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.secondary,
-                        fixedSize: const Size(75, 75),
+                        fixedSize: const Size(70, 70),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         )
@@ -58,7 +58,6 @@ class ConfigPage extends StatelessWidget {
                       color: Theme.of(context).colorScheme.onSecondary,
                     ),
                   ),
-                  const SizedBox(width: 14),
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () {
@@ -85,7 +84,7 @@ class ConfigPage extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        fixedSize: const Size(double.infinity, 75),
+                        fixedSize: const Size(double.infinity, 70),
                         backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       ),
