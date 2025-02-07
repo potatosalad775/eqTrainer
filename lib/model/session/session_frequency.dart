@@ -75,7 +75,7 @@ class SessionFrequencyData extends ChangeNotifier {
       // There's no specific c value, I just chose what looks great on this app.
       double a = 2;
       double b;
-      double c = (8 - (sessionParameter.startingBand / 2)).toDouble();
+      double c = (-0.28 * sessionParameter.startingBand + 8.56).toDouble();
       double e;
       double h;
       _graphBarDataList.clear();
