@@ -10,7 +10,6 @@ eqTrainer is an open-source training application for 'Critical Listening', built
       height="70"
       src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
 />](https://play.google.com/store/apps/details?id=kr.potatosalad775.eq_trainer&pcampaignid=pcampaignidMKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1)
-
 [<img alt="Get it on Github"
       height="70"
       src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/refs/heads/main/get-it-on-github.png"
@@ -30,15 +29,15 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 
 <div align="center">
   
-[<img alt="screenshot_1" width="130" src="./.github/screenshot/Screenshot_1.png"/>](./.github/screenshot/Screenshot_1.png)
-[<img alt="screenshot_2" width="302" src="./.github/screenshot/Screenshot_2.png"/>](./.github/screenshot/Screenshot_2.png)
-[<img alt="screenshot_3" width="302" src="./.github/screenshot/Screenshot_3.png"/>](./.github/screenshot/Screenshot_3.png)
-[<img alt="screenshot_4" width="130" src="./.github/screenshot/Screenshot_4.png"/>](./.github/screenshot/Screenshot_4.png)
+[<img alt="screenshot_1" width="123" src="./.github/screenshot/Screenshot_1.png"/>](./.github/screenshot/Screenshot_1.png)
+[<img alt="screenshot_2" width="285" src="./.github/screenshot/Screenshot_2.png"/>](./.github/screenshot/Screenshot_2.png)
+[<img alt="screenshot_3" width="285" src="./.github/screenshot/Screenshot_3.png"/>](./.github/screenshot/Screenshot_3.png)
+[<img alt="screenshot_4" width="123" src="./.github/screenshot/Screenshot_4.png"/>](./.github/screenshot/Screenshot_4.png)
 
 <div align="left">
 
 ## Supported Platforms
-
+    
 | Platform | Minimum Version | Note                                                                                     |
 |----------|-----------------|------------------------------------------------------------------------------------------|
 | Windows  | Vista           | Works with WASAPI <br/> **Audio Editor is not available at the moment.**                 |
@@ -47,8 +46,11 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                            |
 | iOS      | 12.1            | Manual Sideload Required. <br/> Use [Sideloadly][SIDELOADLY] or [Altstore][ALTSTORE].    |
 
-## Download
+[SIDELOADLY]: https://sideloadly.io/
+[ALTSTORE]: https://altstore.io/
 
+## Download
+      
 | Windows                 | MacOS                    | Linux          | Android                 | iOS            |
 |-------------------------|--------------------------|----------------|-------------------------|----------------|
 | [Portable ZIP][RELEASE] | [Universal DMG][RELEASE] | [DEB][RELEASE] | [Play Store][PLAYSTORE] | [IPA][RELEASE] |
@@ -77,5 +79,3 @@ If you like this project, please consider donating!
 [RELEASE]: https://github.com/potatosalad775/eqTrainer/releases/latest
 [PLAYSTORE]: https://play.google.com/store/apps/details?id=kr.potatosalad775.eq_trainer
 [PAYPAL]: https://paypal.me/potatosalad775/
-[SIDELOADLY]: https://sideloadly.io/
-[ALTSTORE]: https://altstore.io/
