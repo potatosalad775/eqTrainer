@@ -157,6 +157,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
           ),
         ),
+        // Added another '40' bottom padding since main navigation bar is floating
+        SizedBox(height: 40),
       ],
     );
   }

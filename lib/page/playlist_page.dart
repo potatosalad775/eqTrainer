@@ -18,13 +18,19 @@ class PlaylistPage extends StatefulWidget {
 class _PlaylistPageState extends State<PlaylistPage> {
   @override
   Widget build(BuildContext context) {
+    // Add bottom padding if device doesn't already have it.
+    double bottomPaddingValue = MediaQuery.of(context).viewPadding.bottom == 0 ? 40 : 0;
+
     return Scaffold(
       body: ValueListenableBuilder(
           valueListenable: Hive.box<AudioClip>(audioClipBoxName).listenable(),
           builder: (context, Box<AudioClip> box, _) {
             if (box.values.isEmpty) {
               return Center(
-                child: Text("PLAYLIST_EMPTY_TEXT".tr()),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 36),
+                  child: Text("PLAYLIST_EMPTY_TEXT".tr()),
+                ),
               );
             } else {
               return ReorderableListView.builder(
@@ -37,7 +43,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   return Card(
                     key: Key("$index"),
                     elevation: 0,
-                    margin: EdgeInsets.zero,
+                    margin: EdgeInsets.only(bottom: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                     color: Theme.of(context).colorScheme.surfaceContainer,
@@ -132,7 +138,9 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   });
                 },
                 footer: Padding(
-                  padding: const EdgeInsets.all(14),
+                  // Added another '40' bottom padding since main navigation bar is floating
+                  // Added another '70' bottom padding since Add FAB is present
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14 + 40 + 70),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -147,16 +155,19 @@ class _PlaylistPageState extends State<PlaylistPage> {
                   ),
                 ),
                 padding: const EdgeInsets.fromLTRB(13, 4, 13, 0),
-                proxyDecorator: _proxyDecorator,
+                proxyDecorator: _tempProxyDecorator,
               );
             }
           }),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () {
-          Navigator.of(context).push(
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: bottomPaddingValue),
+        child: FloatingActionButton(
+          child: const Icon(Icons.add),
+          onPressed: () {
+            Navigator.of(context).push(
               MaterialPageRoute(builder: (context) => const ImportPage()));
-        },
+          },
+        ),
       ),
     );
   }
@@ -200,6 +211,16 @@ class _PlaylistPageState extends State<PlaylistPage> {
           ),
         );
       },
+      child: child,
+    );
+  }
+
+  // Using Temporary ProxyDecorator to hide ugly shadow around margin.
+  // Flutter Issue Tracker: https://github.com/flutter/flutter/issues/63527
+  Widget _tempProxyDecorator(
+      Widget child, int index, Animation<double> animation) {
+    return Material(
+      type: MaterialType.transparency,
       child: child,
     );
   }

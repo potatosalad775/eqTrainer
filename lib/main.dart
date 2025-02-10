@@ -54,6 +54,16 @@ Future<void> main() async {
   Hive.registerAdapter(AudioClipAdapter());
   await Hive.openBox<AudioClip>(audioClipBoxName);
 
+  // Set Android System UI Style
+  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      systemStatusBarContrastEnforced: true,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.dark
+  ));
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: [SystemUiOverlay.top]);
+
   runApp(
     EasyDynamicThemeWidget(
       child: EasyLocalization(

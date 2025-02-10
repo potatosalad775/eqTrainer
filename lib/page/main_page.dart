@@ -35,7 +35,7 @@ class _MainPageState extends State<MainPage> {
         shadowColor: Theme.of(context).colorScheme.shadow,
         toolbarHeight: (MediaQuery.of(context).size.height *
                 reactiveElementData.appbarHeight)
-            .clamp(56, 150),
+            .clamp(90, 120),
         titleSpacing: 13 +
             (MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
             ? 0
@@ -50,7 +50,7 @@ class _MainPageState extends State<MainPage> {
               style: TextStyle(
                 fontSize: (MediaQuery.of(context).size.height *
                         reactiveElementData.appbarFontSize)
-                    .clamp(14, 48),
+                    .clamp(24, 32),
               ),
             ),
             Text(
@@ -58,7 +58,7 @@ class _MainPageState extends State<MainPage> {
               style: TextStyle(
                 fontSize: (MediaQuery.of(context).size.height *
                         reactiveElementData.appbarFontSize)
-                    .clamp(14, 48),
+                    .clamp(24, 32),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -70,35 +70,38 @@ class _MainPageState extends State<MainPage> {
           constraints: BoxConstraints(
             maxWidth: reactiveElementData.maximumWidgetWidth,
           ),
-          child: IndexedStack(
-            index: navBarProvider.currentIndex,
-            children: const [
-              ConfigPage(),
-              PlaylistPage(),
-              SettingsPage(),
+          child: Column(
+            children: [
+              Expanded(
+                child: IndexedStack(
+                  index: navBarProvider.currentIndex,
+                  children: const [
+                    ConfigPage(),
+                    PlaylistPage(),
+                    SettingsPage(),
+                  ],
+                ),
+              ),
+              // SizedBox to hide scrolled contents under BottomNavigationBar
+              SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 40)
             ],
           ),
         ),
       ),
-      bottomNavigationBar: Padding(
+      floatingActionButton: Padding(
         padding: EdgeInsets.only(
           bottom: bottomPaddingValue,
           left: 11 + sidePaddingValue,
           right: 11 + sidePaddingValue,
         ),
-        child: Material(
-          color: Theme.of(context).colorScheme.surfaceContainerHigh,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(14)),
-          ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.all(Radius.circular(18)),
           child: NavigationBar(
             selectedIndex: navBarProvider.currentIndex,
             onDestinationSelected: (index) {
               navBarProvider.currentIndex = index;
             },
-            height: (MediaQuery.of(context).size.height *
-                    reactiveElementData.navbarHeight)
-                .clamp(56, 80),
+            height: 72,
             destinations: [
               NavigationDestination(
                   icon: const Icon(Icons.home), label: "MAIN_NAVBAR_MAIN".tr()),
@@ -109,11 +112,14 @@ class _MainPageState extends State<MainPage> {
                   icon: const Icon(Icons.settings),
                   label: "MAIN_NAVBAR_SETTINGS".tr()),
             ],
-            backgroundColor: Colors.transparent,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
             //selectedItemColor: Theme.of(context).colorScheme.surfaceTint,
           ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      extendBody: false,
+      resizeToAvoidBottomInset: false,
     );
   }
 }
