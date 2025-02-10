@@ -110,6 +110,9 @@ class _PlayerMessage {
 
 /// A player isolate that plays audio from a file or buffer.
 class PlayerIsolate extends ChangeNotifier {
+  // Add a constant for the state update interval
+  static const int _stateUpdateIntervalMs = 500;
+
   PlayerIsolate();
   final _isolate = AudioIsolate<_PlayerMessage>(_worker);
 
@@ -129,7 +132,8 @@ class PlayerIsolate extends ChangeNotifier {
         content: null,
       ),
     );
-    _startPlayerStateUpdateTimer(milliseconds: 500);
+    // Use the defined constant for timer interval
+    _startPlayerStateUpdateTimer(milliseconds: _stateUpdateIntervalMs);
   }
 
   Future<void> attach() {
@@ -198,7 +202,7 @@ class PlayerIsolate extends ChangeNotifier {
   bool? _lastEQState;
 
   void _playerStateUpdate() async {
-    if(!isLaunched) return;
+    if (!isLaunched) return;
     final results = await Future.wait([
       getState(),
       getPosition(),
@@ -206,20 +210,26 @@ class PlayerIsolate extends ChangeNotifier {
       getEqState(),
     ]);
 
-    if(results[0] != null && results[0] != _lastState) {
+    bool shouldNotify = false;
+
+    if (results[0] != null && results[0] != _lastState) {
       _lastState = results[0] as PlayerStateResponse?;
-      notifyListeners();
+      shouldNotify = true;
     }
-    if(results[1] != null && results[1] != _lastPosition) {
+    if (results[1] != null && results[1] != _lastPosition) {
       _lastPosition = results[1] as AudioTime?;
-      notifyListeners();
+      shouldNotify = true;
     }
-    if(results[2] != null && results[2] != _lastDuration) {
+    if (results[2] != null && results[2] != _lastDuration) {
       _lastDuration = results[2] as AudioTime?;
-      notifyListeners();
+      shouldNotify = true;
     }
-    if(results[3] != null && results[3] != _lastEQState) {
+    if (results[3] != null && results[3] != _lastEQState) {
       _lastEQState = results[3] as bool?;
+      shouldNotify = true;
+    }
+
+    if (shouldNotify) {
       notifyListeners();
     }
   }
@@ -253,10 +263,13 @@ class PlayerIsolate extends ChangeNotifier {
         switch (request) {
           case PlayerHostRequestStart():
             player.play();
+            break;
           case PlayerHostRequestPause():
             player.pause();
+            break;
           case PlayerHostRequestSetVolume():
             player.volume = request.volume;
+            break;
           case PlayerHostRequestSeek():
             player.position = request.position;
             return player.getPosition();
@@ -268,10 +281,13 @@ class PlayerIsolate extends ChangeNotifier {
             return player.duration;
           case PlayerHostRequestSetEQ():
             player.setEQ(request.enableEQ);
+            break;
           case PlayerHostRequestSetEQGain():
             player.setEQGain(request.gainDb);
+            break;
           case PlayerHostRequestSetEQFreq():
             player.setEQFreq(request.frequency);
+            break;
           case PlayerHostRequestGetEqState():
             return player.getEqState();
         }
@@ -355,6 +371,9 @@ class AudioPlayer {
 
   final PlaybackNode _playbackNode;
 
+  // Cached audio buffer to minimize reallocation
+  AllocatedAudioFrames? _buffer;
+
   bool get isPlaying => _playbackNode.device.isStarted;
 
   double get volume => _playbackNode.device.volume;
@@ -414,21 +433,21 @@ class AudioPlayer {
       throw Exception('DeviceInitException : $e');
     }
     
-    final bufferFrames = bufferDuration.computeFrames(_decoderNode.decoder.outputFormat);
-    final buffer = AllocatedAudioFrames(
-      length: bufferFrames,
-      format: _decoderNode.decoder.outputFormat,
-    );
+    // Calculate required frames using the current decoder output format
+    final int requiredFrames = bufferDuration.computeFrames(_decoderNode.decoder.outputFormat);
+    // Use cached buffer if available and matching size, otherwise allocate a new one
+    _buffer ??= AllocatedAudioFrames(length: requiredFrames, format: _decoderNode.decoder.outputFormat);
+    if (_buffer!.sizeInFrames != requiredFrames) {
+      _buffer = AllocatedAudioFrames(length: requiredFrames, format: _decoderNode.decoder.outputFormat);
+    }
 
-    // runWithBuffer is a helper method that runs the specified callback with the audio buffer
-    // This code will run the callback every 0.9 seconds and read the audio data from the decoder
+    // runWithBuffer is a helper method that uses the cached buffer
     AudioIntervalClock(AudioTime(bufferDuration.seconds * 0.8)).runWithBuffer(
-      frames: buffer,
+      frames: _buffer!,
       onTick: (_, buffer) {
         if (!_playbackNode.device.isStarted) {
           return false;
         }
-
         final result = _playbackNode.outputBus.read(buffer);
         return !result.isEnd;
       },
