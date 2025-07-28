@@ -44,7 +44,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 | MacOS    | 11 Big Sur      | Supports Intel & Apple Silicon as Universal App                                          |
 | Linux    | -               | Works with ALSA, Jack, PulseAudio <br/> **Audio Editor is not available at the moment.** |
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                            |
-| iOS      | 12.1            | Manual Sideload Required. <br/> Use [Sideloadly][SIDELOADLY] or [Altstore][ALTSTORE].    |
+| iOS      | 14.0            | Manual Sideload Required. <br/> Use [Sideloadly][SIDELOADLY] or [Altstore][ALTSTORE].    |
 
 [SIDELOADLY]: https://sideloadly.io/
 [ALTSTORE]: https://altstore.io/

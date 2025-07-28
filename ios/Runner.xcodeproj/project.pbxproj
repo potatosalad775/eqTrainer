@@ -3,11 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		2C63DE832E3790C3007B2548 /* coast_audio.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C63DE822E3790C3007B2548 /* coast_audio.xcframework */; };
+		2C63DE842E3790C3007B2548 /* coast_audio.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 2C63DE822E3790C3007B2548 /* coast_audio.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2CF5C60B2A6004B700BA4431 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2CF5C60A2A6004B700BA4431 /* LaunchScreen.storyboard */; };
 		2CF5C60C2A6004B700BA4431 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2CF5C60A2A6004B700BA4431 /* LaunchScreen.storyboard */; };
 		2CF5C60E2A6006D000BA4431 /* image in Resources */ = {isa = PBXBuildFile; fileRef = 2CF5C60D2A6006D000BA4431 /* image */; };
@@ -38,6 +40,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				2C63DE842E3790C3007B2548 /* coast_audio.xcframework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -48,6 +51,8 @@
 		019B8AC7C7F5757742D623A8 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		2C63DE822E3790C3007B2548 /* coast_audio.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = coast_audio.xcframework; path = Pods/CoastAudio/native/prebuilt/apple/coast_audio.xcframework; sourceTree = "<group>"; };
+		2C63DE852E37931E007B2548 /* Flutter.xcframework */ = {isa = PBXFileReference; expectedSignature = "AppleDeveloperProgram:S8QB4VV633:FLUTTER.IO LLC"; lastKnownFileType = wrapper.xcframework; name = Flutter.xcframework; path = ../../../../../Users/potatosalad/sdk/flutter/bin/cache/artifacts/engine/ios/Flutter.xcframework; sourceTree = "<group>"; };
 		2CF5C60A2A6004B700BA4431 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = ../LaunchScreen.storyboard; sourceTree = "<group>"; };
 		2CF5C60D2A6006D000BA4431 /* image */ = {isa = PBXFileReference; lastKnownFileType = folder; path = image; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
@@ -85,6 +90,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C3E6D514DA96B74B1A2C14B6 /* Pods_Runner.framework in Frameworks */,
+				2C63DE832E3790C3007B2548 /* coast_audio.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -102,6 +108,8 @@
 		704DCBF64116E8FB0A3CBBD8 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				2C63DE852E37931E007B2548 /* Flutter.xcframework */,
+				2C63DE822E3790C3007B2548 /* coast_audio.xcframework */,
 				EB73453E0CB744BC90E26ECF /* Pods_Runner.framework */,
 				019B8AC7C7F5757742D623A8 /* Pods_RunnerTests.framework */,
 			);
@@ -307,9 +315,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -456,7 +468,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = iphoneos;
@@ -602,7 +614,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -657,7 +669,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = iphoneos;
