@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:ffmpeg_kit_flutter_audio/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
