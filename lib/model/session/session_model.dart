@@ -91,7 +91,11 @@ class SessionModel extends ChangeNotifier {
     } while (answerGraphIndex == prevAnswerGraphIndex); // make sure answer is different everytime
     prevAnswerGraphIndex = answerGraphIndex;
 
-    if(sessionParameter.filterType == FilterType.peakDip) answerFreqIndex = (answerGraphIndex / 2).floor();
+    if(sessionParameter.filterType == FilterType.peakDip) {
+      answerFreqIndex = (answerGraphIndex / 2).floor();
+    } else {
+      answerFreqIndex = answerGraphIndex;
+    }
     answerCenterFreq = sessionFreqData.centerFreqLogList[answerFreqIndex];
     player.setEQFreq(answerCenterFreq);
 
