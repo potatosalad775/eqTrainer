@@ -141,7 +141,8 @@ class _ImportPageState extends State<ImportPage> {
         'aac',
         'wma',
         'ogg',
-        'm4a'
+        'm4a',
+        'opus'
       ];
     } else {
       allowedExtensions = ['wav', 'mp3', 'flac'];
