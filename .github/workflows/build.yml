@@ -18,7 +18,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.27.3
+          flutter-version: 3.29.3
 
       - name: Get Keystore
         id: android_keystore
@@ -59,7 +59,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.27.3
+          flutter-version: 3.29.3
 
       - name: Setup Podfile
         run: |
@@ -93,7 +93,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.27.3
+          flutter-version: 3.29.3
 
       - name: Build Windows
         run: |
@@ -116,7 +116,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.27.3
+          flutter-version: 3.29.3
 
       - name: Setup Podfile
         run: |
@@ -164,7 +164,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.27.3
+          flutter-version: 3.29.3
 
       - name: Update system dependencies
         run: |
