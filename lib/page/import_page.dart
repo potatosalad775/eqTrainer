@@ -135,7 +135,6 @@ class _ImportPageState extends State<ImportPage> {
       allowedExtensions = [
         'wav',
         'aiff',
-        'alac',
         'flac',
         'mp3',
         'aac',
@@ -239,10 +238,10 @@ class _ImportPageState extends State<ImportPage> {
     // -y : force overwrite temp files
     // -vn : Remove Video
     // -c:a flac : convert unsupported audio clip into flac
-    List<String> ffmpegArg = ["-y", "-i", filePath, newFilePath];
+    String ffmpegArg = "-y -vn -i $filePath -c:a flac $newFilePath";
     // Convert Audio Clip with FFMPEG
     try {
-      FFmpegKit.executeWithArgumentsAsync(ffmpegArg, (session) async {
+      FFmpegKit.executeAsync(ffmpegArg, (session) async {
         final returnCode = await session.getReturnCode();
         final failStackTrace = await session.getFailStackTrace();
         //final failLog = await session.getLogsAsString();
@@ -257,8 +256,8 @@ class _ImportPageState extends State<ImportPage> {
           // Notify error occurred
           importPageState.value = ImportPageState.error;
           // Print failStackTrace and Record Fail Log
-          debugPrint(failStackTrace);
-          //logError(failLog);
+          debugPrint("Error converting audio file: $failStackTrace");
+          //debugPrint(failLog);
         }
       });
     } catch (e) {
