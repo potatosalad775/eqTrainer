@@ -133,10 +133,10 @@ class SessionGraph extends StatelessWidget {
     }
     // If Filter is Only Peak or Only Dip
     else {
-      return Align(
-        alignment: (sessionParameter.filterType == FilterType.peak)
-            ? Alignment((freqData.centerFreqLinearList[freqData.currentPickerValue] - 30) * 1.28 / 30, -0.92)
-            : Alignment((freqData.centerFreqLinearList[freqData.currentPickerValue] - 30) * 1.28 / 30, 0.83),
+      return Positioned(
+        top: (sessionParameter.filterType == FilterType.peak) ? (constraints.maxHeight / 12) - 22 : null,
+        bottom: (sessionParameter.filterType == FilterType.peak) ? null : (constraints.maxHeight / 12),
+        left: freqData.centerFreqLinearList[freqData.currentPickerValue - 1] * constraints.maxWidth / 60 - 42,
         child: SizedBox(
           child: SizedBox(
             width: 84,
@@ -147,7 +147,7 @@ class SessionGraph extends StatelessWidget {
               elevation: 3,
               child: Center(
                 child: Text(
-                  flattenFreq(freqData.centerFreqLogList[freqData.currentPickerValue].toInt()),
+                  flattenFreq(freqData.centerFreqLogList[freqData.currentPickerValue - 1].toInt()),
                   style: const TextStyle(
                     fontSize: 16,
                   ),
