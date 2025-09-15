@@ -77,8 +77,6 @@ class SessionModel extends ChangeNotifier {
   }) async {
     // Reset pEQ Status
     player.setEQ(false);
-    // Set player volume 85% to prevent clipping
-    player.setVolume(0.85);
 
     // Num of Graph
     int numOfGraph = sessionFreqData.graphBarDataList.length;

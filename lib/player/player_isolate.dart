@@ -464,7 +464,7 @@ class AudioPlayer {
 
   void setEQGain(double value) {
     if(value < 0) {
-      _volumeNode.volume = pow(10, (value + 2) / 20.0).toDouble();
+      _volumeNode.volume = pow(10, (value - 2) / 20.0).toDouble();
     } else {
       _volumeNode.volume = pow(10, (0 - value - 2) / 20.0).toDouble();
     }
