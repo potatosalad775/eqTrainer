@@ -78,7 +78,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
-  custom_lint: ^0.7.0
+  custom_lint: ^0.6.4
   hive_generator: ^2.0.0
   flutter_launcher_icons: ^0.14.1
 
