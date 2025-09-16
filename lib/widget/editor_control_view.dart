@@ -1,17 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/model/audio_clip.dart';
 import 'package:eq_trainer/model/error.dart';
-import 'package:eq_trainer/page/import_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:eq_trainer/player/import_player.dart';
+import 'package:eq_trainer/service/audio_clip_service.dart';
+import 'package:eq_trainer/model/state/import_audio_data.dart';
 
 class EditorControlView extends StatefulWidget {
   const EditorControlView({super.key});
@@ -213,11 +210,11 @@ class _EditorControlViewState extends State<EditorControlView> {
               child: ElevatedButton(
                 onPressed: () async {
                   player.pause();
-                  await makeAudioClip(
-                    player.filePath,
-                    clipTimeData.clipStartTime.seconds,
-                    clipTimeData.clipEndTime.seconds,
-                    playerDuration != clipTimeData.clipEndTime
+                  await context.read<AudioClipService>().createClip(
+                    sourcePath: player.filePath,
+                    startSec: clipTimeData.clipStartTime.seconds,
+                    endSec: clipTimeData.clipEndTime.seconds,
+                    isEdit: playerDuration != clipTimeData.clipEndTime,
                   );
                   if(context.mounted) Navigator.pop(context);
                 },
@@ -239,86 +236,5 @@ class _EditorControlViewState extends State<EditorControlView> {
         ),
       ],
     );
-  }
-}
-
-Future<void> makeAudioClip(String targetFilePath, double clipStartSec, double clipEndSec, bool edit) async {
-  DateTime dt = DateTime.now();
-  String audioClipFileName = "${dt.year}${dt.month}${dt.day}${dt.hour}${dt.minute}${dt.second}";
-  String audioClipExtension = p.extension(targetFilePath).toLowerCase();
-  String audioClipDirString = "${audioClipDir.path}${Platform.pathSeparator}$audioClipFileName$audioClipExtension";
-
-  if (audioClipExtension != ".wav" && audioClipExtension != ".mp3" && audioClipExtension != ".flac") {
-    audioClipExtension = ".flac";
-  }
-
-  late final double duration;
-  if((Platform.isAndroid || Platform.isIOS || Platform.isMacOS) && edit) {
-    int clipStartMilliSec = (clipStartSec * 1000).toInt();
-    int clipDurationMilliSec = (clipEndSec * 1000).toInt() - clipStartMilliSec;
-    duration = clipEndSec - clipStartSec;
-    // separated arguments for splitting original audio file into audio clip
-    // -y : force overwrite temp files
-    // -vn : Remove Video
-    // -ss clipStartSec ~ -to clipDurationSec : cutting audio into clip, starting from clipStartSec with duration of clipDurationSec
-    List<String> ffmpegArg = ["-y", "-vn", "-ss", "${clipStartMilliSec}ms", "-i", targetFilePath, "-to", "${clipDurationMilliSec}ms", audioClipDirString];
-    try {
-      FFmpegKit.executeWithArguments(ffmpegArg);
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  } else {
-    duration = clipEndSec;
-    // Copy Audio File
-    try {
-      File(targetFilePath).copy(audioClipDirString);
-    } catch (e) {
-      throw Exception(e.toString());
-    }
-  }
-
-  Box<AudioClip> audioClipBox = Hive.box<AudioClip>(audioClipBoxName);
-  try {
-    //print("$audioClipFileName$audioClipExtension");
-    //print(targetFilePath.split('/').last.split('.').first);
-    if (Platform.isWindows) {
-      audioClipBox.add(AudioClip(
-          "$audioClipFileName$audioClipExtension",
-          targetFilePath.split('\\').last,
-          duration,
-          true)
-      );
-    } else {
-      audioClipBox.add(AudioClip(
-          "$audioClipFileName$audioClipExtension",
-          targetFilePath.split('/').last,
-          duration,
-          true)
-      );
-    }
-  } catch (e) {
-    throw Exception(e.toString());
-  }
-}
-
-class ImportAudioData extends ChangeNotifier {
-  AudioTime _clipStartTime = AudioTime.zero;
-  AudioTime _clipEndTime = const AudioTime(double.maxFinite);
-
-  AudioTime get clipStartTime => _clipStartTime;
-  AudioTime get clipEndTime => _clipEndTime;
-
-  set clipStartTime(value) {
-    _clipStartTime = value;
-    notifyListeners();
-  }
-  set clipEndTime(value) {
-    _clipEndTime = value;
-    notifyListeners();
-  }
-
-  void initEndTime(AudioTime value) {
-    _clipEndTime = value;
-    return;
   }
 }

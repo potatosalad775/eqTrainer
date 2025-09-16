@@ -2,7 +2,7 @@ import 'package:eq_trainer/main.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/page/session_page.dart';
+import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
 
 class SessionPickerLandscape extends StatefulWidget {

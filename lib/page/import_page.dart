@@ -1,18 +1,17 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:coast_audio/coast_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:eq_trainer/player/import_player.dart';
 import 'package:eq_trainer/widget/editor_control_view.dart';
 import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
-//import 'package:eq_trainer/model/error.dart';
+import 'package:eq_trainer/repository/audio_clip_repository.dart';
+import 'package:eq_trainer/service/audio_clip_service.dart';
+import 'package:eq_trainer/model/state/import_audio_data.dart';
+import 'package:eq_trainer/service/import_workflow_service.dart';
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -34,7 +33,6 @@ class _ImportPageState extends State<ImportPage> {
   }
 
   Future<void> _init() async {
-    // Open File Picker and Let user pick file
     await importFile();
   }
 
@@ -44,6 +42,11 @@ class _ImportPageState extends State<ImportPage> {
       providers: [
         ChangeNotifierProvider<ImportAudioData>.value(value: clipDivProvider),
         ChangeNotifierProvider<ImportPlayer>.value(value: importPlayer),
+        Provider<AudioClipRepository>(create: (_) => AudioClipRepository()),
+        Provider<AudioClipService>(
+          create: (ctx) => AudioClipService(ctx.read<AudioClipRepository>()),
+        ),
+        Provider<ImportWorkflowService>(create: (_) => const ImportWorkflowService()),
       ],
       child: PopScope(
         canPop: false,
@@ -107,10 +110,10 @@ class _ImportPageState extends State<ImportPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const SizedBox(height: 8),
+                      children: const [
+                        SizedBox(height: 8),
                         EditorControlView(),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                       ],
                     );
                   }
@@ -123,155 +126,91 @@ class _ImportPageState extends State<ImportPage> {
     );
   }
 
-  // --- Open File Picker and Import Selected Audio File ---
-  // miniaudio backend only supports mp3, wav, flac formats.
-  // if selected audio has unsupported format, this function will attempt
-  // ...to convert it into flac format.
   Future<void> importFile() async {
     final audioState = Provider.of<AudioState>(context, listen: false);
+    final workflow = context.read<ImportWorkflowService>();
 
     late final List<String> allowedExtensions;
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       allowedExtensions = [
-        'wav',
-        'aiff',
-        'flac',
-        'mp3',
-        'aac',
-        'wma',
-        'ogg',
-        'm4a',
-        'opus'
+        'wav', 'aiff', 'flac', 'mp3', 'aac', 'wma', 'ogg', 'm4a', 'opus'
       ];
     } else {
       allowedExtensions = ['wav', 'mp3', 'flac'];
     }
 
-    FilePickerResult? importResult = await FilePicker.platform.pickFiles(
+    final importResult = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: allowedExtensions,
     );
 
-    debugPrint(importResult.toString());
+    //debugPrint(importResult.toString());
 
-    // if file selection was aborted
     if (importResult == null) {
       importPageState.value = ImportPageState.aborted;
       return;
     }
 
-    // Cutout extension part from file path
     final fileNameList = importResult.files.single.name.split('.');
     fileNameList.removeLast();
 
     final fileName = fileNameList.join();
-    String filePath = importResult.files.single.path!;
+    final filePath = importResult.files.single.path!;
     final fileExtension = importResult.files.single.extension?.toLowerCase();
 
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       if (["mp3", "wav", "flac"].contains(fileExtension)) {
-        // if audio clip is supported format
-        await _loadAudioFile(audioState, filePath);
+        try {
+          final duration = await workflow.loadAudioFile(
+            audioState: audioState,
+            importPlayer: importPlayer,
+            filePath: filePath,
+          );
+          clipDivProvider.clipEndTime = duration;
+          importPageState.value = ImportPageState.ready;
+        } catch (e) {
+          debugPrint("Error loading audio file: $e");
+          importPageState.value = ImportPageState.error;
+        }
       } else {
-        await _convertAndLoadAudioFile(audioState, fileName, filePath);
+        importPageState.value = ImportPageState.converting;
+        try {
+          final converted = await workflow.convertToFlac(
+            fileNameWithoutExt: fileName,
+            sourcePath: filePath,
+          );
+          final duration = await workflow.loadAudioFile(
+            audioState: audioState,
+            importPlayer: importPlayer,
+            filePath: converted,
+          );
+          clipDivProvider.clipEndTime = duration;
+          importPageState.value = ImportPageState.ready;
+        } catch (e) {
+          debugPrint("Error converting/loading audio file: $e");
+          importPageState.value = ImportPageState.error;
+        }
       }
     } else {
-      _loadAudioFile(audioState, filePath).then((duration) => {
-        makeAudioClip(filePath, 0, duration.seconds, false).then((_) {
-          Navigator.of(context).pop();
-        })
-      });
-    }
-  }
-
-  Future<AudioTime> _loadAudioFile(
-      AudioState audioState, String filePath) async {
-    try {
-      // Open Audio Clip with Import Player
-      await importPlayer.launch(
-        backend: audioState.backend,
-        outputDeviceId: audioState.outputDevice?.id,
-        path: filePath,
-      );
-      importPlayer.filePath = filePath;
-
-      // Wait for the duration to be available
-      AudioTime? duration;
-      int attempts = 0;
-      const maxAttempts = 50; // 5 seconds (50 * 100ms)
-
-      while (duration == null || duration == AudioTime.zero) {
-        duration = await importPlayer.getDuration();
-        if (duration != null && duration != AudioTime.zero) break;
-
-        await Future.delayed(const Duration(milliseconds: 100));
-        attempts++;
-
-        if (attempts >= maxAttempts) {
-          throw TimeoutException(
-              'Failed to get audio duration after $maxAttempts attempts');
-        }
+      final clipService = context.read<AudioClipService>();
+      try {
+        final duration = await workflow.loadAudioFile(
+          audioState: audioState,
+          importPlayer: importPlayer,
+          filePath: filePath,
+        );
+        await clipService.createClip(
+          sourcePath: filePath,
+          startSec: 0,
+          endSec: duration.seconds,
+          isEdit: false,
+        );
+        if (mounted) Navigator.of(context).pop();
+      } catch (e) {
+        debugPrint("Error importing on desktop: $e");
+        importPageState.value = ImportPageState.error;
       }
-
-      // Notify File Import is done
-      clipDivProvider.clipEndTime = duration;
-      importPageState.value = ImportPageState.ready;
-      return duration;
-    } catch (e) {
-      debugPrint("Error loading audio file: $e");
-      importPageState.value = ImportPageState.error;
-      return AudioTime.zero;
     }
-  }
-
-  // if audio clip is unsupported format - convert into flac
-  // miniaudio backend only support 3 formats - mp3, wav, flac.
-  Future<void> _convertAndLoadAudioFile(
-      AudioState audioState, String fileName, String filePath) async {
-    importPageState.value = ImportPageState.converting;
-    Directory appTempDir = await getTemporaryDirectory();
-    Directory tempClipDir =
-        await Directory("${appTempDir.path}${Platform.pathSeparator}temp")
-            .create(recursive: true);
-    String newFilePath =
-        "${tempClipDir.path}${Platform.pathSeparator}$fileName.flac";
-    // -y : force overwrite temp files
-    // -vn : Remove Video
-    // -c:a flac : convert unsupported audio clip into flac
-    String ffmpegArg = "-y -vn -i $filePath -c:a flac $newFilePath";
-    // Convert Audio Clip with FFMPEG
-    try {
-      FFmpegKit.executeAsync(ffmpegArg, (session) async {
-        final returnCode = await session.getReturnCode();
-        final failStackTrace = await session.getFailStackTrace();
-        //final failLog = await session.getLogsAsString();
-
-        // if clip conversion was successful
-        if (ReturnCode.isSuccess(returnCode)) {
-          // Open Audio Clip with Import Player
-          await _loadAudioFile(audioState, newFilePath);
-        }
-        // if conversion was cancelled or error occurred
-        else {
-          // Notify error occurred
-          importPageState.value = ImportPageState.error;
-          // Print failStackTrace and Record Fail Log
-          debugPrint("Error converting audio file: $failStackTrace");
-          //debugPrint(failLog);
-        }
-      });
-    } catch (e) {
-      debugPrint("Error converting audio file: $e");
-      importPageState.value = ImportPageState.error;
-    }
-
-    // If nothing happens even after 10 seconds
-    Timer(const Duration(seconds: 10), () async {
-      // Notify error occurred
-      if (importPageState.value == ImportPageState.converting) {
-        importPageState.value = ImportPageState.timeout;
-      }
-    });
   }
 
   void _onPop() {
@@ -299,7 +238,6 @@ class _ImportPageState extends State<ImportPage> {
         ],
       ),
     );
-    return;
   }
 }
 
@@ -311,16 +249,4 @@ enum ImportPageState {
   timeout,
   aborted,
   noedit
-}
-
-class ImportPlayer extends PlayerIsolate {
-  String _filePath = "";
-
-  set filePath(value) {
-    _filePath = value;
-  }
-
-  String get filePath => _filePath;
-
-  ImportPlayer();
 }

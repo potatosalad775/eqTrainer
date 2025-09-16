@@ -9,6 +9,7 @@ import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_playlist.dart';
+import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:provider/provider.dart';
 
 class SessionSelectorLandscape extends StatelessWidget {
