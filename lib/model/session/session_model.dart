@@ -5,6 +5,7 @@ import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
+import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
 
@@ -16,6 +17,8 @@ class SessionModel extends ChangeNotifier {
   late int answerFreqIndex;
   // center frequency applied to EQ
   late double answerCenterFreq;
+  // gain applied to EQ
+  late double answerGain;
 
   final sessionResultData = SessionResultData();
 
@@ -95,16 +98,23 @@ class SessionModel extends ChangeNotifier {
       answerFreqIndex = answerGraphIndex;
     }
     answerCenterFreq = sessionFreqData.centerFreqLogList[answerFreqIndex];
-    player.setEQFreq(answerCenterFreq);
 
     // Determine Appropriate Gain Value
     // if chosen graph is dip graph, invert gain value of session.
     if(sessionParameter.filterType == FilterType.dip
       || (sessionParameter.filterType == FilterType.peakDip && answerGraphIndex % 2 == 1))
     {
-      player.setEQGain(0 - sessionParameter.gain.toDouble());
+      answerGain = 0 - sessionParameter.gain.toDouble();
     } else {
-      player.setEQGain(sessionParameter.gain.toDouble());
+      answerGain = sessionParameter.gain.toDouble();
     }
+
+    updatePlayerState(player);
+  }
+
+  Future<void> updatePlayerState(PlayerIsolate player) async {
+    debugPrint("Updating Player EQ with Freq: $answerCenterFreq, Gain: $answerGain");
+    player.setEQFreq(answerCenterFreq);
+    player.setEQGain(answerGain);
   }
 }

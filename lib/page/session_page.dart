@@ -18,6 +18,7 @@ import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
+import 'package:eq_trainer/model/state/session_state_data.dart';
 
 class SessionPage extends StatefulWidget {
   const SessionPage({super.key});
@@ -63,6 +64,7 @@ class _SessionPageState extends State<SessionPage> {
         ChangeNotifierProvider<SessionStateData>.value(value: sessionState),
         ChangeNotifierProvider<SessionFrequencyData>.value(value: sessionFreqData),
         ChangeNotifierProvider<SessionResultData>.value(value: sessionResult),
+        ChangeNotifierProvider<SessionModel>.value(value: sessionModel),
       ],
       child: PopScope(
         canPop: false,
@@ -263,23 +265,4 @@ class SessionPlayer extends PlayerIsolate {
   SessionPlayer();
 }
 
-// SessionStateData - Used for controlling content to show user
-class SessionStateData extends ChangeNotifier {
-  SessionState _sessionState = SessionState.loading;
-  int currentSessionPoint = 0;
-  int _selectedPickerNum = 1;
-
-  SessionState get sessionState => _sessionState;
-  set sessionState(SessionState sessionState) {
-    _sessionState = sessionState;
-    notifyListeners();
-  }
-
-  int get selectedPickerNum => _selectedPickerNum;
-  set selectedPickerNum(int value) {
-    _selectedPickerNum = value;
-    notifyListeners();
-  }
-}
-enum SessionState { loading, ready, playlistEmpty, error }
 enum FilterType { peak, dip, peakDip }
