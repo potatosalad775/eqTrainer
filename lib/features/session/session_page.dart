@@ -129,6 +129,7 @@ class _SessionPageState extends State<SessionPage> {
               } else { // sessionState == SessionState.loading || SessionState.ready
                 return InteractionLock(
                   locked: sessionState == SessionState.loading,
+                  useOverlay: true,
                   child: SafeArea(
                     child: (MediaQuery.of(context).size.width < MediaQuery.of(context).size.height
                         && MediaQuery.of(context).orientation == Orientation.portrait)
@@ -147,10 +148,6 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   Widget sessionViewLandscape() {
-    final audioState = Provider.of<AudioState>(context, listen: false);
-    final sessionStore = Provider.of<SessionStore>(context, listen: false);
-    final sessionController = Provider.of<SessionController>(context, listen: false);
-
     return MaxWidthCenterBox(
       ratio: 3,
       child: Row(
@@ -172,15 +169,9 @@ class _SessionPageState extends State<SessionPage> {
                           const DeviceDropdown(),
                           const Spacer(),
                           const SessionPositionSlider(),
-                          SessionControl(player: player, sessionStore: sessionStore),
+                          SessionControl(player: player),
                           const SizedBox(height: 32),
-                          SessionSelectorLandscape(
-                            player: player,
-                            audioState: audioState,
-                            sessionStore: sessionStore,
-                            // pass controller
-                            sessionController: sessionController,
-                          ),
+                          SessionSelectorLandscape(player: player),
                         ],
                       ),
                     )
@@ -194,9 +185,6 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   Widget sessionViewPortrait() {
-    final audioState = Provider.of<AudioState>(context, listen: false);
-    final sessionStore = Provider.of<SessionStore>(context, listen: false);
-    final sessionController = Provider.of<SessionController>(context, listen: false);
     return Column(
       children: [
         const Expanded(
@@ -208,17 +196,11 @@ class _SessionPageState extends State<SessionPage> {
           padding: EdgeInsets.fromLTRB(30, 10, 30, 0),
           child: SessionPositionSlider(),
         ),
-        SessionControl(player: player, sessionStore: sessionStore),
+        SessionControl(player: player),
         const SizedBox(height: 20),
         Padding(
           padding: const EdgeInsets.all(15),
-          child: SessionSelectorPortrait(
-            player: player,
-            audioState: audioState,
-            sessionStore: sessionStore,
-            // pass controller
-            sessionController: sessionController,
-          ),
+          child: SessionSelectorPortrait(player: player),
         ),
       ],
     );

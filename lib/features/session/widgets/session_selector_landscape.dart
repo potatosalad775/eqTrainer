@@ -9,21 +9,15 @@ import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/index.dart';
 
 class SessionSelectorLandscape extends StatelessWidget {
-  const SessionSelectorLandscape({
-    super.key,
-    required this.player,
-    required this.audioState,
-    required this.sessionStore,
-    required this.sessionController,
-  });
+  const SessionSelectorLandscape({ super.key, required this.player });
   final PlayerIsolate player;
-  final AudioState audioState;
-  final SessionStore sessionStore;
-  final SessionController sessionController;
 
   @override
   Widget build(BuildContext context) {
     final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
+    final audioState = context.read<AudioState>();
+    final sessionStore = context.read<SessionStore>();
+    final sessionController = context.read<SessionController>();
 
     return Column(
       children: [

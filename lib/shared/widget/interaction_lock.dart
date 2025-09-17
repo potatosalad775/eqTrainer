@@ -13,7 +13,7 @@ class InteractionLock extends StatelessWidget {
     required this.locked,
     required this.child,
     this.scrimColor = Colors.black,
-    this.scrimOpacity = 0.05,
+    this.scrimOpacity = 0.02,
     this.progress,
     this.useOverlay = false,
   });

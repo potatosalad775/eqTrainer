@@ -123,8 +123,6 @@ class SessionController {
       _answerGain = sessionParameter.gain.toDouble();
     }
 
-    debugPrint('!!! Answer Graph Index: $_answerGraphIndex, Freq Index: $_answerFreqIndex, Freq: $_answerCenterFreq, Gain: $_answerGain');
-
     await updatePlayerState(player);
   }
 

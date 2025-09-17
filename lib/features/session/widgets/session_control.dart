@@ -12,15 +12,14 @@ class SessionControl extends StatelessWidget {
   const SessionControl({
     super.key,
     required this.player,
-    required this.sessionStore,
   });
   final PlayerIsolate player;
-  final SessionStore sessionStore;
 
   @override
   Widget build(BuildContext context) {
     final audioState = context.watch<AudioState>();
     final playerState = context.select<PlayerIsolate, PlayerStateResponse>((p) => p.fetchPlayerState);
+    final sessionStore = context.read<SessionStore>();
 
     Future<void> relaunchWith(String path) async {
       await player.pause();
