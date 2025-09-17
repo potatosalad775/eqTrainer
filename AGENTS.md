@@ -95,7 +95,7 @@ Acceptance checklist
 - [x] Replace global audioClipDir with PathProvider service; migrate services to it; update path handling to path.join.
 - [x] Repository contract: add watch/list/delete/toggle; migrate playlist_page to consume repository/service streams.
 - [x] SessionPlaylist → Store absorption (or minimal wrapper), update controller/UI wiring.
-- [ ] SessionModel → Controller migration; delete legacy calls.
+- [x] SessionModel → Controller migration; delete legacy calls.
 - [ ] Tests: add basic unit tests (service/controller) and enable lightweight logging.
 
 Quality gates

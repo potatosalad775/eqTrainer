@@ -7,7 +7,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/player/import_player.dart';
 import 'package:eq_trainer/widget/editor_control_view.dart';
-import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
+import 'package:eq_trainer/widget/common/max_width_center_box.dart';
 import 'package:eq_trainer/service/audio_clip_service.dart';
 import 'package:eq_trainer/model/state/import_audio_data.dart';
 import 'package:eq_trainer/service/import_workflow_service.dart';

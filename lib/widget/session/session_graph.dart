@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
+import 'package:eq_trainer/model/session/graph_state.dart';
 
 class SessionGraph extends StatelessWidget {
   const SessionGraph({super.key});

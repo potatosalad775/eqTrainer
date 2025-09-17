@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
-import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
+import 'package:eq_trainer/widget/common/max_width_center_box.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ResultPage extends StatelessWidget {

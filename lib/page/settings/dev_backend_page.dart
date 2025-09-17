@@ -6,7 +6,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/setting_data.dart';
-import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
+import 'package:eq_trainer/widget/common/max_width_center_box.dart';
 
 class DevBackendPage extends StatefulWidget {
   const DevBackendPage({super.key});

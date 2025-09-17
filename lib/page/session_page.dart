@@ -11,11 +11,10 @@ import 'package:eq_trainer/widget/session/session_picker_portrait.dart';
 import 'package:eq_trainer/widget/session/session_picker_landscape.dart';
 import 'package:eq_trainer/widget/session/session_control.dart';
 import 'package:eq_trainer/widget/session/session_selector_portrait.dart';
-import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
+import 'package:eq_trainer/widget/common/max_width_center_box.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/controller/session_controller.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
@@ -44,7 +43,6 @@ class _SessionPageState extends State<SessionPage> {
     final sessionState = Provider.of<SessionStateData>(context, listen: false);
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final sessionResult = Provider.of<SessionResultData>(context, listen: false);
-    final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
     final playlistService = Provider.of<PlaylistService>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
 
@@ -55,7 +53,6 @@ class _SessionPageState extends State<SessionPage> {
       sessionStore: sessionStore,
       sessionParameter: sessionParameter,
       sessionResult: sessionResult,
-      sessionFreqData: sessionFreqData,
       playlistService: playlistService,
     );
   }
@@ -160,7 +157,6 @@ class _SessionPageState extends State<SessionPage> {
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
     final sessionState = Provider.of<SessionStateData>(context, listen: false);
-    final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
     final sessionResult = Provider.of<SessionResultData>(context, listen: false);
 
     return MaxWidthCenterBox(
@@ -189,7 +185,6 @@ class _SessionPageState extends State<SessionPage> {
                         SessionSelectorLandscape(
                           player: player,
                           audioState: audioState,
-                          freqData: sessionFreqData,
                           stateData: sessionState,
                           resultData: sessionResult,
                           sessionStore: sessionStore,
@@ -213,7 +208,6 @@ class _SessionPageState extends State<SessionPage> {
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
     final sessionState = Provider.of<SessionStateData>(context, listen: false);
-    final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
     final sessionResult = Provider.of<SessionResultData>(context, listen: false);
     return Column(
       children: [
@@ -233,7 +227,6 @@ class _SessionPageState extends State<SessionPage> {
           child: SessionSelectorPortrait(
             player: player,
             audioState: audioState,
-            freqData: sessionFreqData,
             stateData: sessionState,
             resultData: sessionResult,
             sessionStore: sessionStore,

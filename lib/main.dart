@@ -24,7 +24,6 @@ import 'package:eq_trainer/service/playlist_service.dart';
 import 'package:eq_trainer/service/import_workflow_service.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
 import 'package:eq_trainer/controller/session_controller.dart';
@@ -157,14 +156,12 @@ class AppState extends State<App> {
         // Session parameters and data notifiers
         ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),
         ChangeNotifierProvider<SessionStateData>(create: (_) => SessionStateData()),
-        ChangeNotifierProvider<SessionFrequencyData>(create: (_) => SessionFrequencyData()),
         ChangeNotifierProvider<SessionResultData>(create: (_) => SessionResultData()),
 
 
         // Session store (depends on freq/state/result)
         ChangeNotifierProvider<SessionStore>(
           create: (ctx) => SessionStore(
-            freqData: ctx.read<SessionFrequencyData>(),
             stateData: ctx.read<SessionStateData>(),
             resultData: ctx.read<SessionResultData>(),
           ),

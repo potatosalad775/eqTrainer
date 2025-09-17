@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
@@ -40,13 +39,12 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required SessionResultData sessionResult,
-    required SessionFrequencyData sessionFreqData,
     required PlaylistService playlistService,
   }) async {
     try {
       // Reset Session
       sessionResult.resetResult();
-      sessionFreqData.resetPickerValue();
+      sessionStore.resetPickerValue();
 
       // Load enabled audio clip absolute paths
       final paths = await playlistService.listEnabledClipPaths();
@@ -67,7 +65,7 @@ class SessionController {
       }
 
       // Calculate Frequencies required for Session and Graph UI
-      await sessionFreqData.initSessionFreqData(sessionParameter: sessionParameter);
+      await sessionStore.initFrequency(sessionParameter: sessionParameter);
 
       // Start initialize Session (first round)
       await initSession(
@@ -77,7 +75,6 @@ class SessionController {
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
         sessionResult: sessionResult,
-        sessionFreqData: sessionFreqData,
       );
 
       // Notify the Session is Ready
@@ -96,13 +93,12 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required SessionResultData sessionResult,
-    required SessionFrequencyData sessionFreqData,
   }) async {
     // Reset pEQ Status
     player.setEQ(false);
 
     // Num of Graph
-    final int numOfGraph = sessionFreqData.graphBarDataList.length;
+    final int numOfGraph = sessionStore.graphBarDataList.length;
 
     // Select Random Index of Graph (Correct Answer for Session)
     do {
@@ -116,7 +112,7 @@ class SessionController {
     } else {
       _answerFreqIndex = _answerGraphIndex;
     }
-    _answerCenterFreq = sessionFreqData.centerFreqLogList[_answerFreqIndex];
+    _answerCenterFreq = sessionStore.centerFreqLogList[_answerFreqIndex];
 
     // Determine Appropriate Gain Value
     // if chosen graph is dip graph, invert gain value of session.
@@ -139,7 +135,6 @@ class SessionController {
   Future<SessionSubmitResult> submitAnswer({
     required PlayerIsolate player,
     required AudioState audioState,
-    required SessionFrequencyData freqData,
     required SessionStateData stateData,
     required SessionResultData resultData,
     required SessionStore sessionStore,
@@ -152,7 +147,7 @@ class SessionController {
     final int correctIndex = _answerGraphIndex + 1;
 
     // Judge answer
-    final bool isCorrect = (correctIndex == freqData.currentPickerValue);
+    final bool isCorrect = (correctIndex == sessionStore.currentPickerValue);
 
     if (isCorrect) {
       stateData.currentSessionPoint++;
@@ -167,12 +162,12 @@ class SessionController {
       stateData.currentSessionPoint = 0;
       stateData.selectedPickerNum = 1;
       sessionParameter.startingBand++;
-      await freqData.initSessionFreqData(sessionParameter: sessionParameter);
+      await sessionStore.initFrequency(sessionParameter: sessionParameter);
     } else if (stateData.currentSessionPoint == (0 - sessionParameter.threshold) && sessionParameter.startingBand > 2) {
       stateData.currentSessionPoint = 0;
       stateData.selectedPickerNum = 1;
       sessionParameter.startingBand--;
-      await freqData.initSessionFreqData(sessionParameter: sessionParameter);
+      await sessionStore.initFrequency(sessionParameter: sessionParameter);
     }
 
     // Initialize next round
@@ -183,7 +178,6 @@ class SessionController {
       sessionStore: sessionStore,
       sessionParameter: sessionParameter,
       sessionResult: resultData,
-      sessionFreqData: freqData,
     );
 
     // Ready

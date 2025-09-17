@@ -3,7 +3,6 @@ import 'package:another_flushbar/flushbar.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/page/session_page.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/audio_state.dart';
@@ -17,7 +16,6 @@ class SessionSelectorLandscape extends StatelessWidget {
     super.key,
     required this.player,
     required this.audioState,
-    required this.freqData,
     required this.stateData,
     required this.resultData,
     required this.sessionStore,
@@ -25,7 +23,6 @@ class SessionSelectorLandscape extends StatelessWidget {
   });
   final SessionPlayer player;
   final AudioState audioState;
-  final SessionFrequencyData freqData;
   final SessionStateData stateData;
   final SessionResultData resultData;
   final SessionStore sessionStore;
@@ -87,7 +84,6 @@ class SessionSelectorLandscape extends StatelessWidget {
             final result = await sessionController.submitAnswer(
               player: player,
               audioState: audioState,
-              freqData: freqData,
               stateData: stateData,
               resultData: resultData,
               sessionStore: sessionStore,

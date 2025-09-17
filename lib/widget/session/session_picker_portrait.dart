@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionPickerPortrait extends StatefulWidget {
   const SessionPickerPortrait({super.key});
@@ -14,7 +14,7 @@ class SessionPickerPortrait extends StatefulWidget {
 class _SessionPickerPortraitState extends State<SessionPickerPortrait> {
   @override
   Widget build(BuildContext context) {
-    final freqData = context.read<SessionFrequencyData>();
+    final store = context.read<SessionStore>();
     final sessionState = context.read<SessionStateData>();
     final selectedPickerValue = context.select<SessionStateData, int>((s) => s.selectedPickerNum);
     return Container(
@@ -26,10 +26,11 @@ class _SessionPickerPortraitState extends State<SessionPickerPortrait> {
             // decrease currentPickerValue, which represents index of selected graph
             ElevatedButton(
               onPressed: () {
-                if(selectedPickerValue > 1) {
+                if (selectedPickerValue > 1) {
                   setState(() {
-                    sessionState.selectedPickerNum -= 1;
-                    freqData.updatePickerValue(selectedPickerValue);
+                    final newValue = selectedPickerValue - 1;
+                    sessionState.selectedPickerNum = newValue;
+                    store.updatePickerValue(newValue);
                   });
                 }
               },
@@ -46,7 +47,7 @@ class _SessionPickerPortraitState extends State<SessionPickerPortrait> {
             NumberPicker(
               value: selectedPickerValue,
               minValue: 1,
-              maxValue: freqData.graphBarDataList.length,
+              maxValue: store.graphBarDataList.length,
               step: 1,
               axis: Axis.horizontal,
               itemWidth: (MediaQuery.of(context).size.width) * 0.18,
@@ -63,17 +64,18 @@ class _SessionPickerPortraitState extends State<SessionPickerPortrait> {
               onChanged: (value) {
                 setState(() {
                   sessionState.selectedPickerNum = value;
-                  freqData.updatePickerValue(value);
+                  store.updatePickerValue(value);
                 });
               },
             ),
             // increase currentPickerValue, which represents index of selected graph
             ElevatedButton(
               onPressed: () {
-                if(selectedPickerValue < freqData.graphBarDataList.length) {
+                if (selectedPickerValue < store.graphBarDataList.length) {
                   setState(() {
-                    sessionState.selectedPickerNum += 1;
-                    freqData.updatePickerValue(selectedPickerValue);
+                    final newValue = selectedPickerValue + 1;
+                    sessionState.selectedPickerNum = newValue;
+                    store.updatePickerValue(newValue);
                   });
                 }
               },

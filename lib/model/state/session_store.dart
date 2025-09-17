@@ -1,32 +1,24 @@
-// filepath: /Users/potatosalad/project/eqTrainer/lib/model/state/session_store.dart
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:eq_trainer/model/session/session_frequency.dart';
+import 'package:eq_trainer/model/session/frequency_calculator.dart';
+import 'package:eq_trainer/model/session/graph_state.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
+import 'package:eq_trainer/model/session/session_parameter.dart';
 
 /// SessionStore aggregates session-related UI state into a single source of truth.
-/// It subscribes to existing notifiers and mirrors their computed values for widgets to select.
+/// Holds frequency/graph data computed by the pure FrequencyCalculator.
 class SessionStore extends ChangeNotifier {
   SessionStore({
-    required SessionFrequencyData freqData,
     required SessionStateData stateData,
     required SessionResultData resultData,
-  }) : _freqData = freqData, _stateData = stateData, _resultData = resultData {
-    // Seed initial values
-    _syncFromFreq();
+  })  : _stateData = stateData,
+        _resultData = resultData {
+    // Seed initial values from state/result
     _syncFromState();
     _syncFromResult();
-    graphStateNotifier.value = _freqData.graphStateNotifier.value;
-
-    // Subscribe to changes
-    _freqData.graphStateNotifier.addListener(_onGraphStateChanged);
-    _freqData.addListener(_onFreqChanged);
-    _stateData.addListener(_onStateChanged);
-    _resultData.addListener(_onResultChanged);
   }
 
-  final SessionFrequencyData _freqData;
   final SessionStateData _stateData;
   final SessionResultData _resultData;
 
@@ -43,6 +35,7 @@ class SessionStore extends ChangeNotifier {
   List<double> _centerFreqLinearList = const [];
   List<double> get centerFreqLinearList => _centerFreqLinearList;
 
+  // Picker value mirrors SessionStateData.selectedPickerNum, but we keep a cached copy
   int _currentPickerValue = 1;
   int get currentPickerValue => _currentPickerValue;
 
@@ -57,6 +50,7 @@ class SessionStore extends ChangeNotifier {
   int _resultIncorrect = 0;
   int get resultIncorrect => _resultIncorrect;
 
+  // Playlist paths and index
   List<String> _playlistPaths = const [];
   List<String> get playlistPaths => _playlistPaths;
 
@@ -68,6 +62,49 @@ class SessionStore extends ChangeNotifier {
           ? _playlistPaths[_currentPlayingAudioIndex]
           : null;
 
+  // --- Frequency/Graph lifecycle ---
+  Future<void> initFrequency({required SessionParameter sessionParameter}) async {
+    graphStateNotifier.value = GraphState.loading;
+    try {
+      final computed = FrequencyCalculator.compute(sessionParameter: sessionParameter);
+
+      _centerFreqLogList = List<double>.from(computed.centerFreqLogList);
+      _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
+      _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
+
+      // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
+      resetPickerValue();
+
+      graphStateNotifier.value = GraphState.ready;
+    } catch (_) {
+      graphStateNotifier.value = GraphState.error;
+      rethrow;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  void updatePickerValue(int newValue) {
+    if (newValue == _currentPickerValue) return;
+    if (_graphBarDataList.isEmpty) return;
+    if (newValue < 1 || newValue > _graphBarDataList.length) return;
+
+    final updated = List<LineChartBarData>.from(_graphBarDataList);
+    // Previous selection to red
+    updated[_currentPickerValue - 1] = updated[_currentPickerValue - 1].copyWith(color: Colors.redAccent);
+    // New selection to blue
+    updated[newValue - 1] = updated[newValue - 1].copyWith(color: Colors.blueAccent);
+
+    _graphBarDataList = updated;
+    _currentPickerValue = newValue;
+    notifyListeners();
+  }
+
+  void resetPickerValue() {
+    _currentPickerValue = 1;
+  }
+
+  // --- Playlist controls ---
   void setPlaylistPaths(List<String> paths) {
     _playlistPaths = List<String>.from(paths);
     _currentPlayingAudioIndex = 0;
@@ -97,8 +134,6 @@ class SessionStore extends ChangeNotifier {
 
   void previousTrack({Duration threshold = const Duration(seconds: 3), Duration? currentPosition}) {
     if (_playlistPaths.isEmpty) return;
-    // If current position is provided and less than threshold behavior should be handled by caller (seek to 0).
-    // Store only changes index when moving to previous clip.
     if (_currentPlayingAudioIndex == 0) {
       _currentPlayingAudioIndex = _playlistPaths.length - 1;
     } else {
@@ -107,18 +142,21 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _onGraphStateChanged() {
-    graphStateNotifier.value = _freqData.graphStateNotifier.value;
-    // Also sync data when graph state changes (e.g., after initSessionFreqData completes)
-    if (graphStateNotifier.value == GraphState.ready || graphStateNotifier.value == GraphState.error) {
-      _syncFromFreq();
-      notifyListeners();
-    }
+  // --- Mirror state/result ---
+  void _syncFromState() {
+    _currentSessionPoint = _stateData.currentSessionPoint;
+    _currentPickerValue = _stateData.selectedPickerNum;
   }
 
-  void _onFreqChanged() {
-    _syncFromFreq();
-    notifyListeners();
+  void _syncFromResult() {
+    _resultCorrect = _resultData.resultCorrect;
+    _resultIncorrect = _resultData.resultIncorrect;
+  }
+
+  void attach() {
+    // Allow late subscription in main after providers are ready
+    _stateData.addListener(_onStateChanged);
+    _resultData.addListener(_onResultChanged);
   }
 
   void _onStateChanged() {
@@ -131,26 +169,8 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _syncFromFreq() {
-    _graphBarDataList = List<LineChartBarData>.from(_freqData.graphBarDataList);
-    _centerFreqLogList = List<double>.from(_freqData.centerFreqLogList);
-    _centerFreqLinearList = List<double>.from(_freqData.centerFreqLinearList);
-    _currentPickerValue = _freqData.currentPickerValue;
-  }
-
-  void _syncFromState() {
-    _currentSessionPoint = _stateData.currentSessionPoint;
-  }
-
-  void _syncFromResult() {
-    _resultCorrect = _resultData.resultCorrect;
-    _resultIncorrect = _resultData.resultIncorrect;
-  }
-
   @override
   void dispose() {
-    _freqData.graphStateNotifier.removeListener(_onGraphStateChanged);
-    _freqData.removeListener(_onFreqChanged);
     _stateData.removeListener(_onStateChanged);
     _resultData.removeListener(_onResultChanged);
     super.dispose();
