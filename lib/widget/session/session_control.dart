@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:eq_trainer/model/error.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
+import 'package:eq_trainer/controller/session_controller.dart';
 
 class SessionControl extends StatelessWidget {
 
@@ -31,7 +31,7 @@ class SessionControl extends StatelessWidget {
         outputDeviceId: audioState.outputDevice?.id,
         path: path,
       );
-      if(context.mounted) await context.read<SessionModel>().updatePlayerState(player);
+      if(context.mounted) await context.read<SessionController>().updatePlayerState(player);
       await player.play();
     }
 

@@ -2,7 +2,6 @@ import 'package:eq_trainer/main.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 
 class ConfigCard extends StatefulWidget {

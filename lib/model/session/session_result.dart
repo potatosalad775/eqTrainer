@@ -16,8 +16,6 @@ class SessionResultData extends ChangeNotifier {
     resultCorrect = 0;
     correctAnswerPerFreq = [0, 0, 0, 0, 0, 0, 0];
     resultIncorrect = 0;
-
-    notifyListeners();
   }
 
   // Get each session's center frequency, and record each result

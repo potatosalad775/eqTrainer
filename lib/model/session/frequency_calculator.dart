@@ -1,9 +1,7 @@
-// filepath: /Users/potatosalad/project/eqTrainer/lib/model/session/frequency_calculator.dart
 import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
-import 'package:eq_trainer/page/session_page.dart';
 
 class FrequencyGraphData {
   FrequencyGraphData({
@@ -97,4 +95,3 @@ class FrequencyCalculator {
     );
   }
 }
-

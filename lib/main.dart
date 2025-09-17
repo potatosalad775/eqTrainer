@@ -171,7 +171,7 @@ class AppState extends State<App> {
         ),
 
         // Controller
-        Provider<SessionController>(create: (_) => const SessionController()),
+        Provider<SessionController>(create: (_) => SessionController()),
       ],
       child: MaterialApp(
         title: 'eq_trainer',

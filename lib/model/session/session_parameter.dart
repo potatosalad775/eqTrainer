@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:eq_trainer/page/session_page.dart';
+
+enum FilterType { peak, dip, peakDip }
 
 // SessionParameter - Manage Variables required for Session
 class SessionParameter extends ChangeNotifier {

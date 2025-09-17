@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
-import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionGraph extends StatelessWidget {

@@ -14,7 +14,6 @@ import 'package:eq_trainer/widget/session/session_selector_portrait.dart';
 import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
-import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
@@ -31,7 +30,6 @@ class SessionPage extends StatefulWidget {
 
 class _SessionPageState extends State<SessionPage> {
   final player = SessionPlayer();
-  final sessionModel = SessionModel();
 
   @override
   void initState() {
@@ -48,8 +46,9 @@ class _SessionPageState extends State<SessionPage> {
     final sessionResult = Provider.of<SessionResultData>(context, listen: false);
     final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
     final playlistService = Provider.of<PlaylistService>(context, listen: false);
+    final sessionController = Provider.of<SessionController>(context, listen: false);
 
-    await sessionModel.launchSession(
+    await sessionController.launchSession(
       player,
       audioState: audioState,
       sessionState: sessionState,
@@ -66,7 +65,6 @@ class _SessionPageState extends State<SessionPage> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<SessionPlayer>.value(value: player),
-        ChangeNotifierProvider<SessionModel>.value(value: sessionModel),
       ],
       child: PopScope(
         canPop: false,
@@ -191,7 +189,6 @@ class _SessionPageState extends State<SessionPage> {
                         SessionSelectorLandscape(
                           player: player,
                           audioState: audioState,
-                          sessionModel: sessionModel,
                           freqData: sessionFreqData,
                           stateData: sessionState,
                           resultData: sessionResult,
@@ -236,7 +233,6 @@ class _SessionPageState extends State<SessionPage> {
           child: SessionSelectorPortrait(
             player: player,
             audioState: audioState,
-            sessionModel: sessionModel,
             freqData: sessionFreqData,
             stateData: sessionState,
             resultData: sessionResult,
@@ -283,5 +279,3 @@ class _SessionPageState extends State<SessionPage> {
 class SessionPlayer extends PlayerIsolate {
   SessionPlayer();
 }
-
-enum FilterType { peak, dip, peakDip }
