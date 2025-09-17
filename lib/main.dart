@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:window_size/window_size.dart';
@@ -11,22 +12,13 @@ import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/theme_data.dart';
-import 'package:eq_trainer/page/main_page.dart';
-import 'package:eq_trainer/model/audio_clip.dart';
-import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/model/setting_data.dart';
-// DI targets
-import 'package:eq_trainer/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/service/app_directories.dart';
-import 'package:eq_trainer/service/audio_clip_service.dart';
-import 'package:eq_trainer/service/playlist_service.dart';
-import 'package:eq_trainer/service/import_workflow_service.dart';
-import 'package:eq_trainer/service/upgrader_service.dart';
-import 'package:eq_trainer/model/session/session_parameter.dart';
-import 'package:eq_trainer/model/state/session_state_data.dart';
-import 'package:eq_trainer/model/session/session_result.dart';
-import 'package:eq_trainer/model/state/session_store.dart';
-import 'package:eq_trainer/controller/session_controller.dart';
+import 'package:eq_trainer/features/main_page.dart';
+import 'package:eq_trainer/shared/model/audio_clip.dart';
+import 'package:eq_trainer/shared/model/audio_state.dart';
+import 'package:eq_trainer/shared/model/setting_data.dart';
+import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
+import 'package:eq_trainer/shared/service/index.dart';
+import 'package:eq_trainer/features/session/index.dart';
 
 Future<void> main() async {
   // Initialize Packages
@@ -78,8 +70,10 @@ Future<void> main() async {
         fallbackLocale: const Locale('en'),
         useOnlyLangCode: true,
         assetLoader: const YamlAssetLoader(),
-        child: App(
-          upgrader: upgrader,
+        child: ToastificationWrapper(
+          child: App(
+            upgrader: upgrader,
+          ),
         ),
       ),
     )
@@ -161,15 +155,10 @@ class AppState extends State<App> {
 
         // Session parameters and data notifiers
         ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),
-        ChangeNotifierProvider<SessionStateData>(create: (_) => SessionStateData()),
-        ChangeNotifierProvider<SessionResultData>(create: (_) => SessionResultData()),
 
         // Session store (depends on freq/state/result)
         ChangeNotifierProvider<SessionStore>(
-          create: (ctx) => SessionStore(
-            stateData: ctx.read<SessionStateData>(),
-            resultData: ctx.read<SessionResultData>(),
-          ),
+          create: (ctx) => SessionStore(),
         ),
 
         // Controller

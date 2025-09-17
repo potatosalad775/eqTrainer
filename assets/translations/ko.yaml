@@ -139,7 +139,7 @@
   ## DEV SETTING CARD - Android Backend API
   "DEV_SETTING_CARD_BACKEND_TITLE": "오디오 API",
   "DEV_SETTING_CARD_BACKEND_DESC":
-    "소리가 생각보다 잘 재생되지 않는다면 오디오 API를 바꿔보세요.",
+    "소리가 생각보다 잘 재생되지 않는다면\n오디오 API를 바꿔보세요.",
   ## DEV SETTING - Backend
   "DEV_SETTING_BACKEND_APPBAR": "오디오 백엔드 API 설정",
   "DEV_SETTING_BACKEND_SNACKBAR_ERROR": "선택하신 오디오 백엔드를 활성화하는데 실패했습니다.",

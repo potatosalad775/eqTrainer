@@ -46,7 +46,7 @@ dependencies:
   fl_chart: ^1.0.0
   easy_localization: ^3.0.2
   easy_localization_loader: ^2.0.1
-  another_flushbar: ^1.12.30
+  toastification: ^3.0.3
   upgrader: ^12.0.0
   audio_video_progress_bar: ^2.0.0
   equatable: ^2.0.5

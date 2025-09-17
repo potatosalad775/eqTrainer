@@ -139,7 +139,7 @@
   ## DEV SETTING CARD - Android Backend API
   "DEV_SETTING_CARD_BACKEND_TITLE": "Audio API",
   "DEV_SETTING_CARD_BACKEND_DESC":
-    "If audio is not playing as expected, try changing audio backend API.",
+    "If audio is not playing as expected,\nTry changing audio backend API.",
   ## DEV SETTING - Backend
   "DEV_SETTING_BACKEND_APPBAR": "Audio Backend API Settings",
   "DEV_SETTING_BACKEND_SNACKBAR_ERROR": "Failed at activating selected Audio Backends.",

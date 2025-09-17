@@ -1,0 +1,1 @@
+enum SessionState { init, loading, ready, playlistEmpty, error }
