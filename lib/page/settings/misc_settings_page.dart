@@ -5,7 +5,7 @@ import 'package:eq_trainer/model/setting_data.dart';
 import 'package:eq_trainer/widget/settings_card.dart';
 import 'package:eq_trainer/widget/common/max_width_center_box.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 
 class MiscSettingsPage extends StatefulWidget {
   const MiscSettingsPage({super.key});

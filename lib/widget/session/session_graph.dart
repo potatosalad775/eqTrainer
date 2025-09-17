@@ -95,7 +95,7 @@ class SessionGraph extends StatelessWidget {
       else if(frequency > 1000) {
         String sF = (frequency ~/ 1000).toString();
         String sB = ((frequency % 1000) ~/ 100).toString();
-        return "${sF}.${sB}kHz";
+        return "$sF.${sB}kHz";
       }
       else if(frequency > 100) {
         return "${frequency - (frequency % 10)}Hz";

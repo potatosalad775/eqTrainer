@@ -1,8 +1,8 @@
+import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:flutter/material.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
-import 'package:eq_trainer/player/player_isolate.dart';
 
 class SessionPositionSlider extends StatelessWidget {
   const SessionPositionSlider({super.key});

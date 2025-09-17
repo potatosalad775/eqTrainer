@@ -1,7 +1,8 @@
 import 'dart:ffi';
-
 import 'package:coast_audio/coast_audio.dart';
+// ignore: implementation_imports
 import 'package:coast_audio/src/interop/internal/generated/bindings.dart';
+// ignore: implementation_imports
 import 'package:coast_audio/src/interop/internal/ma_extension.dart';
 
 class PeakingEQFilter {

@@ -64,7 +64,7 @@ class _ConfigCardState extends State<ConfigCard> {
                         );
                       }).toList()
                 :  (widget.cardType == ConfigCardType.qFactor) ?
-                      configCardInfo.valueList.map<DropdownMenuItem<double>>((double item) {
+                      configCardInfo.valueList.map<DropdownMenuItem<double>>((dynamic item) {
                         return DropdownMenuItem<double>(
                           value: item,
                           child: Text(item.toString()),
@@ -104,7 +104,7 @@ class ConfigCardInfo {
     required this.type,
   });
 
-  get title {
+  String get title {
     if(type == ConfigCardType.startingBand) { return "CONFIG_CARD_TITLE_SB".tr(); }
     else if(type == ConfigCardType.gain) { return "CONFIG_CARD_TITLE_G".tr(); }
     else if(type == ConfigCardType.qFactor) { return "CONFIG_CARD_TITLE_QF".tr(); }
@@ -112,7 +112,7 @@ class ConfigCardInfo {
     else if(type == ConfigCardType.threshold) { return "CONFIG_CARD_TITLE_T".tr(); }
     else { return "?"; }
   }
-  get subtitle {
+  String get subtitle {
     if(type == ConfigCardType.startingBand) { return "CONFIG_CARD_SUBTITLE_SB".tr(); }
     else if(type == ConfigCardType.gain) { return "CONFIG_CARD_SUBTITLE_G".tr(); }
     else if(type == ConfigCardType.qFactor) { return "CONFIG_CARD_SUBTITLE_QF".tr(); }
@@ -120,13 +120,13 @@ class ConfigCardInfo {
     else if(type == ConfigCardType.threshold) { return "CONFIG_CARD_SUBTITLE_T".tr(); }
     else { return "?"; }
   }
-  get valueList {
+  List<dynamic> get valueList {
     if(type == ConfigCardType.startingBand) { return [for(var i = 2; i <= 25; i+=1) i]; }
     else if(type == ConfigCardType.gain) { return [3,4,5,6,8,10,15]; }
     else if(type == ConfigCardType.qFactor) { return [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]; }
     else if(type == ConfigCardType.filterType) { return [FilterType.peak, FilterType.dip, FilterType.peakDip]; }
     else if(type == ConfigCardType.threshold) { return [1, 3, 5, 10]; }
-    else { return "?"; }
+    else { return []; }
   }
 }
 

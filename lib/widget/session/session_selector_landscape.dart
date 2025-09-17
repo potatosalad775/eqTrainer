@@ -90,6 +90,8 @@ class SessionSelectorLandscape extends StatelessWidget {
               sessionParameter: sessionParameter,
             );
 
+            if (!context.mounted) return;
+
             if (result.isCorrect) {
               Flushbar(
                 icon: Icon(Icons.check, color: Theme.of(context).colorScheme.onTertiary),

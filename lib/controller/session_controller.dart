@@ -100,7 +100,7 @@ class SessionController {
     required SessionResultData sessionResult,
   }) async {
     // Reset pEQ Status
-    player.setEQ(false);
+    await player.setEQ(false);
 
     // Num of Graph
     final int numOfGraph = sessionStore.graphBarDataList.length;
@@ -133,8 +133,8 @@ class SessionController {
 
   Future<void> updatePlayerState(PlayerIsolate player) async {
     // debugPrint("Updating Player EQ with Freq: $_answerCenterFreq, Gain: $_answerGain");
-    player.setEQFreq(_answerCenterFreq);
-    player.setEQGain(_answerGain);
+    await player.setEQFreq(_answerCenterFreq);
+    await player.setEQGain(_answerGain);
   }
 
   Future<SessionSubmitResult> submitAnswer({

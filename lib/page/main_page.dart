@@ -126,8 +126,8 @@ class _MainPageState extends State<MainPage> {
 
 class NavBarProvider extends ChangeNotifier {
   int _currentIndex = 0;
-  get currentIndex => _currentIndex;
-  set currentIndex(value) {
+  int get currentIndex => _currentIndex;
+  set currentIndex(int value) {
     _currentIndex = value;
     notifyListeners();
   }

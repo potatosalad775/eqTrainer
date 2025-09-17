@@ -187,8 +187,10 @@ class _ImportPageState extends State<ImportPage> {
         }
       }
     } else {
-      final clipService = context.read<AudioClipService>();
       try {
+        if(!mounted) return;
+        final clipService = context.read<AudioClipService>();
+
         final duration = await workflow.loadAudioFile(
           audioState: audioState,
           importPlayer: importPlayer,
@@ -200,7 +202,9 @@ class _ImportPageState extends State<ImportPage> {
           endSec: duration.seconds,
           isEdit: false,
         );
-        if (mounted) Navigator.of(context).pop();
+
+        if(!mounted) return;
+        Navigator.of(context).pop();
       } catch (e) {
         debugPrint("Error importing on desktop: $e");
         importPageState.value = ImportPageState.error;

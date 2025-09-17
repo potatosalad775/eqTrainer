@@ -60,24 +60,24 @@ Acceptance checklist
 - Introduce PathProvider (AppDirectories) service; services read paths via this, not global vars.
 - Use path.join everywhere (no Platform.pathSeparator/manual splits).
 
-3) Expand IAudioClipRepository and decouple playlist page
+3) Expand IAudioClipRepository and decouple playlist page [Complete]
 - Add getAllClips(), watchClips(), delete/update/toggleEnabled.
 - playlist_page uses Repository/Service streams; remove Hive.box(...).listenable() from UI.
 
-4) PlaylistService refinements
+4) PlaylistService refinements [Complete]
 - Use path.join and add resolvePath(fileName) for UI convenience.
 - Optionally return List<AudioClip> and resolve paths only when needed.
 
-5) Absorb or slim SessionPlaylist
+5) Absorb or slim SessionPlaylist [Complete]
 - Move playlistPaths/currentIndex into SessionStore; drop or reduce SessionPlaylist.
 
-6) Fold SessionModel into SessionController
+6) Fold SessionModel into SessionController [Complete]
 - Move launch/init/next-round/EQ update logic into controller; deprecate SessionModel.
 
-7) FrequencyCalculator purity
+7) FrequencyCalculator purity [Complete]
 - Ensure session_frequency is pure; Store holds results; no ChangeNotifier in calculator.
 
-8) UI cleanup
+8) UI cleanup [Complete]
 - Make selectors Stateless and call controller; keep feedback display only. [Complete]
 
 9) Errors & logging
