@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -7,6 +6,9 @@ import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_clip.dart';
 import 'package:eq_trainer/page/import_page.dart';
 import 'package:eq_trainer/widget/playlist_control_view.dart';
+import 'package:provider/provider.dart';
+import 'package:eq_trainer/service/app_directories.dart';
+import 'package:path/path.dart' as p;
 
 class PlaylistPage extends StatefulWidget {
   const PlaylistPage({super.key});
@@ -37,6 +39,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                 buildDefaultDragHandles: false,
                 itemCount: box.values.length,
                 itemBuilder: (context, index) {
+                  final dirs = context.read<AppDirectories>();
                   AudioClip? currentClip = box.getAt(index);
                   Duration clipDuration = Duration(
                       milliseconds: (currentClip!.duration * 1000).toInt());
@@ -76,7 +79,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                         children: [
                           // Play Button
                           IconButton(
-                            onPressed: () {
+                            onPressed: () async {
                               // Show popup screen
                               showModalBottomSheet(
                                   isDismissible: false,
@@ -85,15 +88,20 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                   context: context,
                                   isScrollControlled: true,
                                   builder: (context) {
-                                    if (Platform.isWindows) {
-                                      return PlaylistControlView(
-                                          filePath:
-                                              "${audioClipDir.path}\\${box.getAt(index)?.fileName}");
-                                    } else {
-                                      return PlaylistControlView(
-                                          filePath:
-                                              "${audioClipDir.path}/${box.getAt(index)?.fileName}");
-                                    }
+                                    return FutureBuilder<String>(
+                                      future: dirs.getClipsPath(),
+                                      builder: (context, snap) {
+                                        if (!snap.hasData) {
+                                          return const SizedBox(
+                                            height: 160,
+                                            child: Center(child: CircularProgressIndicator()),
+                                          );
+                                        }
+                                        final base = snap.data!;
+                                        final filePath = p.join(base, box.getAt(index)!.fileName);
+                                        return PlaylistControlView(filePath: filePath);
+                                      },
+                                    );
                                   });
                             },
                             icon: const Icon(Icons.play_arrow),
@@ -193,6 +201,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
     );
   }
 
+  /*
   Widget _proxyDecorator(
       Widget child, int index, Animation<double> animation) {
     return AnimatedBuilder(
@@ -214,8 +223,8 @@ class _PlaylistPageState extends State<PlaylistPage> {
       child: child,
     );
   }
+  */
 
-  // Using Temporary ProxyDecorator to hide ugly shadow around margin.
   // Flutter Issue Tracker: https://github.com/flutter/flutter/issues/63527
   Widget _tempProxyDecorator(
       Widget child, int index, Animation<double> animation) {

@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_clip.dart';
+import 'package:eq_trainer/service/app_directories.dart';
 
 abstract class IAudioClipRepository {
   Future<void> addClip(AudioClip clip);
@@ -11,9 +11,10 @@ abstract class IAudioClipRepository {
 }
 
 class AudioClipService {
-  AudioClipService(this._repository);
+  AudioClipService(this._repository, this._dirs);
 
   final IAudioClipRepository _repository;
+  final AppDirectories _dirs;
 
   /// Generate Audio Clip from Source File
   /// - sourcePath: Original File Path
@@ -27,12 +28,12 @@ class AudioClipService {
   }) async {
     // Prepare Paths
     final String fileBase = DateTime.now().microsecondsSinceEpoch.toString();
+    final audioClipPath = await _dirs.getClipsPath();
     String ext = p.extension(sourcePath).toLowerCase();
     if (ext != '.wav' && ext != '.mp3' && ext != '.flac') {
       ext = '.flac';
     }
-    final String destPath =
-        '${audioClipDir.path}${Platform.pathSeparator}$fileBase$ext';
+    final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
     // Generate Clip File
     late final double duration;
@@ -66,9 +67,7 @@ class AudioClipService {
     }
 
     // Save Metadata to DB
-    final originalName = Platform.isWindows
-        ? sourcePath.split('\\').last
-        : sourcePath.split('/').last;
+    final originalName = p.basename(sourcePath);
     final clip = AudioClip(
       '$fileBase$ext',
       originalName,

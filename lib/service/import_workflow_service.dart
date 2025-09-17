@@ -6,6 +6,7 @@ import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/player/import_player.dart';
+import 'package:path/path.dart' as p;
 
 class ImportWorkflowService {
   const ImportWorkflowService();
@@ -49,10 +50,9 @@ class ImportWorkflowService {
   }) async {
     final Directory appTempDir = await getTemporaryDirectory();
     final Directory tempClipDir = await Directory(
-      "${appTempDir.path}${Platform.pathSeparator}temp",
+      p.join(appTempDir.path, 'temp')
     ).create(recursive: true);
-    final String newFilePath =
-        "${tempClipDir.path}${Platform.pathSeparator}$fileNameWithoutExt.flac";
+    final String newFilePath = p.join(tempClipDir.path, "$fileNameWithoutExt.flac");
 
     final String cmd = "-y -vn -i $sourcePath -c:a flac $newFilePath";
     final session = await FFmpegKit.execute(cmd);

@@ -18,6 +18,7 @@ import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/setting_data.dart';
 // DI targets
 import 'package:eq_trainer/repository/audio_clip_repository.dart';
+import 'package:eq_trainer/service/app_directories.dart';
 import 'package:eq_trainer/service/audio_clip_service.dart';
 import 'package:eq_trainer/service/playlist_service.dart';
 import 'package:eq_trainer/service/import_workflow_service.dart';
@@ -41,11 +42,6 @@ Future<void> main() async {
 
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();
-  if (Platform.isWindows) {
-    audioClipDir = await Directory("${appSupportDir.path}\\audioclip").create(recursive: true);
-  } else {
-    audioClipDir = await Directory("${appSupportDir.path}/audioclip").create(recursive: true);
-  }
 
   // Load Hive - settings data & playlist database
   await Hive.initFlutter(appSupportDir.path);
@@ -140,14 +136,23 @@ class AppState extends State<App> {
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
         ChangeNotifierProvider<AudioState>.value(value: _audioState),
 
+        // Directories
+        Provider<AppDirectories>(create: (_) => AppDirectories()),
+
         // Repository
         Provider<AudioClipRepository>(create: (_) => AudioClipRepository()),
         // Expose as interface as well for flexible injection
         Provider<IAudioClipRepository>(create: (ctx) => ctx.read<AudioClipRepository>()),
 
         // Services
-        Provider<AudioClipService>(create: (ctx) => AudioClipService(ctx.read<IAudioClipRepository>())),
-        Provider<PlaylistService>(create: (ctx) => PlaylistService(ctx.read<IAudioClipRepository>())),
+        Provider<AudioClipService>(create: (ctx) => AudioClipService(
+          ctx.read<IAudioClipRepository>(),
+          ctx.read<AppDirectories>(),
+        )),
+        Provider<PlaylistService>(create: (ctx) => PlaylistService(
+          ctx.read<IAudioClipRepository>(),
+          ctx.read<AppDirectories>(),
+        )),
         Provider<ImportWorkflowService>(create: (_) => const ImportWorkflowService()),
 
         // Session parameters and data notifiers
@@ -239,7 +244,6 @@ String miscSettingsKey = "miscSettingsKey";
 String audioClipBoxName = "audioClipBox";
 
 late Directory appSupportDir;
-late Directory audioClipDir;
 
 //AndroidAudioBackend? androidAudioBackend;
 late List<String> backendList;
