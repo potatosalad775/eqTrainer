@@ -13,5 +13,9 @@ class AudioClipRepository implements IAudioClipRepository {
   Future<void> addClip(AudioClip clip) async {
     await _box.add(clip);
   }
-}
 
+  @override
+  List<AudioClip> getAllClips() {
+    return _box.values.toList(growable: false);
+  }
+}

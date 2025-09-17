@@ -6,6 +6,8 @@ import 'package:eq_trainer/model/audio_clip.dart';
 
 abstract class IAudioClipRepository {
   Future<void> addClip(AudioClip clip);
+  // 전체 클립 목록을 반환 (동기). PlaylistService에서 필터링/매핑.
+  List<AudioClip> getAllClips();
 }
 
 class AudioClipService {
@@ -77,4 +79,3 @@ class AudioClipService {
     await _repository.addClip(clip);
   }
 }
-

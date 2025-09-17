@@ -32,18 +32,6 @@ class SessionPage extends StatefulWidget {
 class _SessionPageState extends State<SessionPage> {
   final player = SessionPlayer();
   final sessionModel = SessionModel();
-  final sessionState = SessionStateData();
-  final sessionPlaylist = SessionPlaylist();
-  final sessionResult = SessionResultData();
-  final sessionFreqData = SessionFrequencyData();
-  // Add SessionController
-  final sessionController = SessionController();
-  // Add SessionStore as single-source-of-truth for UI
-  late final SessionStore sessionStore = SessionStore(
-    freqData: sessionFreqData,
-    stateData: sessionState,
-    resultData: sessionResult,
-  );
 
   @override
   void initState() {
@@ -55,6 +43,11 @@ class _SessionPageState extends State<SessionPage> {
   Future<void> _init() async {
     final audioState = Provider.of<AudioState>(context, listen: false);
     final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
+    final sessionState = Provider.of<SessionStateData>(context, listen: false);
+    final sessionPlaylist = Provider.of<SessionPlaylist>(context, listen: false);
+    final sessionResult = Provider.of<SessionResultData>(context, listen: false);
+    final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
+
     await sessionModel.launchSession(
       player,
       audioState: audioState,
@@ -71,12 +64,7 @@ class _SessionPageState extends State<SessionPage> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<SessionPlayer>.value(value: player),
-        ChangeNotifierProvider<SessionStateData>.value(value: sessionState),
-        ChangeNotifierProvider<SessionFrequencyData>.value(value: sessionFreqData),
-        ChangeNotifierProvider<SessionResultData>.value(value: sessionResult),
         ChangeNotifierProvider<SessionModel>.value(value: sessionModel),
-        // Provide SessionStore
-        ChangeNotifierProvider<SessionStore>.value(value: sessionStore),
       ],
       child: PopScope(
         canPop: false,
@@ -169,6 +157,12 @@ class _SessionPageState extends State<SessionPage> {
 
   Widget sessionViewLandscape() {
     final audioState = Provider.of<AudioState>(context, listen: false);
+    final sessionPlaylist = Provider.of<SessionPlaylist>(context, listen: false);
+    final sessionController = Provider.of<SessionController>(context, listen: false);
+    final sessionState = Provider.of<SessionStateData>(context, listen: false);
+    final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
+    final sessionResult = Provider.of<SessionResultData>(context, listen: false);
+
     return MaxWidthCenterBox(
       ratio: 3,
       child: Row(
@@ -217,6 +211,11 @@ class _SessionPageState extends State<SessionPage> {
 
   Widget sessionViewPortrait() {
     final audioState = Provider.of<AudioState>(context, listen: false);
+    final sessionPlaylist = Provider.of<SessionPlaylist>(context, listen: false);
+    final sessionController = Provider.of<SessionController>(context, listen: false);
+    final sessionState = Provider.of<SessionStateData>(context, listen: false);
+    final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
+    final sessionResult = Provider.of<SessionResultData>(context, listen: false);
     return Column(
       children: [
         const Expanded(
@@ -249,6 +248,8 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   void _onPop() {
+    final sessionResult = Provider.of<SessionResultData>(context, listen: false);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

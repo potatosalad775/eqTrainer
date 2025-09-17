@@ -1,257 +1,109 @@
-# Engineering Log / Milestones
+# Engineering Log / Milestones (condensed)
 
 Tracking ongoing refactors and decisions for eqTrainer.
 
-## 2025-09-17 — Audio Clip pipeline refactor (Phase 1)
-
+## 2025-09-17 — Audio Clip pipeline refactor (Phase 1) — Summary
 Completed
-- Introduced AudioClipService (lib/service/audio_clip_service.dart)
-  - Business logic for creating clips
-  - Mobile (Android/iOS/macOS): trims via FFmpegKit (-ss/-to in ms)
-  - Desktop/Non-edit: full copy
-  - Unique filenames with microsecondsSinceEpoch
-  - Extension policy: wav/mp3/flac kept; others converted to flac
-- Added repository abstraction for persistence
-  - IAudioClipRepository (service-facing contract)
-  - AudioClipRepository (lib/repository/audio_clip_repository.dart) using Hive box (audioClipBox)
-- Rewired UI call sites to the service
-  - EditorControlView: replaced local makeAudioClip with AudioClipService.createClip
-  - ImportPage: desktop path now calls AudioClipService.createClip; added scoped Providers for repository/service
-- Verified static analysis on touched files: no errors in service, repository, and updated widgets/pages
-
-Decisions & Notes
-- Keep FFmpeg-based trim only when isEdit=true on mobile targets; otherwise just copy
-- Favor flac fallback for unsupported extensions to align with miniaudio constraints
-- Store original filename and computed duration in AudioClip Hive model
-
-## Next up (Phase 1.1)
-- Dependency injection
-  - Consider lifting AudioClipService/Repository Providers to app-level (main.dart) if service is needed beyond ImportPage
-- Import pipeline hardening
-  - Extract ImportPlayer into its own file to avoid circular imports if needed in multiple widgets
-  - Add unit tests for AudioClipService (trim vs copy, unsupported ext→flac, ffmpeg error propagation)
-  - Handle edge cases: zero/invalid duration, nonexistent sourcePath, permission errors, partial writes
-- Observability
-  - Add lightweight logging around clip creation (args, duration, errors)
-
-## Future refactors (Phase 2)
-- Session flow decoupling
-  - Ensure SessionController mediates submit logic for both portrait/landscape selectors
-  - Reduce duplicated provider wiring and centralize where feasible
-- Code hygiene
-  - Remove legacy makeAudioClip implementations across the codebase (confirmed migrated at current call sites)
-  - Organize player-related classes (shared player contracts, isolate boundaries)
-
-## Quick reference
-- Service entrypoint: AudioClipService.createClip({sourcePath, startSec, endSec, isEdit})
-- Repository contract: IAudioClipRepository.addClip(AudioClip)
-- Persistence: Hive box name = audioClipBox (see lib/main.dart)
-
----
-
-## Scan findings and refactor plan (from earlier discussion)
-
-Findings (요약 스캔 결과)
-- State/Provider sprawl: many ChangeNotifier scattered across lib
-  - Found: SessionFrequencyData, SessionModel, AudioState, SessionPlaylist, SessionResultData, SessionParameter,
-    PlayerIsolate, SessionStateData (currently inside page/session_page.dart), NavBarProvider,
-    ImportAudioData (currently inside widget/editor_control_view.dart)
-- Logic location issues
-  - session_selector_landscape.dart: answer judgment, scoring, band changes, and next-session init hardcoded in widget
-  - editor_control_view.dart: file trim/copy logic (makeAudioClip) lives in UI
-- FFmpeg/file processing inconsistencies
-  - executeWithArguments (no await) vs executeAsync, mixed usage and incomplete failure handling
-  - Output extension recalculation bug risk; path separator/platform splits; prefer path.basename/join
-- Domain/storage coupling
-  - makeAudioClip performs Hive writes and references global audioClipDir directly from UI layer
-
-Architecture improvements (제안)
-- Layering
-  - services/audio_clip_service.dart: owns clip create/copy/encode, FFmpeg calls, filename/ext policy; await and map errors
-  - repositories/audio_clip_repository.dart: Hive-only persistence (add/list/delete/toggle)
-  - controllers/session_controller.dart (or view_model/): submitAnswer orchestration
-    - UI shows feedback (Flushbar), controller mutates state and runs next session init
-- State class placement
-  - Create model/state/ or state/ and move scattered notifiers there
-  - Extract SessionStateData (from page/session_page.dart)
-  - Extract ImportAudioData (from widget/editor_control_view.dart)
-  - Apply same rule to NavBarProvider, etc.
-- Provider composition
-  - Register Notifiers and services centrally (main.dart MultiProvider); widgets only select/consume
-- FFmpeg standardization
-  - Standardize to one approach (await completion), verify options (-ss, -to/-t) and codecs (-c:a flac for flac)
-  - Common error/cancel/timeout handling
-- File/path hygiene
-  - Use path package: basename, extension, join
-  - Ensure output dir exists; unique filenames (timestamp + microseconds)
-- Behavior/edge checks
-  - Validate time ranges (0 ≤ start < end ≤ duration), epsilon rounding
-  - Platform-specific path/permission handling
-  - Only persist and pop UI after FFmpeg completes successfully
-- UI simplification
-  - session selectors: call controller.submitAnswer and display feedback only
-  - editor control: call audioClipService.createClip; repo handles persistence
-
-Work plan (저위험 → 고효과)
-- [x] Extract AudioClipService/Repository and move makeAudioClip into service (fix ext/path/await/errors)
-- [x] Replace service calls in import_page.dart and editor_control_view.dart
-- [x] Extract ImportAudioData, SessionStateData to state/ (or model/state/) and update imports
-- [x] Extract SessionController and route submit logic through it (applied to portrait/landscape)
-- [ ] Unify Provider registration in main.dart; remove page/widget-local registrations where feasible
-- [ ] Standardize FFmpeg call sites to service only; remove any stray usage
-- [ ] Add tests (service and controller) and basic logging
-
-Specific issues to fix (메모)
-- editor_control_view.dart
-  - Path/ext handling and awaiting FFmpeg (now addressed by service)
-  - Use path.basename instead of Platform/split (handled in service)
-  - UI must not write to Hive directly (moved to repo)
-- session_selector_landscape.dart
-  - Widget contained domain logic (now centralized via SessionController). Ensure portrait version is aligned
-
-Recommended structure (권장 구조)
-```
-lib/
-  service/
-    audio_clip_service.dart
-  repository/
-    audio_clip_repository.dart
-  model/
-    state/
-      import_audio_data.dart
-      session_state_data.dart
-  controller/
-    session_controller.dart
-  widget/
-    editor_control_view.dart  // UI only
-    session/
-      session_selector_landscape.dart  // UI only
-      session_selector_portrait.dart   // UI only
-```
-
-Interface contracts (간단 계약)
-- AudioClipService
-  - Future<void> createClip({required String sourcePath, required double startSec, required double endSec, required bool isEdit})
-  - Throws mapped exceptions on FFmpeg/file errors
-- AudioClipRepository
-  - Future<void> addClip(AudioClip)
-  - (Later) list/delete/toggle
-- SessionController
-  - Future<SessionSubmitResult> submitAnswer(...) -> {isCorrect, answerIndex}
-
-Quality gates & tests (품질 게이트)
-- Build & Analyzer: PASS on touched files; keep warnings at 0 for new modules
-- Unit tests (to add):
-  - AudioClipService: trim vs copy, unsupported ext→flac, invalid range throws, error propagation
-  - SessionController: scoring, threshold band changes, next-session init calls
-- Widget tests (optional):
-  - Session selector invokes controller and shows correct feedback
-- Smoke checks:
-  - Path handling (basename/join), FFmpeg options and awaiting, UI only pops after persistence
-
----
-
-## 2025-09-17 — Session Flow Refactor Plan (Phase 2 kickoff)
-
-Context
-- Goal: reduce session state/logic sprawl, move domain rules out of widgets, and converge on a single controller + single store pattern.
-- Why now: session scoring/round logic currently lives in UI (session_selector_*), and 5+ ChangeNotifiers increase coupling and complexity.
-
-Repo scan snapshot (session-related)
-- Found 14 files under lib/**/session_*.dart (widgets, page, model/state):
-  - widget/session/: session_graph.dart, session_picker_portrait.dart, session_selector_landscape.dart, session_picker_landscape.dart, session_control.dart, session_selector_portrait.dart, session_position_slider.dart
-  - page/session_page.dart
-  - model/session/: session_frequency.dart, session_parameter.dart, session_model.dart, session_playlist.dart, session_result.dart
-  - model/state/session_state_data.dart
-
-Problems observed (요약)
-- Logic in UI: session_selector_landscape.dart owns answer judgment, scoring, band thresholds, and next-round init.
-- State fragmentation: SessionFrequencyData, SessionModel, SessionParameter, SessionPlaylist, SessionResultData, SessionStateData (+ AudioState, PlayerIsolate) scattered as ChangeNotifiers.
-- Domain/storage coupling: session_playlist.dart and others directly touch Hive/paths.
-- Testability: unit testing is hard since rules live inside widgets/notifiers with side effects.
-
-Target architecture (간단 구조)
-- Controller (SessionController): orchestrates submit/nextRound/launch/reset; communicates only via Store/Services.
-- Store (SessionStore): single source of truth for session state; immutable snapshots preferred.
-- Services/Repositories: PlayerService, PlaylistService, IAudioClipRepository; decouple from Hive and platform details.
-- Pure utilities: FrequencyCalculator for graph/center frequencies; result reducers are pure functions.
-- UI: thin; triggers controller actions and renders from Store; no domain rules.
-
-File-level actions (각 파일 처리 방침)
-- model/session/session_frequency.dart
-  - Convert to pure FrequencyCalculator (no ChangeNotifier). Output: {centerFreqs, graphSeries} given startingBand/filterType.
-  - Any GraphState enum should live under model/state or view-only.
-- model/session/session_model.dart
-  - Fold round creation/EQ update logic into SessionController. Deprecate direct mutations here.
-- model/session/session_parameter.dart
-  - Make it an immutable value object (consider freezed later). Store keeps the active copy.
-- model/session/session_playlist.dart
-  - Extract to PlaylistService that depends on IAudioClipRepository for persistence; remove direct Hive/path usage from model layer.
-- model/session/session_result.dart
-  - Keep as value + pure reducers (aggregate/update). Store holds current result snapshot.
-- widget/session/session_selector_landscape.dart (and portrait counterpart)
-  - Remove domain logic; call SessionController (submitAnswer/nextRound) and only show feedback.
-- model/state/session_state_data.dart
-  - Becomes SessionStore (single ChangeNotifier or StateNotifier if we later move to Riverpod). Holds viewState/currentRound/graph/progress/result.
-
-Contracts (초안)
-- SessionStore (fields)
-  - viewState: idle | loading | ready | error
-  - currentRound: {graphIndex, freqIndex, centerFreq, gain}
-  - graph: {centerFreqsLog, centerFreqsLinear, series}
-  - progress: {currentSessionPoint, threshold, startingBand}
-  - result: {elapsedMs, correct, incorrect, perBand}
-- SessionController (methods)
-  - Future<void> launchSession()
-  - Future<SessionSubmitResult> submitAnswer({required int pickedIndex}) // returns {isCorrect, answerIndex}
-  - Future<void> nextRound()
-  - void reset()
-- FrequencyCalculator
-  - compute({required int startingBand, required FilterType type}) -> {centerFreqs, series}
-- PlaylistService
-  - Future<List<String>> listEnabledClipPaths()
-- PlayerService
-  - Future<void> launch(); Future<void> setEQ({freq, gain}); etc.
-
-Step-by-step plan
-1) Introduce SessionController + wire UI
-   - Route session_selector_landscape/portrait actions through controller.
-   - Keep UI feedback only (Flushbar/snackbar). [Planned]
-2) Introduce SessionStore as single state
-   - Move computed graph/progress/result into Store snapshots; widgets select slices. [Planned]
-3) Extract FrequencyCalculator (pure) and update graph usage
-   - Remove ChangeNotifier responsibilities from session_frequency.dart. [Planned]
-4) Decouple playlist/storage
-   - Create PlaylistService using IAudioClipRepository; remove Hive/path logic from session_playlist.dart. [Planned]
-5) Consolidate Providers in main.dart
-   - Register Store, Controller, Services centrally; delete page/widget-local providers. [Planned]
-6) Tests & logging
-   - Add unit tests for controller (scoring/threshold/nextRound) and frequency calculator; add lightweight logs. [Planned]
-
-Edge cases to cover
-- Empty playlist or disabled all clips -> controller should surface a ready=false/error state.
-- Threshold band changes -> ensure picker index bounds reset safely.
-- Rapid submits/debounced updates -> guard re-entrancy in controller.
-- Player errors/timeouts -> map to Store.error with user-friendly message.
-
-Quality gates
-- Build & Analyzer: PASS for new/edited modules; no new warnings.
-- Unit tests: controller and frequency calculator cover happy path + boundary conditions.
-- Smoke test: selectors trigger controller, UI displays correct/incorrect feedback, next round advances.
-
-Risks & mitigation
-- UI regressions due to provider rewiring -> migrate one selector first (landscape), verify, then port portrait.
-- Hidden logic in other widgets -> grep for session_* usage and centralize gradually.
-- Coupling with PlayerIsolate -> introduce PlayerService adapter to maintain existing isolate boundary.
+- AudioClipService introduced: edit(trim via FFmpegKit) vs copy, unique filenames, ext policy (wav/mp3/flac, else→flac), basename/join policy planned.
+- Repository abstraction: IAudioClipRepository contract; AudioClipRepository (Hive box: audioClipBox).
+- UI rewiring: import/editor now call AudioClipService.createClip (UI no longer writes to Hive directly).
 
 Decisions & notes
-- Keep Provider for now; consider Riverpod(StateNotifier) later if beneficial.
-- Prefer immutable state snapshots (optionally freezed later) to simplify testing.
-- Maintain existing public APIs where feasible to reduce blast radius during Phase 2.
+- Mobile edit→FFmpeg (-ss/-to in ms); desktop/non-edit→copy.
+- Store original filename and computed duration in Hive model.
+- Favor flac fallback to align with playback constraints.
 
-Acceptance checklist (완료 조건)
-- [ ] session_selector_landscape.dart has no scoring/next-round logic; calls controller only.
-- [ ] session_selector_portrait.dart aligned with the same controller API.
-- [ ] Only one session-related ChangeNotifier (Store) is exposed to UI.
-- [ ] Playlist/Hive access is behind a Repository/Service; no direct Hive calls in UI/Controller.
-- [ ] Unit tests for SessionController and FrequencyCalculator are green.
+Next up (Phase 1.1)
+- DI: lift repository/service providers to app-level when broadly used.
+- Observability: add lightweight logs around clip creation and failures.
+- Tests: AudioClipService (trim vs copy, ext fallback, error propagation).
+
+---
+
+## 2025-09-17 — Session Flow Refactor (Phase 2) — Plan
+Context
+- Goal: reduce session state/logic sprawl; move domain rules out of widgets; converge on a single controller + single store.
+
+Pain points (snapshot)
+- Logic in UI (selectors): judgment, scoring, band changes, next-session init mixed into widgets.
+- State fragmentation: many ChangeNotifiers (SessionFrequencyData, SessionModel, SessionParameter, SessionPlaylist, SessionResultData, SessionStateData, AudioState…).
+- Domain/storage coupling: playlist and UI touching Hive/paths.
+- Testability: hard while rules live inside widgets with side effects.
+
+Target architecture
+- Controller (SessionController): orchestrates launch/submit/nextRound; mutates Store only.
+- Store (SessionStore): single source of truth for session state (viewState, round, graph, progress, result).
+- Services/Repositories: PlayerService adapter, PlaylistService, IAudioClipRepository (Hive hidden).
+- Pure utilities: FrequencyCalculator (graph/center freqs), reducers for results.
+- UI: thin; triggers controller; renders from Store; no domain rules.
+
+Contracts (quick)
+- SessionController: launchSession(), submitAnswer(pickedIndex) → {isCorrect, answerIndex}, nextRound(), reset().
+- SessionStore: viewState, currentRound, graph, progress, result.
+- PlaylistService: listEnabledClipPaths() and/or resolvePath(fileName).
+- IAudioClipRepository: addClip(), getAllClips(), (later) watch/list/delete/toggle.
+
+Acceptance checklist
+- [x] Playlist/Hive access behind Repository/Service; no direct Hive/path in session playlist model (Plan 4 DONE).
+- [ ] Selectors have no domain logic; call controller only (landscape+portrait).
+- [ ] Only one session-related ChangeNotifier (Store) exposed to UI.
+- [ ] Frequency/graph computed via pure utility; state held in Store.
+- [ ] Unit tests: controller + frequency calculator.
+
+---
+
+## Improvements to do before provider consolidation (practical, high impact)
+1) Consolidate DI/providers in main.dart
+- Register Repository, Services, Store, Controller centrally; pages/widgets only consume.
+
+2) Remove global audioClipDir
+- Introduce PathProvider (AppDirectories) service; services read paths via this, not global vars.
+- Use path.join everywhere (no Platform.pathSeparator/manual splits).
+
+3) Expand IAudioClipRepository and decouple playlist page
+- Add getAllClips(), watchClips(), delete/update/toggleEnabled.
+- playlist_page uses Repository/Service streams; remove Hive.box(...).listenable() from UI.
+
+4) PlaylistService refinements
+- Use path.join and add resolvePath(fileName) for UI convenience.
+- Optionally return List<AudioClip> and resolve paths only when needed.
+
+5) Absorb or slim SessionPlaylist
+- Move playlistPaths/currentIndex into SessionStore; drop or reduce SessionPlaylist.
+
+6) Fold SessionModel into SessionController
+- Move launch/init/next-round/EQ update logic into controller; deprecate SessionModel.
+
+7) FrequencyCalculator purity
+- Ensure session_frequency is pure; Store holds results; no ChangeNotifier in calculator.
+
+8) UI cleanup
+- Make selectors Stateless and call controller; keep feedback display only.
+
+9) Errors & logging
+- Standardize FFmpeg error/timeout mapping; controller maps to Store.error with user-friendly messages.
+- Add minimal logging hooks (debug build only).
+
+10) Tests & smoke
+- Unit: AudioClipService, SessionController.
+- Smoke: selectors trigger controller, UI advances rounds, correct/incorrect path verified.
+
+---
+
+## Step-by-step next actions (safe order)
+- [ ] Provider consolidation in main.dart (Repo/Services/Store/Controller registration; remove local news in pages/widgets).
+- [ ] Replace global audioClipDir with PathProvider service; migrate services to it; update path handling to path.join.
+- [ ] Repository contract: add watch/list/delete/toggle; migrate playlist_page to consume repository/service streams.
+- [ ] SessionPlaylist → Store absorption (or minimal wrapper), update controller/UI wiring.
+- [ ] SessionModel → Controller migration; delete legacy calls.
+- [ ] Tests: add basic unit tests (service/controller) and enable lightweight logging.
+
+Quality gates
+- Build & Analyzer: PASS; zero new warnings.
+- Tests: service/controller cover happy + boundaries.
+- Smoke: empty playlist, threshold band change, rapid submits, player errors mapped to Store.error.
+
+Risks & mitigation
+- UI regressions after provider rewiring → migrate one page at a time and verify.
+- Hidden logic in other widgets → grep session_* and centralize gradually.
+- Player isolate coupling → add PlayerService adapter to preserve boundaries.

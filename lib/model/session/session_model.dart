@@ -35,7 +35,7 @@ class SessionModel extends ChangeNotifier {
       sessionResultData.resetResult();
       sessionFreqData.resetPickerValue();
       // Update Audio Clip Path list for Session
-      sessionPlaylist.getAudioClipPathList();
+      await sessionPlaylist.getAudioClipPathList();
       // If List of Audio clips for Session is Not Empty
       if(sessionPlaylist.audioClipPathList.isNotEmpty) {
         // Open First AudioClip

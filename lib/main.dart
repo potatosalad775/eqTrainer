@@ -16,6 +16,18 @@ import 'package:eq_trainer/page/main_page.dart';
 import 'package:eq_trainer/model/audio_clip.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/setting_data.dart';
+// DI targets
+import 'package:eq_trainer/repository/audio_clip_repository.dart';
+import 'package:eq_trainer/service/audio_clip_service.dart';
+import 'package:eq_trainer/service/playlist_service.dart';
+import 'package:eq_trainer/service/import_workflow_service.dart';
+import 'package:eq_trainer/model/session/session_parameter.dart';
+import 'package:eq_trainer/model/state/session_state_data.dart';
+import 'package:eq_trainer/model/session/session_frequency.dart';
+import 'package:eq_trainer/model/session/session_result.dart';
+import 'package:eq_trainer/model/session/session_playlist.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
+import 'package:eq_trainer/controller/session_controller.dart';
 
 Future<void> main() async {
   // Initialize Packages
@@ -124,8 +136,42 @@ class AppState extends State<App> {
 
     return MultiProvider(
       providers: [
+        // UI-level
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
         ChangeNotifierProvider<AudioState>.value(value: _audioState),
+
+        // Repository
+        Provider<AudioClipRepository>(create: (_) => AudioClipRepository()),
+        // Expose as interface as well for flexible injection
+        Provider<IAudioClipRepository>(create: (ctx) => ctx.read<AudioClipRepository>()),
+
+        // Services
+        Provider<AudioClipService>(create: (ctx) => AudioClipService(ctx.read<IAudioClipRepository>())),
+        Provider<PlaylistService>(create: (ctx) => PlaylistService(ctx.read<IAudioClipRepository>())),
+        Provider<ImportWorkflowService>(create: (_) => const ImportWorkflowService()),
+
+        // Session parameters and data notifiers
+        ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),
+        ChangeNotifierProvider<SessionStateData>(create: (_) => SessionStateData()),
+        ChangeNotifierProvider<SessionFrequencyData>(create: (_) => SessionFrequencyData()),
+        ChangeNotifierProvider<SessionResultData>(create: (_) => SessionResultData()),
+
+        // Session playlist (depends on PlaylistService)
+        ChangeNotifierProvider<SessionPlaylist>(
+          create: (ctx) => SessionPlaylist(playlistService: ctx.read<PlaylistService>()),
+        ),
+
+        // Session store (depends on freq/state/result)
+        ChangeNotifierProvider<SessionStore>(
+          create: (ctx) => SessionStore(
+            freqData: ctx.read<SessionFrequencyData>(),
+            stateData: ctx.read<SessionStateData>(),
+            resultData: ctx.read<SessionResultData>(),
+          ),
+        ),
+
+        // Controller
+        Provider<SessionController>(create: (_) => const SessionController()),
       ],
       child: MaterialApp(
         title: 'eq_trainer',

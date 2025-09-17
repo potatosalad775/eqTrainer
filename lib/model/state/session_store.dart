@@ -60,8 +60,10 @@ class SessionStore extends ChangeNotifier {
   void _onGraphStateChanged() {
     graphStateNotifier.value = _freqData.graphStateNotifier.value;
     // Also sync data when graph state changes (e.g., after initSessionFreqData completes)
-    //_syncFromFreq();
-    //notifyListeners();
+    if (graphStateNotifier.value == GraphState.ready || graphStateNotifier.value == GraphState.error) {
+      _syncFromFreq();
+      notifyListeners();
+    }
   }
 
   void _onFreqChanged() {

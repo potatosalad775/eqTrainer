@@ -8,7 +8,6 @@ import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/player/import_player.dart';
 import 'package:eq_trainer/widget/editor_control_view.dart';
 import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
-import 'package:eq_trainer/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/service/audio_clip_service.dart';
 import 'package:eq_trainer/model/state/import_audio_data.dart';
 import 'package:eq_trainer/service/import_workflow_service.dart';
@@ -42,11 +41,7 @@ class _ImportPageState extends State<ImportPage> {
       providers: [
         ChangeNotifierProvider<ImportAudioData>.value(value: clipDivProvider),
         ChangeNotifierProvider<ImportPlayer>.value(value: importPlayer),
-        Provider<AudioClipRepository>(create: (_) => AudioClipRepository()),
-        Provider<AudioClipService>(
-          create: (ctx) => AudioClipService(ctx.read<AudioClipRepository>()),
-        ),
-        Provider<ImportWorkflowService>(create: (_) => const ImportWorkflowService()),
+        // Remove local DI; use app-level providers for services
       ],
       child: PopScope(
         canPop: false,
