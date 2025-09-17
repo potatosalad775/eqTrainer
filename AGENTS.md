@@ -148,3 +148,110 @@ Quality gates & tests (품질 게이트)
   - Session selector invokes controller and shows correct feedback
 - Smoke checks:
   - Path handling (basename/join), FFmpeg options and awaiting, UI only pops after persistence
+
+---
+
+## 2025-09-17 — Session Flow Refactor Plan (Phase 2 kickoff)
+
+Context
+- Goal: reduce session state/logic sprawl, move domain rules out of widgets, and converge on a single controller + single store pattern.
+- Why now: session scoring/round logic currently lives in UI (session_selector_*), and 5+ ChangeNotifiers increase coupling and complexity.
+
+Repo scan snapshot (session-related)
+- Found 14 files under lib/**/session_*.dart (widgets, page, model/state):
+  - widget/session/: session_graph.dart, session_picker_portrait.dart, session_selector_landscape.dart, session_picker_landscape.dart, session_control.dart, session_selector_portrait.dart, session_position_slider.dart
+  - page/session_page.dart
+  - model/session/: session_frequency.dart, session_parameter.dart, session_model.dart, session_playlist.dart, session_result.dart
+  - model/state/session_state_data.dart
+
+Problems observed (요약)
+- Logic in UI: session_selector_landscape.dart owns answer judgment, scoring, band thresholds, and next-round init.
+- State fragmentation: SessionFrequencyData, SessionModel, SessionParameter, SessionPlaylist, SessionResultData, SessionStateData (+ AudioState, PlayerIsolate) scattered as ChangeNotifiers.
+- Domain/storage coupling: session_playlist.dart and others directly touch Hive/paths.
+- Testability: unit testing is hard since rules live inside widgets/notifiers with side effects.
+
+Target architecture (간단 구조)
+- Controller (SessionController): orchestrates submit/nextRound/launch/reset; communicates only via Store/Services.
+- Store (SessionStore): single source of truth for session state; immutable snapshots preferred.
+- Services/Repositories: PlayerService, PlaylistService, IAudioClipRepository; decouple from Hive and platform details.
+- Pure utilities: FrequencyCalculator for graph/center frequencies; result reducers are pure functions.
+- UI: thin; triggers controller actions and renders from Store; no domain rules.
+
+File-level actions (각 파일 처리 방침)
+- model/session/session_frequency.dart
+  - Convert to pure FrequencyCalculator (no ChangeNotifier). Output: {centerFreqs, graphSeries} given startingBand/filterType.
+  - Any GraphState enum should live under model/state or view-only.
+- model/session/session_model.dart
+  - Fold round creation/EQ update logic into SessionController. Deprecate direct mutations here.
+- model/session/session_parameter.dart
+  - Make it an immutable value object (consider freezed later). Store keeps the active copy.
+- model/session/session_playlist.dart
+  - Extract to PlaylistService that depends on IAudioClipRepository for persistence; remove direct Hive/path usage from model layer.
+- model/session/session_result.dart
+  - Keep as value + pure reducers (aggregate/update). Store holds current result snapshot.
+- widget/session/session_selector_landscape.dart (and portrait counterpart)
+  - Remove domain logic; call SessionController (submitAnswer/nextRound) and only show feedback.
+- model/state/session_state_data.dart
+  - Becomes SessionStore (single ChangeNotifier or StateNotifier if we later move to Riverpod). Holds viewState/currentRound/graph/progress/result.
+
+Contracts (초안)
+- SessionStore (fields)
+  - viewState: idle | loading | ready | error
+  - currentRound: {graphIndex, freqIndex, centerFreq, gain}
+  - graph: {centerFreqsLog, centerFreqsLinear, series}
+  - progress: {currentSessionPoint, threshold, startingBand}
+  - result: {elapsedMs, correct, incorrect, perBand}
+- SessionController (methods)
+  - Future<void> launchSession()
+  - Future<SessionSubmitResult> submitAnswer({required int pickedIndex}) // returns {isCorrect, answerIndex}
+  - Future<void> nextRound()
+  - void reset()
+- FrequencyCalculator
+  - compute({required int startingBand, required FilterType type}) -> {centerFreqs, series}
+- PlaylistService
+  - Future<List<String>> listEnabledClipPaths()
+- PlayerService
+  - Future<void> launch(); Future<void> setEQ({freq, gain}); etc.
+
+Step-by-step plan
+1) Introduce SessionController + wire UI
+   - Route session_selector_landscape/portrait actions through controller.
+   - Keep UI feedback only (Flushbar/snackbar). [Planned]
+2) Introduce SessionStore as single state
+   - Move computed graph/progress/result into Store snapshots; widgets select slices. [Planned]
+3) Extract FrequencyCalculator (pure) and update graph usage
+   - Remove ChangeNotifier responsibilities from session_frequency.dart. [Planned]
+4) Decouple playlist/storage
+   - Create PlaylistService using IAudioClipRepository; remove Hive/path logic from session_playlist.dart. [Planned]
+5) Consolidate Providers in main.dart
+   - Register Store, Controller, Services centrally; delete page/widget-local providers. [Planned]
+6) Tests & logging
+   - Add unit tests for controller (scoring/threshold/nextRound) and frequency calculator; add lightweight logs. [Planned]
+
+Edge cases to cover
+- Empty playlist or disabled all clips -> controller should surface a ready=false/error state.
+- Threshold band changes -> ensure picker index bounds reset safely.
+- Rapid submits/debounced updates -> guard re-entrancy in controller.
+- Player errors/timeouts -> map to Store.error with user-friendly message.
+
+Quality gates
+- Build & Analyzer: PASS for new/edited modules; no new warnings.
+- Unit tests: controller and frequency calculator cover happy path + boundary conditions.
+- Smoke test: selectors trigger controller, UI displays correct/incorrect feedback, next round advances.
+
+Risks & mitigation
+- UI regressions due to provider rewiring -> migrate one selector first (landscape), verify, then port portrait.
+- Hidden logic in other widgets -> grep for session_* usage and centralize gradually.
+- Coupling with PlayerIsolate -> introduce PlayerService adapter to maintain existing isolate boundary.
+
+Decisions & notes
+- Keep Provider for now; consider Riverpod(StateNotifier) later if beneficial.
+- Prefer immutable state snapshots (optionally freezed later) to simplify testing.
+- Maintain existing public APIs where feasible to reduce blast radius during Phase 2.
+
+Acceptance checklist (완료 조건)
+- [ ] session_selector_landscape.dart has no scoring/next-round logic; calls controller only.
+- [ ] session_selector_portrait.dart aligned with the same controller API.
+- [ ] Only one session-related ChangeNotifier (Store) is exposed to UI.
+- [ ] Playlist/Hive access is behind a Repository/Service; no direct Hive calls in UI/Controller.
+- [ ] Unit tests for SessionController and FrequencyCalculator are green.

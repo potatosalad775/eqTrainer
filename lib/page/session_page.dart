@@ -19,6 +19,8 @@ import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
+import 'package:eq_trainer/controller/session_controller.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionPage extends StatefulWidget {
   const SessionPage({super.key});
@@ -34,6 +36,14 @@ class _SessionPageState extends State<SessionPage> {
   final sessionPlaylist = SessionPlaylist();
   final sessionResult = SessionResultData();
   final sessionFreqData = SessionFrequencyData();
+  // Add SessionController
+  final sessionController = SessionController();
+  // Add SessionStore as single-source-of-truth for UI
+  late final SessionStore sessionStore = SessionStore(
+    freqData: sessionFreqData,
+    stateData: sessionState,
+    resultData: sessionResult,
+  );
 
   @override
   void initState() {
@@ -65,6 +75,8 @@ class _SessionPageState extends State<SessionPage> {
         ChangeNotifierProvider<SessionFrequencyData>.value(value: sessionFreqData),
         ChangeNotifierProvider<SessionResultData>.value(value: sessionResult),
         ChangeNotifierProvider<SessionModel>.value(value: sessionModel),
+        // Provide SessionStore
+        ChangeNotifierProvider<SessionStore>.value(value: sessionStore),
       ],
       child: PopScope(
         canPop: false,
@@ -77,14 +89,14 @@ class _SessionPageState extends State<SessionPage> {
               "SESSION_APPBAR_TITLE".tr()
             ),
             actions: [
-              Consumer<SessionResultData>(
-                builder: (_, sessionResult, __) {
+              Consumer<SessionStore>(
+                builder: (_, store, __) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(Icons.check),
                       Text(
-                        sessionResult.resultCorrect.toString(),
+                        store.resultCorrect.toString(),
                         style: const TextStyle(
                           fontSize: 20,
                         ),
@@ -92,7 +104,7 @@ class _SessionPageState extends State<SessionPage> {
                       const SizedBox(width: 10),
                       const Icon(Icons.clear),
                       Text(
-                        sessionResult.resultIncorrect.toString(),
+                        store.resultIncorrect.toString(),
                         style: const TextStyle(
                           fontSize: 20,
                         ),
@@ -188,6 +200,8 @@ class _SessionPageState extends State<SessionPage> {
                           stateData: sessionState,
                           resultData: sessionResult,
                           sessionPlaylist: sessionPlaylist,
+                          // pass controller
+                          sessionController: sessionController,
                         ),
                       ],
                     ),
@@ -226,6 +240,8 @@ class _SessionPageState extends State<SessionPage> {
             stateData: sessionState,
             resultData: sessionResult,
             sessionPlaylist: sessionPlaylist,
+            // pass controller
+            sessionController: sessionController,
           ),
         ),
       ],

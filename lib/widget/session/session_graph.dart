@@ -6,15 +6,16 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/page/session_page.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionGraph extends StatelessWidget {
   const SessionGraph({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final sessionFrequencyData = context.read<SessionFrequencyData>();
+    final store = context.read<SessionStore>();
     return ValueListenableBuilder<GraphState>(
-        valueListenable: sessionFrequencyData.graphStateNotifier,
+        valueListenable: store.graphStateNotifier,
         builder: (context, value, _) {
           if(value == GraphState.loading) {
             return const Center(
@@ -36,8 +37,8 @@ class SessionGraph extends StatelessWidget {
             );
           }
           else {
-            return Selector<SessionFrequencyData, int>(
-              selector: (context, sessionState) => sessionState.currentPickerValue,
+            return Selector<SessionStore, int>(
+              selector: (context, s) => s.currentPickerValue,
               builder: (context, pickerValue, _) {
                 return RepaintBoundary(
                   child: Padding(
@@ -63,12 +64,12 @@ class SessionGraph extends StatelessWidget {
   }
 
   Widget _buildChart(BuildContext context) {
-    final data = Provider.of<SessionFrequencyData>(context, listen: false);
+    final store = Provider.of<SessionStore>(context, listen: false);
     return LineChart(
         LineChartData(
           minX: 0, maxX: 60, minY: -3, maxY: 3,
           clipData: const FlClipData.all(),
-          lineBarsData: data.graphBarDataList,
+          lineBarsData: store.graphBarDataList,
           lineTouchData: const LineTouchData(enabled: false),
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(
@@ -84,7 +85,7 @@ class SessionGraph extends StatelessWidget {
   }
 
   Widget _freqToolTip(BuildContext context, BoxConstraints constraints) {
-    final freqData = Provider.of<SessionFrequencyData>(context, listen: false);
+    final store = Provider.of<SessionStore>(context, listen: false);
     final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
 
     String flattenFreq(int frequency) {
@@ -107,11 +108,11 @@ class SessionGraph extends StatelessWidget {
 
     // If Filter is Peak & Dip
     if(sessionParameter.filterType == FilterType.peakDip) {
-      final centerIndex = (freqData.currentPickerValue - 1) ~/ 2;
+      final centerIndex = (store.currentPickerValue - 1) ~/ 2;
       return Positioned(
-        top: (freqData.currentPickerValue % 2 == 1) ? (constraints.maxHeight / 12) - 22 : null,
-        bottom: (freqData.currentPickerValue % 2 == 1) ? null : (constraints.maxHeight / 12),
-        left: freqData.centerFreqLinearList[centerIndex] * constraints.maxWidth / 60 - 42,
+        top: (store.currentPickerValue % 2 == 1) ? (constraints.maxHeight / 12) - 22 : null,
+        bottom: (store.currentPickerValue % 2 == 1) ? null : (constraints.maxHeight / 12),
+        left: store.centerFreqLinearList[centerIndex] * constraints.maxWidth / 60 - 42,
         child: SizedBox(
           width: 84,
           height: 44,
@@ -121,7 +122,7 @@ class SessionGraph extends StatelessWidget {
             elevation: 3,
             child: Center(
               child: Text(
-                flattenFreq(freqData.centerFreqLogList[centerIndex].toInt()),
+                flattenFreq(store.centerFreqLogList[centerIndex].toInt()),
                 style: const TextStyle(
                   fontSize: 16,
                 ),
@@ -136,7 +137,7 @@ class SessionGraph extends StatelessWidget {
       return Positioned(
         top: (sessionParameter.filterType == FilterType.peak) ? (constraints.maxHeight / 12) - 22 : null,
         bottom: (sessionParameter.filterType == FilterType.peak) ? null : (constraints.maxHeight / 12),
-        left: freqData.centerFreqLinearList[freqData.currentPickerValue - 1] * constraints.maxWidth / 60 - 42,
+        left: store.centerFreqLinearList[store.currentPickerValue - 1] * constraints.maxWidth / 60 - 42,
         child: SizedBox(
           child: SizedBox(
             width: 84,
@@ -147,7 +148,7 @@ class SessionGraph extends StatelessWidget {
               elevation: 3,
               child: Center(
                 child: Text(
-                  flattenFreq(freqData.centerFreqLogList[freqData.currentPickerValue - 1].toInt()),
+                  flattenFreq(store.centerFreqLogList[store.currentPickerValue - 1].toInt()),
                   style: const TextStyle(
                     fontSize: 16,
                   ),

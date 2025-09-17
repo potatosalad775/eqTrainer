@@ -11,6 +11,7 @@ import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:provider/provider.dart';
+import 'package:eq_trainer/controller/session_controller.dart';
 
 class SessionSelectorLandscape extends StatelessWidget {
   const SessionSelectorLandscape({
@@ -22,6 +23,7 @@ class SessionSelectorLandscape extends StatelessWidget {
     required this.stateData,
     required this.resultData,
     required this.sessionPlaylist,
+    required this.sessionController,
   });
   final SessionPlayer player;
   final AudioState audioState;
@@ -30,6 +32,7 @@ class SessionSelectorLandscape extends StatelessWidget {
   final SessionStateData stateData;
   final SessionResultData resultData;
   final SessionPlaylist sessionPlaylist;
+  final SessionController sessionController;
 
   @override
   Widget build(BuildContext context) {
@@ -84,11 +87,18 @@ class SessionSelectorLandscape extends StatelessWidget {
         const SizedBox(height: 20),
         ElevatedButton.icon(
           onPressed: () async {
-            // Notify 'the Session is Loading'
-            stateData.sessionState = SessionState.loading;
-            // Increase or Decrease 'sessionPoint' depends on whether user selected correct answer or not
-            if (sessionModel.answerGraphIndex + 1 == freqData.currentPickerValue) {
-              // Notify user chose correct answer
+            final result = await sessionController.submitAnswer(
+              player: player,
+              audioState: audioState,
+              sessionModel: sessionModel,
+              freqData: freqData,
+              stateData: stateData,
+              resultData: resultData,
+              sessionPlaylist: sessionPlaylist,
+              sessionParameter: sessionParameter,
+            );
+
+            if (result.isCorrect) {
               Flushbar(
                 icon: Icon(Icons.check, color: Theme.of(context).colorScheme.onTertiary),
                 flushbarPosition: FlushbarPosition.TOP,
@@ -96,13 +106,9 @@ class SessionSelectorLandscape extends StatelessWidget {
                 flushbarStyle: FlushbarStyle.GROUNDED,
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
                 messageColor: Theme.of(context).colorScheme.onTertiary,
-                message: "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': (sessionModel.answerGraphIndex + 1).toString()}),
+                message: "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': (result.correctIndex).toString()}),
               ).show(context);
-              // Increase 'sessionPoint' and update result data
-              stateData.currentSessionPoint++;
-              resultData.updateResultFromFreq(sessionModel.answerCenterFreq, true);
             } else {
-              // Notify user chose incorrect answer
               Flushbar(
                 icon: Icon(Icons.clear, color: Theme.of(context).colorScheme.onTertiary),
                 flushbarPosition: FlushbarPosition.TOP,
@@ -110,39 +116,9 @@ class SessionSelectorLandscape extends StatelessWidget {
                 flushbarStyle: FlushbarStyle.GROUNDED,
                 backgroundColor: Theme.of(context).colorScheme.tertiary,
                 messageColor: Theme.of(context).colorScheme.onTertiary,
-                message: "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': (sessionModel.answerGraphIndex + 1).toString()}),
+                message: "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': (result.correctIndex).toString()}),
               ).show(context);
-              // Decrease 'sessionPoint' and update result data
-              stateData.currentSessionPoint--;
-              resultData.updateResultFromFreq(sessionModel.answerCenterFreq, false);
             }
-            // Increase or Decrease the number of 'bands'
-            // ... if 'sessionPoint' hits the threshold
-            // ... when the num of band is changed, recalculate the graph frequency data.
-            if (stateData.currentSessionPoint == sessionParameter.threshold && sessionParameter.startingBand < 25) {
-              stateData.currentSessionPoint = 0;
-              stateData.selectedPickerNum = 1;
-              sessionParameter.startingBand++;
-              await freqData.initSessionFreqData(sessionParameter: sessionParameter);
-            }
-            else if (stateData.currentSessionPoint == (0 - sessionParameter.threshold) && sessionParameter.startingBand > 2) {
-              stateData.currentSessionPoint = 0;
-              stateData.selectedPickerNum = 1;
-              sessionParameter.startingBand--;
-              await freqData.initSessionFreqData(sessionParameter: sessionParameter);
-            }
-            // Initialize Session by selecting random index and more.
-            await sessionModel.initSession(
-              player,
-              audioState: audioState,
-              sessionState: stateData,
-              sessionPlaylist: sessionPlaylist,
-              sessionParameter: sessionParameter,
-              sessionResult: resultData,
-              sessionFreqData: freqData,
-            );
-            // Notify 'the Session is Ready'
-            stateData.sessionState = SessionState.ready;
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.tertiary,

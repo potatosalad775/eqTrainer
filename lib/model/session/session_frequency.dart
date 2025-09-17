@@ -135,6 +135,8 @@ class SessionFrequencyData extends ChangeNotifier {
     } catch (e) {
       graphStateNotifier.value = GraphState.error;
       throw Exception(e.toString());
+    } finally {
+      notifyListeners();
     }
   }
 
