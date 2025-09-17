@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/theme_data.dart';
-import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/audio_state.dart';
@@ -10,6 +9,7 @@ import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/controller/session_controller.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
+import 'package:eq_trainer/player/player_isolate.dart';
 
 class SessionSelectorPortrait extends StatelessWidget {
   const SessionSelectorPortrait({
@@ -21,7 +21,7 @@ class SessionSelectorPortrait extends StatelessWidget {
     required this.sessionStore,
     required this.sessionController,
   });
-  final SessionPlayer player;
+  final PlayerIsolate player;
   final AudioState audioState;
   final SessionStateData stateData;
   final SessionResultData resultData;
@@ -30,7 +30,7 @@ class SessionSelectorPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pEQState = context.select<SessionPlayer, bool>((p) => p.fetchEQState);
+    final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
     final sessionParameter = context.read<SessionParameter>();
 
     return Row(
@@ -38,7 +38,7 @@ class SessionSelectorPortrait extends StatelessWidget {
         Expanded(
           child: ElevatedButton(
             onPressed: (pEQState == true)
-                ? () { player.setEQ(false); }
+                ? () { sessionController.setEqEnabled(player, false); }
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -57,7 +57,7 @@ class SessionSelectorPortrait extends StatelessWidget {
         Expanded(
           child: ElevatedButton(
             onPressed: (pEQState == false)
-                ? () { player.setEQ(true); }
+                ? () { sessionController.setEqEnabled(player, true); }
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,

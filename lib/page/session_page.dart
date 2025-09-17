@@ -28,7 +28,7 @@ class SessionPage extends StatefulWidget {
 }
 
 class _SessionPageState extends State<SessionPage> {
-  final player = SessionPlayer();
+  final player = PlayerIsolate();
 
   @override
   void initState() {
@@ -61,7 +61,7 @@ class _SessionPageState extends State<SessionPage> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<SessionPlayer>.value(value: player),
+        ChangeNotifierProvider<PlayerIsolate>.value(value: player),
       ],
       child: PopScope(
         canPop: false,
@@ -267,8 +267,4 @@ class _SessionPageState extends State<SessionPage> {
 
     return;
   }
-}
-
-class SessionPlayer extends PlayerIsolate {
-  SessionPlayer();
 }

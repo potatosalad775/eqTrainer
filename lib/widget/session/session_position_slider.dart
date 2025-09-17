@@ -1,17 +1,17 @@
-import 'package:eq_trainer/page/session_page.dart';
 import 'package:flutter/material.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+import 'package:eq_trainer/player/player_isolate.dart';
 
 class SessionPositionSlider extends StatelessWidget {
   const SessionPositionSlider({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final player = context.read<SessionPlayer>();
-    final playerPosition = context.select<SessionPlayer, AudioTime>((p) => p.fetchPosition);
-    final playerDuration = context.select<SessionPlayer, AudioTime>((p) => p.fetchDuration);
+    final player = context.read<PlayerIsolate>();
+    final playerPosition = context.select<PlayerIsolate, AudioTime>((p) => p.fetchPosition);
+    final playerDuration = context.select<PlayerIsolate, AudioTime>((p) => p.fetchDuration);
 
     return ProgressBar(
       barHeight: 12,

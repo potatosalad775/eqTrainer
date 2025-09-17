@@ -45,7 +45,7 @@ Contracts (quick)
 
 Acceptance checklist
 - [x] Playlist/Hive access behind Repository/Service; no direct Hive/path in session playlist model (Plan 4 DONE).
-- [ ] Selectors have no domain logic; call controller only (landscape+portrait).
+- [x] Selectors have no domain logic; call controller only (landscape+portrait).
 - [ ] Only one session-related ChangeNotifier (Store) exposed to UI.
 - [ ] Frequency/graph computed via pure utility; state held in Store.
 - [ ] Unit tests: controller + frequency calculator.
@@ -78,7 +78,7 @@ Acceptance checklist
 - Ensure session_frequency is pure; Store holds results; no ChangeNotifier in calculator.
 
 8) UI cleanup
-- Make selectors Stateless and call controller; keep feedback display only.
+- Make selectors Stateless and call controller; keep feedback display only. [Complete]
 
 9) Errors & logging
 - Standardize FFmpeg error/timeout mapping; controller maps to Store.error with user-friendly messages.

@@ -32,6 +32,11 @@ class SessionController {
   int get answerGraphIndex => _answerGraphIndex;
   double get answerCenterFreq => _answerCenterFreq;
 
+  /// Toggle peaking EQ on the player via controller to keep UI logic thin.
+  Future<void> setEqEnabled(PlayerIsolate player, bool enabled) async {
+    await player.setEQ(enabled);
+  }
+
   Future<void> launchSession(
     PlayerIsolate player, {
     required AudioState audioState,

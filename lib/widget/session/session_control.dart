@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:eq_trainer/model/error.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
 import 'package:eq_trainer/controller/session_controller.dart';
@@ -15,13 +14,13 @@ class SessionControl extends StatelessWidget {
     required this.player,
     required this.sessionStore,
   });
-  final SessionPlayer player;
+  final PlayerIsolate player;
   final SessionStore sessionStore;
 
   @override
   Widget build(BuildContext context) {
     final audioState = context.watch<AudioState>();
-    final playerState = context.select<SessionPlayer, PlayerStateResponse>((p) => p.fetchPlayerState);
+    final playerState = context.select<PlayerIsolate, PlayerStateResponse>((p) => p.fetchPlayerState);
 
     Future<void> relaunchWith(String path) async {
       await player.pause();
