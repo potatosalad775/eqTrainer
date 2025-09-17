@@ -2,10 +2,10 @@ import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
-import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionSubmitResult {
   const SessionSubmitResult({
@@ -28,7 +28,7 @@ class SessionController {
     required SessionFrequencyData freqData,
     required SessionStateData stateData,
     required SessionResultData resultData,
-    required SessionPlaylist sessionPlaylist,
+    required SessionStore sessionStore,
     required SessionParameter sessionParameter,
   }) async {
     // Mark loading
@@ -66,7 +66,7 @@ class SessionController {
       player,
       audioState: audioState,
       sessionState: stateData,
-      sessionPlaylist: sessionPlaylist,
+      sessionStore: sessionStore,
       sessionParameter: sessionParameter,
       sessionResult: resultData,
       sessionFreqData: freqData,

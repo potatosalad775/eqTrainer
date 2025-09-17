@@ -57,6 +57,56 @@ class SessionStore extends ChangeNotifier {
   int _resultIncorrect = 0;
   int get resultIncorrect => _resultIncorrect;
 
+  List<String> _playlistPaths = const [];
+  List<String> get playlistPaths => _playlistPaths;
+
+  int _currentPlayingAudioIndex = 0;
+  int get currentPlayingAudioIndex => _currentPlayingAudioIndex;
+
+  String? get currentClipPath =>
+      (_playlistPaths.isNotEmpty && _currentPlayingAudioIndex >= 0 && _currentPlayingAudioIndex < _playlistPaths.length)
+          ? _playlistPaths[_currentPlayingAudioIndex]
+          : null;
+
+  void setPlaylistPaths(List<String> paths) {
+    _playlistPaths = List<String>.from(paths);
+    _currentPlayingAudioIndex = 0;
+    notifyListeners();
+  }
+
+  void clearPlaylist() {
+    _playlistPaths = const [];
+    _currentPlayingAudioIndex = 0;
+    notifyListeners();
+  }
+
+  void setCurrentPlayingIndex(int index) {
+    if (_playlistPaths.isEmpty) {
+      _currentPlayingAudioIndex = 0;
+    } else {
+      _currentPlayingAudioIndex = index.clamp(0, _playlistPaths.length - 1);
+    }
+    notifyListeners();
+  }
+
+  void nextTrack() {
+    if (_playlistPaths.isEmpty) return;
+    _currentPlayingAudioIndex = (_currentPlayingAudioIndex + 1) % _playlistPaths.length;
+    notifyListeners();
+  }
+
+  void previousTrack({Duration threshold = const Duration(seconds: 3), Duration? currentPosition}) {
+    if (_playlistPaths.isEmpty) return;
+    // If current position is provided and less than threshold behavior should be handled by caller (seek to 0).
+    // Store only changes index when moving to previous clip.
+    if (_currentPlayingAudioIndex == 0) {
+      _currentPlayingAudioIndex = _playlistPaths.length - 1;
+    } else {
+      _currentPlayingAudioIndex -= 1;
+    }
+    notifyListeners();
+  }
+
   void _onGraphStateChanged() {
     graphStateNotifier.value = _freqData.graphStateNotifier.value;
     // Also sync data when graph state changes (e.g., after initSessionFreqData completes)

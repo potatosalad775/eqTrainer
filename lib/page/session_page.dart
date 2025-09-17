@@ -13,7 +13,6 @@ import 'package:eq_trainer/widget/session/session_control.dart';
 import 'package:eq_trainer/widget/session/session_selector_portrait.dart';
 import 'package:eq_trainer/widget/common/MaxWidthCenterBox.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
@@ -21,6 +20,7 @@ import 'package:eq_trainer/model/session/session_frequency.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/controller/session_controller.dart';
 import 'package:eq_trainer/model/state/session_store.dart';
+import 'package:eq_trainer/service/playlist_service.dart';
 
 class SessionPage extends StatefulWidget {
   const SessionPage({super.key});
@@ -44,18 +44,20 @@ class _SessionPageState extends State<SessionPage> {
     final audioState = Provider.of<AudioState>(context, listen: false);
     final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
     final sessionState = Provider.of<SessionStateData>(context, listen: false);
-    final sessionPlaylist = Provider.of<SessionPlaylist>(context, listen: false);
+    final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final sessionResult = Provider.of<SessionResultData>(context, listen: false);
     final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
+    final playlistService = Provider.of<PlaylistService>(context, listen: false);
 
     await sessionModel.launchSession(
       player,
       audioState: audioState,
       sessionState: sessionState,
-      sessionPlaylist: sessionPlaylist,
+      sessionStore: sessionStore,
       sessionParameter: sessionParameter,
       sessionResult: sessionResult,
       sessionFreqData: sessionFreqData,
+      playlistService: playlistService,
     );
   }
 
@@ -157,7 +159,7 @@ class _SessionPageState extends State<SessionPage> {
 
   Widget sessionViewLandscape() {
     final audioState = Provider.of<AudioState>(context, listen: false);
-    final sessionPlaylist = Provider.of<SessionPlaylist>(context, listen: false);
+    final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
     final sessionState = Provider.of<SessionStateData>(context, listen: false);
     final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
@@ -184,7 +186,7 @@ class _SessionPageState extends State<SessionPage> {
                         const DeviceDropdown(),
                         const Spacer(),
                         const SessionPositionSlider(),
-                        SessionControl(player: player, sessionPlaylist: sessionPlaylist),
+                        SessionControl(player: player, sessionStore: sessionStore),
                         const SizedBox(height: 32),
                         SessionSelectorLandscape(
                           player: player,
@@ -193,7 +195,7 @@ class _SessionPageState extends State<SessionPage> {
                           freqData: sessionFreqData,
                           stateData: sessionState,
                           resultData: sessionResult,
-                          sessionPlaylist: sessionPlaylist,
+                          sessionStore: sessionStore,
                           // pass controller
                           sessionController: sessionController,
                         ),
@@ -211,7 +213,7 @@ class _SessionPageState extends State<SessionPage> {
 
   Widget sessionViewPortrait() {
     final audioState = Provider.of<AudioState>(context, listen: false);
-    final sessionPlaylist = Provider.of<SessionPlaylist>(context, listen: false);
+    final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
     final sessionState = Provider.of<SessionStateData>(context, listen: false);
     final sessionFreqData = Provider.of<SessionFrequencyData>(context, listen: false);
@@ -227,7 +229,7 @@ class _SessionPageState extends State<SessionPage> {
           padding: EdgeInsets.fromLTRB(30, 10, 30, 0),
           child: SessionPositionSlider(),
         ),
-        SessionControl(player: player, sessionPlaylist: sessionPlaylist),
+        SessionControl(player: player, sessionStore: sessionStore),
         const SizedBox(height: 20),
         Padding(
           padding: const EdgeInsets.all(15),
@@ -238,7 +240,7 @@ class _SessionPageState extends State<SessionPage> {
             freqData: sessionFreqData,
             stateData: sessionState,
             resultData: sessionResult,
-            sessionPlaylist: sessionPlaylist,
+            sessionStore: sessionStore,
             // pass controller
             sessionController: sessionController,
           ),

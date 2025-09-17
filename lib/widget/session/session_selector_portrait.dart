@@ -8,10 +8,10 @@ import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/controller/session_controller.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionSelectorPortrait extends StatelessWidget {
   const SessionSelectorPortrait({
@@ -22,7 +22,7 @@ class SessionSelectorPortrait extends StatelessWidget {
     required this.freqData,
     required this.stateData,
     required this.resultData,
-    required this.sessionPlaylist,
+    required this.sessionStore,
     required this.sessionController,
   });
   final SessionPlayer player;
@@ -31,7 +31,7 @@ class SessionSelectorPortrait extends StatelessWidget {
   final SessionFrequencyData freqData;
   final SessionStateData stateData;
   final SessionResultData resultData;
-  final SessionPlaylist sessionPlaylist;
+  final SessionStore sessionStore;
   final SessionController sessionController;
 
   @override
@@ -88,7 +88,7 @@ class SessionSelectorPortrait extends StatelessWidget {
               freqData: freqData,
               stateData: stateData,
               resultData: resultData,
-              sessionPlaylist: sessionPlaylist,
+              sessionStore: sessionStore,
               sessionParameter: sessionParameter,
             );
 

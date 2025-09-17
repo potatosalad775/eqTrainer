@@ -3,42 +3,45 @@ import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:eq_trainer/model/error.dart';
 import 'package:eq_trainer/model/audio_state.dart';
-import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/session/session_model.dart';
 import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
 
 class SessionControl extends StatelessWidget {
 
   const SessionControl({
     super.key,
     required this.player,
-    required this.sessionPlaylist,
+    required this.sessionStore,
   });
   final SessionPlayer player;
-  final SessionPlaylist sessionPlaylist;
+  final SessionStore sessionStore;
 
   @override
   Widget build(BuildContext context) {
     final audioState = context.watch<AudioState>();
     final playerState = context.select<SessionPlayer, PlayerStateResponse>((p) => p.fetchPlayerState);
 
-    Future<void> playerNext() async {
-      sessionPlaylist.currentPlayingAudioIndex++;
-      if(sessionPlaylist.currentPlayingAudioIndex >= sessionPlaylist.audioClipPathList.length) {
-        sessionPlaylist.currentPlayingAudioIndex = 0;
-      }
-
+    Future<void> relaunchWith(String path) async {
       await player.pause();
       await player.shutdown();
       await player.launch(
         backend: audioState.backend,
         outputDeviceId: audioState.outputDevice?.id,
-        path: sessionPlaylist.audioClipPathList[sessionPlaylist.currentPlayingAudioIndex],
+        path: path,
       );
       if(context.mounted) await context.read<SessionModel>().updatePlayerState(player);
       await player.play();
+    }
 
+    Future<void> playerNext() async {
+      if (sessionStore.playlistPaths.isEmpty) return;
+      sessionStore.nextTrack();
+      final nextPath = sessionStore.currentClipPath;
+      if (nextPath != null) {
+        await relaunchWith(nextPath);
+      }
       return;
     }
 
@@ -49,21 +52,13 @@ class SessionControl extends StatelessWidget {
         player.seek(AudioTime.zero);
         return;
       }
+      if (sessionStore.playlistPaths.isEmpty) return;
       // Else, play previous clip
-      sessionPlaylist.currentPlayingAudioIndex--;
-      if(sessionPlaylist.currentPlayingAudioIndex < 0) {
-        sessionPlaylist.currentPlayingAudioIndex = (sessionPlaylist.audioClipPathList.length - 1);
+      sessionStore.previousTrack();
+      final prevPath = sessionStore.currentClipPath;
+      if (prevPath != null) {
+        await relaunchWith(prevPath);
       }
-
-      await player.pause();
-      await player.shutdown();
-      await player.launch(
-        backend: audioState.backend,
-        outputDeviceId: audioState.outputDevice?.id,
-        path: sessionPlaylist.audioClipPathList[sessionPlaylist.currentPlayingAudioIndex],
-      );
-      if(context.mounted) await context.read<SessionModel>().updatePlayerState(player);
-      await player.play();
 
       return;
     }

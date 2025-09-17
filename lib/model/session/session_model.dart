@@ -2,12 +2,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/model/audio_state.dart';
 import 'package:eq_trainer/model/session/session_frequency.dart';
-import 'package:eq_trainer/model/session/session_playlist.dart';
 import 'package:eq_trainer/model/session/session_result.dart';
 import 'package:eq_trainer/model/session/session_parameter.dart';
 import 'package:eq_trainer/model/state/session_state_data.dart';
 import 'package:eq_trainer/page/session_page.dart';
 import 'package:eq_trainer/player/player_isolate.dart';
+import 'package:eq_trainer/model/state/session_store.dart';
+import 'package:eq_trainer/service/playlist_service.dart';
 
 class SessionModel extends ChangeNotifier {
   // Random Answer for Session Round - in Graph Index
@@ -25,24 +26,26 @@ class SessionModel extends ChangeNotifier {
   Future<void> launchSession(PlayerIsolate player, {
     required AudioState audioState,
     required SessionStateData sessionState,
-    required SessionPlaylist sessionPlaylist,
+    required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required SessionResultData sessionResult,
     required SessionFrequencyData sessionFreqData,
+    required PlaylistService playlistService,
   }) async {
     try {
       // Reset Session
       sessionResultData.resetResult();
       sessionFreqData.resetPickerValue();
-      // Update Audio Clip Path list for Session
-      await sessionPlaylist.getAudioClipPathList();
+      // Load enabled audio clip absolute paths
+      final paths = await playlistService.listEnabledClipPaths();
+      sessionStore.setPlaylistPaths(paths);
       // If List of Audio clips for Session is Not Empty
-      if(sessionPlaylist.audioClipPathList.isNotEmpty) {
+      if(sessionStore.playlistPaths.isNotEmpty) {
         // Open First AudioClip
         await player.launch(
           backend: audioState.backend,
           outputDeviceId: audioState.outputDevice?.id,
-          path: sessionPlaylist.audioClipPathList[0],
+          path: sessionStore.playlistPaths[0],
         );
       } else {
         // ... else notify the playlist is empty.
@@ -56,7 +59,7 @@ class SessionModel extends ChangeNotifier {
         player,
         audioState: audioState,
         sessionState: sessionState,
-        sessionPlaylist: sessionPlaylist,
+        sessionStore: sessionStore,
         sessionParameter: sessionParameter,
         sessionResult: sessionResult,
         sessionFreqData: sessionFreqData,
@@ -73,7 +76,7 @@ class SessionModel extends ChangeNotifier {
   Future<void> initSession(PlayerIsolate player, {
     required AudioState audioState,
     required SessionStateData sessionState,
-    required SessionPlaylist sessionPlaylist,
+    required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required SessionResultData sessionResult,
     required SessionFrequencyData sessionFreqData,
