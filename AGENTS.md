@@ -53,10 +53,10 @@ Acceptance checklist
 ---
 
 ## Improvements to do before provider consolidation (practical, high impact)
-1) Consolidate DI/providers in main.dart
+1) Consolidate DI/providers in main.dart [Complete]
 - Register Repository, Services, Store, Controller centrally; pages/widgets only consume.
 
-2) Remove global audioClipDir
+2) Remove global audioClipDir [Complete]
 - Introduce PathProvider (AppDirectories) service; services read paths via this, not global vars.
 - Use path.join everywhere (no Platform.pathSeparator/manual splits).
 
@@ -91,9 +91,9 @@ Acceptance checklist
 ---
 
 ## Step-by-step next actions (safe order)
-- [ ] Provider consolidation in main.dart (Repo/Services/Store/Controller registration; remove local news in pages/widgets).
-- [ ] Replace global audioClipDir with PathProvider service; migrate services to it; update path handling to path.join.
-- [ ] Repository contract: add watch/list/delete/toggle; migrate playlist_page to consume repository/service streams.
+- [x] Provider consolidation in main.dart (Repo/Services/Store/Controller registration; remove local news in pages/widgets).
+- [x] Replace global audioClipDir with PathProvider service; migrate services to it; update path handling to path.join.
+- [x] Repository contract: add watch/list/delete/toggle; migrate playlist_page to consume repository/service streams.
 - [ ] SessionPlaylist → Store absorption (or minimal wrapper), update controller/UI wiring.
 - [ ] SessionModel → Controller migration; delete legacy calls.
 - [ ] Tests: add basic unit tests (service/controller) and enable lightweight logging.

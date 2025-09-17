@@ -1,13 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/model/audio_clip.dart';
 import 'package:eq_trainer/page/import_page.dart';
 import 'package:eq_trainer/widget/playlist_control_view.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/service/app_directories.dart';
+import 'package:eq_trainer/service/audio_clip_service.dart';
 import 'package:path/path.dart' as p;
 
 class PlaylistPage extends StatefulWidget {
@@ -23,11 +22,17 @@ class _PlaylistPageState extends State<PlaylistPage> {
     // Add bottom padding if device doesn't already have it.
     double bottomPaddingValue = MediaQuery.of(context).viewPadding.bottom == 0 ? 40 : 0;
 
+    final repo = context.read<IAudioClipRepository>();
+
     return Scaffold(
-      body: ValueListenableBuilder(
-          valueListenable: Hive.box<AudioClip>(audioClipBoxName).listenable(),
-          builder: (context, Box<AudioClip> box, _) {
-            if (box.values.isEmpty) {
+      body: StreamBuilder<List<AudioClip>>(
+          stream: repo.watchClips(),
+          builder: (context, snap) {
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final clips = snap.data!;
+            if (clips.isEmpty) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 36),
@@ -37,12 +42,11 @@ class _PlaylistPageState extends State<PlaylistPage> {
             } else {
               return ReorderableListView.builder(
                 buildDefaultDragHandles: false,
-                itemCount: box.values.length,
+                itemCount: clips.length,
                 itemBuilder: (context, index) {
                   final dirs = context.read<AppDirectories>();
-                  AudioClip? currentClip = box.getAt(index);
-                  Duration clipDuration = Duration(
-                      milliseconds: (currentClip!.duration * 1000).toInt());
+                  final currentClip = clips[index];
+                  final clipDuration = Duration(milliseconds: (currentClip.duration * 1000).toInt());
                   return Card(
                     key: Key("$index"),
                     elevation: 0,
@@ -65,9 +69,8 @@ class _PlaylistPageState extends State<PlaylistPage> {
                       leading: ReorderableDragStartListener(
                         index: index,
                         child: IconButton(
-                          onPressed: () {
-                            currentClip.isEnabled = !currentClip.isEnabled;
-                            box.putAt(index, currentClip);
+                          onPressed: () async {
+                            await repo.toggleEnabledAt(index);
                           },
                           icon: Icon(currentClip.isEnabled
                               ? Icons.radio_button_checked
@@ -98,7 +101,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                           );
                                         }
                                         final base = snap.data!;
-                                        final filePath = p.join(base, box.getAt(index)!.fileName);
+                                        final filePath = p.join(base, currentClip.fileName);
                                         return PlaylistControlView(filePath: filePath);
                                       },
                                     );
@@ -115,7 +118,7 @@ class _PlaylistPageState extends State<PlaylistPage> {
                                   builder: (context) => _deleteAlertDialog(),
                                 );
                                 if (confirmDelete == true) {
-                                  box.deleteAt(index);
+                                  await repo.deleteAt(index);
                                 }
                               }
                             },
@@ -133,17 +136,15 @@ class _PlaylistPageState extends State<PlaylistPage> {
                     ),
                   );
                 },
-                onReorder: (int oldIndex, int newIndex) {
+                onReorder: (int oldIndex, int newIndex) async {
                   if (oldIndex < newIndex) {
                     newIndex -= 1;
                   }
-                  setState(() {
-                    final oldItem = box.getAt(oldIndex);
-                    final newItem = box.getAt(newIndex);
-
-                    box.putAt(oldIndex, newItem!);
-                    box.putAt(newIndex, oldItem!);
-                  });
+                  // swap two items by index to persist ordering
+                  final oldItem = clips[oldIndex];
+                  final newItem = clips[newIndex];
+                  await repo.updateAt(oldIndex, newItem);
+                  await repo.updateAt(newIndex, oldItem);
                 },
                 footer: Padding(
                   // Added another '40' bottom padding since main navigation bar is floating

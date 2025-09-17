@@ -21,4 +21,15 @@ class PlaylistService {
         .map((c) => p.join(base, c.fileName))
         .toList(growable: false);
   }
+
+  /// Stream of enabled clip absolute paths; updates on repository changes
+  Stream<List<String>> watchEnabledClipPaths() async* {
+    await for (final clips in _repository.watchClips()) {
+      final base = await _dirs.getClipsPath();
+      yield clips
+          .where((c) => c.isEnabled)
+          .map((c) => p.join(base, c.fileName))
+          .toList(growable: false);
+    }
+  }
 }

@@ -6,8 +6,14 @@ import 'package:eq_trainer/service/app_directories.dart';
 
 abstract class IAudioClipRepository {
   Future<void> addClip(AudioClip clip);
-  // 전체 클립 목록을 반환 (동기). PlaylistService에서 필터링/매핑.
+  // Return all clips (synchronous). PlaylistService will filter/map.
   List<AudioClip> getAllClips();
+  // Subscribe to changes as a stream, including initial snapshot.
+  Stream<List<AudioClip>> watchClips();
+  // Delete/update/toggle by index (maintaining current Hive Box index order)
+  Future<void> deleteAt(int index);
+  Future<void> updateAt(int index, AudioClip clip);
+  Future<void> toggleEnabledAt(int index);
 }
 
 class AudioClipService {
