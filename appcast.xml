@@ -4,6 +4,26 @@
         <title>eqTrainer - Appcast</title>
 
         <item>
+            <title>v2.3.0</title>
+            <link>https://github.com/potatosalad775/eqTrainer</link>
+            <description>
+                <p>Fixed a bug that caused the volume to be unstable during sessions.</p>
+                <p>Reworked audio buffer logic to improve high-resolution audio playback performance.</p>
+                <p>Applied other bug fixes and performance improvements, and UI optimizations.</p>
+            </description>
+            <pubDate>Thu, 18 Sep 2025 18:49:33 +0800</pubDate>
+            <enclosure url="https://github.com/potatosalad775/eqTrainer/releases/tag/v2.3.0" sparkle:version="2.3.0" />
+        </item>
+
+        <item>
+            <title>v2.2.9</title>
+            <link>https://github.com/potatosalad775/eqTrainer</link>
+            <description>Bug fixes and Performance Improvements.</description>
+            <pubDate>Sat, 2 Aug 2025 18:49:33 +0800</pubDate>
+            <enclosure url="https://github.com/potatosalad775/eqTrainer/releases/tag/v2.2.9" sparkle:version="2.2.9" />
+        </item>
+
+        <item>
             <title>v2.2.8</title>
             <link>https://github.com/potatosalad775/eqTrainer</link>
             <description>Bug fixes and Performance Improvements.</description>
