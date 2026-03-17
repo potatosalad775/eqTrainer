@@ -83,6 +83,7 @@ dev_dependencies:
   custom_lint: ^0.8.1
   hive_ce_generator: ^1.9.5
   flutter_launcher_icons: ^0.14.1
+  mocktail: ^1.0.0
 
 flutter_launcher_icons:
   windows:

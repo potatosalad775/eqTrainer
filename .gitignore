@@ -305,7 +305,6 @@ app.*.map.json
 # VSCode
 .vscode/
 /--no-codesign/
-/test/
 /ios/Podfile.lock
 /macos/Podfile.lock
 /devtools_options.yaml
