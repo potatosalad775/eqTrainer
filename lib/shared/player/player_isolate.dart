@@ -71,6 +71,23 @@ class PlayerHostRequestGetEqState extends PlayerHostRequest {
   const PlayerHostRequestGetEqState();
 }
 
+class PlayerHostRequestGetAllState extends PlayerHostRequest {
+  const PlayerHostRequestGetAllState();
+}
+
+class PlayerAllStateResponse {
+  const PlayerAllStateResponse({
+    required this.playerState,
+    required this.position,
+    required this.duration,
+    required this.eqEnabled,
+  });
+  final PlayerStateResponse playerState;
+  final AudioTime position;
+  final AudioTime duration;
+  final bool eqEnabled;
+}
+
 class PlayerStateResponse extends Equatable {
   const PlayerStateResponse({
     required this.isPlaying,
@@ -105,12 +122,10 @@ class _PlayerMessage {
     required this.backend,
     required this.outputDeviceId,
     required this.path,
-    required this.content,
   });
   final AudioDeviceBackend backend;
   final AudioDeviceId? outputDeviceId;
   final String? path;
-  final Uint8List? content;
 }
 
 /// A player isolate that plays audio from a file or buffer.
@@ -134,7 +149,6 @@ class PlayerIsolate extends ChangeNotifier {
         backend: backend,
         outputDeviceId: outputDeviceId,
         path: path,
-        content: null,
       ),
     );
     // Use the defined constant for timer interval
@@ -194,6 +208,10 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.request(const PlayerHostRequestGetEqState());
   }
 
+  Future<PlayerAllStateResponse?> getAllState() {
+    return _isolate.request(const PlayerHostRequestGetAllState());
+  }
+
   void _startPlayerStateUpdateTimer({required int milliseconds}) {
     _playerStateUpdateTimer?.cancel();
     _playerStateUpdateTimer =
@@ -209,29 +227,25 @@ class PlayerIsolate extends ChangeNotifier {
 
   void _playerStateUpdate() async {
     if (!isLaunched) return;
-    final results = await Future.wait([
-      getState(),
-      getPosition(),
-      getDuration(),
-      getEqState(),
-    ]);
+    final all = await getAllState();
+    if (all == null) return;
 
     bool shouldNotify = false;
 
-    if (results[0] != null && results[0] != _lastState) {
-      _lastState = results[0] as PlayerStateResponse?;
+    if (all.playerState != _lastState) {
+      _lastState = all.playerState;
       shouldNotify = true;
     }
-    if (results[1] != null && results[1] != _lastPosition) {
-      _lastPosition = results[1] as AudioTime?;
+    if (all.position != _lastPosition) {
+      _lastPosition = all.position;
       shouldNotify = true;
     }
-    if (results[2] != null && results[2] != _lastDuration) {
-      _lastDuration = results[2] as AudioTime?;
+    if (all.duration != _lastDuration) {
+      _lastDuration = all.duration;
       shouldNotify = true;
     }
-    if (results[3] != null && results[3] != _lastEQState) {
-      _lastEQState = results[3] as bool?;
+    if (all.eqEnabled != _lastEQState) {
+      _lastEQState = all.eqEnabled;
       shouldNotify = true;
     }
 
@@ -299,6 +313,13 @@ class PlayerIsolate extends ChangeNotifier {
             break;
           case PlayerHostRequestGetEqState():
             return player.getEqState();
+          case PlayerHostRequestGetAllState():
+            return PlayerAllStateResponse(
+              playerState: player.getState(),
+              position: player.position,
+              duration: player.duration,
+              eqEnabled: player.getEqState(),
+            );
         }
       },
     );
@@ -592,11 +613,9 @@ class AudioPlayer {
   }
 
   void setEQGain(double value) {
-    if (value < 0) {
-      _volumeNode.volume = pow(10, (value - 2) / 20.0).toDouble();
-    } else {
-      _volumeNode.volume = pow(10, (0 - value - 2) / 20.0).toDouble();
-    }
+    // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
+    // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
+    _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
     _peakingEQNode.filter.update(gainDb: value);
   }
 

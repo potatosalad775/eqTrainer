@@ -21,17 +21,16 @@ class SessionGraph extends StatelessWidget {
             );
           }
           else if (value == GraphState.error) {
-            return AlertDialog(
-              title: Text("SESSION_ALERT_ERROR_TITLE".tr()),
-              content: Text("SESSION_ALERT_ERROR_CONTENT".tr()),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text("SESSION_ALERT_ERROR_BUTTON".tr()),
-                )
-              ],
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("SESSION_ALERT_ERROR_TITLE".tr(),
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  Text("SESSION_ALERT_ERROR_CONTENT".tr()),
+                ],
+              ),
             );
           }
           else {
@@ -63,11 +62,19 @@ class SessionGraph extends StatelessWidget {
 
   Widget _buildChart(BuildContext context) {
     final store = Provider.of<SessionStore>(context, listen: false);
+    // Apply selected-bar highlight without mutating the store's list.
+    final selectedIdx = store.currentPickerValue - 1;
+    final bars = [
+      for (int i = 0; i < store.graphBarDataList.length; i++)
+        store.graphBarDataList[i].copyWith(
+          color: i == selectedIdx ? Colors.blueAccent : Colors.redAccent,
+        ),
+    ];
     return LineChart(
         LineChartData(
           minX: 0, maxX: 60, minY: -3, maxY: 3,
           clipData: const FlClipData.all(),
-          lineBarsData: store.graphBarDataList,
+          lineBarsData: bars,
           lineTouchData: const LineTouchData(enabled: false),
           gridData: const FlGridData(show: false),
           borderData: FlBorderData(

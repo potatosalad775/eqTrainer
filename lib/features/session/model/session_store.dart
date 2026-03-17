@@ -39,15 +39,7 @@ class SessionStore extends ChangeNotifier {
     if (_graphBarDataList.isEmpty) return;
     if (newValue < 1 || newValue > _graphBarDataList.length) return;
 
-    final updated = List<LineChartBarData>.from(_graphBarDataList);
-    // Previous selection to red
-    updated[_currentPickerValue - 1] = updated[_currentPickerValue - 1].copyWith(color: Colors.redAccent);
-    // New selection to blue
-    updated[newValue - 1] = updated[newValue - 1].copyWith(color: Colors.blueAccent);
-
-    _graphBarDataList = updated;
     _currentPickerValue = newValue;
-
     notifyListeners();
   }
 
@@ -83,11 +75,6 @@ class SessionStore extends ChangeNotifier {
 
   List<int> _correctAnswerPerFreq = [0, 0, 0, 0, 0, 0, 0];
   List<int> get correctAnswerPerFreq => List<int>.from(_correctAnswerPerFreq);
-
-  Object resultObj = {
-    'correct': 0,
-    'incorrect': 0,
-  };
 
   int _resultIncorrect = 0;
   int get resultIncorrect => _resultIncorrect;
@@ -225,6 +212,8 @@ class SessionStore extends ChangeNotifier {
 
   void previousTrack({Duration threshold = const Duration(seconds: 3), Duration? currentPosition}) {
     if (_playlistPaths.isEmpty) return;
+    // If we're past the threshold into the current track, restart it rather than go back.
+    if (currentPosition != null && currentPosition > threshold) return;
     if (_currentPlayingAudioIndex == 0) {
       _currentPlayingAudioIndex = _playlistPaths.length - 1;
     } else {

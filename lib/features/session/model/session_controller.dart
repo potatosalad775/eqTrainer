@@ -23,6 +23,7 @@ class SessionController {
   SessionController();
 
   // --- Internal round state ---
+  final _random = Random();
   late int _answerGraphIndex;
   int _prevAnswerGraphIndex = -1;
   late int _answerFreqIndex;
@@ -102,8 +103,7 @@ class SessionController {
 
     // Select Random Index of Graph (Correct Answer for Session)
     do {
-      final random = Random();
-      _answerGraphIndex = random.nextInt(numOfGraph);
+      _answerGraphIndex = _random.nextInt(numOfGraph);
     } while (_answerGraphIndex == _prevAnswerGraphIndex); // make sure answer is different everytime
     _prevAnswerGraphIndex = _answerGraphIndex;
 
@@ -127,7 +127,6 @@ class SessionController {
   }
 
   Future<void> updatePlayerState(PlayerIsolate player) async {
-    // debugPrint("Updating Player EQ with Freq: $_answerCenterFreq, Gain: $_answerGain");
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);
   }
