@@ -163,7 +163,7 @@ void main() {
     // resetResult
     // -------------------------------------------------------------------------
     group('resetResult', () {
-      test('resets all counters to zero', () {
+      test('resets elapsed, correct and incorrect counters to zero', () {
         store.applySubmission(centerFreq: 440.0, isCorrect: true);
         store.applySubmission(centerFreq: 440.0, isCorrect: false);
         store.resetResult();
@@ -171,7 +171,15 @@ void main() {
         expect(store.elapsedSession, equals(0));
         expect(store.resultCorrect, equals(0));
         expect(store.resultIncorrect, equals(0));
-        expect(store.currentSessionPoint, equals(0));
+      });
+
+      test('does NOT reset currentSessionPoint', () {
+        // Two correct answers → sessionPoint = 2
+        store.applySubmission(centerFreq: 440.0, isCorrect: true);
+        store.applySubmission(centerFreq: 440.0, isCorrect: true);
+        store.resetResult();
+        // sessionPoint is left untouched by resetResult
+        expect(store.currentSessionPoint, equals(2));
       });
 
       test('resets per-band counters to zero', () {
