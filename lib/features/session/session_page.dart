@@ -23,7 +23,6 @@ class SessionPage extends StatefulWidget {
 
 class _SessionPageState extends State<SessionPage> {
   final player = PlayerIsolate();
-  bool _disposed = false;
 
   @override
   void initState() {
@@ -34,7 +33,6 @@ class _SessionPageState extends State<SessionPage> {
 
   @override
   void dispose() {
-    _disposed = true;
     player.shutdown();
     super.dispose();
   }
