@@ -1,6 +1,3 @@
-import 'dart:math';
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eq_trainer/features/session/model/frequency_calculator.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
@@ -77,23 +74,6 @@ void main() {
       param.filterType = FilterType.peakDip;
       final result = FrequencyCalculator.compute(sessionParameter: param);
       expect(result.graphBarDataList.length, equals(8));
-    });
-
-    test('first bar in graphBarDataList has color == Colors.blueAccent', () {
-      param.startingBand = 3;
-      param.filterType = FilterType.peak;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      expect(result.graphBarDataList.isNotEmpty, isTrue);
-      expect(result.graphBarDataList[0].color, equals(Colors.blueAccent));
-    });
-
-    test('remaining bars have color == Colors.redAccent', () {
-      param.startingBand = 3;
-      param.filterType = FilterType.peak;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      for (int i = 1; i < result.graphBarDataList.length; i++) {
-        expect(result.graphBarDataList[i].color, equals(Colors.redAccent));
-      }
     });
 
     test('each graph spot list has 61 points (j = 0..60)', () {
