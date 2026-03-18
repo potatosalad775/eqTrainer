@@ -84,10 +84,6 @@ class FrequencyCalculator {
       }
     }
 
-    if (graphBarDataList.isNotEmpty) {
-      graphBarDataList[0] = graphBarDataList[0].copyWith(color: Colors.blueAccent);
-    }
-
     return FrequencyGraphData(
       centerFreqLogList: centerFreqLogList,
       centerFreqLinearList: centerFreqLinearList,

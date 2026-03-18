@@ -65,9 +65,9 @@ class PeakingEQFilter {
       frequency ?? this.frequency,
     );
 
-    late final pNewConfig = _interop.allocateManaged<ma_peak2_config>(sizeOf<ma_peak2_config>());
-    pNewConfig.ref = config;
-    _interop.bindings.ma_peak2_reinit(pNewConfig, _pFilter).throwMaResultIfNeeded();
+    // Reuse the pre-allocated _pConfig struct rather than allocating a new one each call.
+    _pConfig.ref = config;
+    _interop.bindings.ma_peak2_reinit(_pConfig, _pFilter).throwMaResultIfNeeded();
 
     _gainDb = gainDb ?? this.gainDb;
     _q = q ?? this.q;

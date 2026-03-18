@@ -31,7 +31,14 @@ class _SessionPageState extends State<SessionPage> {
     _init();
   }
 
+  @override
+  void dispose() {
+    player.shutdown();
+    super.dispose();
+  }
+
   Future<void> _init() async {
+    if (!mounted) return;
     final audioState = Provider.of<AudioState>(context, listen: false);
     final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
@@ -101,30 +108,38 @@ class _SessionPageState extends State<SessionPage> {
                   child: CircularProgressIndicator(),
                 );
               } else if (sessionState == SessionState.playlistEmpty) {
-                return AlertDialog(
-                  title: Text("SESSION_ALERT_EMPTY_TITLE".tr()),
-                  content: Text("SESSION_ALERT_EMPTY_CONTENT".tr()),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text("SESSION_ALERT_EMPTY_BUTTON".tr()),
-                    )
-                  ],
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("SESSION_ALERT_EMPTY_TITLE".tr(),
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      Text("SESSION_ALERT_EMPTY_CONTENT".tr()),
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text("SESSION_ALERT_EMPTY_BUTTON".tr()),
+                      ),
+                    ],
+                  ),
                 );
               } else if (sessionState == SessionState.error) {
-                return AlertDialog(
-                  title: Text("SESSION_ALERT_ERROR_TITLE".tr()),
-                  content: Text("SESSION_ALERT_ERROR_CONTENT".tr()),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text("SESSION_ALERT_ERROR_BUTTON".tr()),
-                    )
-                  ],
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("SESSION_ALERT_ERROR_TITLE".tr(),
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      Text("SESSION_ALERT_ERROR_CONTENT".tr()),
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: Text("SESSION_ALERT_ERROR_BUTTON".tr()),
+                      ),
+                    ],
+                  ),
                 );
               } else { // sessionState == SessionState.loading || SessionState.ready
                 return InteractionLock(
@@ -221,7 +236,7 @@ class _SessionPageState extends State<SessionPage> {
           ),
           TextButton(
             onPressed: () {
-              player.shutdown();
+              // dispose() handles player.shutdown(); just navigate.
               Navigator.of(context).pop(true);
               Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (context) => ResultPage())
