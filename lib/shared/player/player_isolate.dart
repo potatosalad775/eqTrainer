@@ -130,14 +130,14 @@ class _PlayerMessage {
 
 /// A player isolate that plays audio from a file or buffer.
 class PlayerIsolate extends ChangeNotifier {
-  // Add a constant for the state update interval
-  static const int _stateUpdateIntervalMs = 500;
+  static const int _stateUpdateIntervalMs = 100;
 
   PlayerIsolate();
   final _isolate = AudioIsolate<_PlayerMessage>(_worker);
 
   bool get isLaunched => _isolate.isLaunched;
   Timer? _playerStateUpdateTimer;
+  bool _isUpdating = false;
 
   Future<void> launch({
     required AudioDeviceBackend backend,
@@ -151,7 +151,8 @@ class PlayerIsolate extends ChangeNotifier {
         path: path,
       ),
     );
-    // Use the defined constant for timer interval
+    // Fetch initial state immediately so widgets don't wait for the first tick.
+    _playerStateUpdate();
     _startPlayerStateUpdateTimer(milliseconds: _stateUpdateIntervalMs);
   }
 
@@ -164,24 +165,40 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.shutdown();
   }
 
-  Future<void> play() {
-    return _isolate.request(const PlayerHostRequestStart());
+  Future<void> play() async {
+    await _isolate.request(const PlayerHostRequestStart());
+    if (_lastState != null) {
+      _lastState = PlayerStateResponse(
+          isPlaying: true, outputFormat: _lastState!.outputFormat);
+      notifyListeners();
+    }
   }
 
-  Future<void> pause() {
-    return _isolate.request(const PlayerHostRequestPause());
+  Future<void> pause() async {
+    await _isolate.request(const PlayerHostRequestPause());
+    if (_lastState != null) {
+      _lastState = PlayerStateResponse(
+          isPlaying: false, outputFormat: _lastState!.outputFormat);
+      notifyListeners();
+    }
   }
 
-  Future<PlayerPositionResponse?> seek(AudioTime position) {
-    return _isolate.request(PlayerHostRequestSeek(position: position));
+  Future<PlayerPositionResponse?> seek(AudioTime position) async {
+    final result =
+        await _isolate.request(PlayerHostRequestSeek(position: position));
+    _lastPosition = position;
+    notifyListeners();
+    return result;
   }
 
   Future<void> setVolume(double volume) {
     return _isolate.request(PlayerHostRequestSetVolume(volume: volume));
   }
 
-  Future<void> setEQ(bool enableEQ) {
-    return _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+  Future<void> setEQ(bool enableEQ) async {
+    await _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+    _lastEQState = enableEQ;
+    notifyListeners();
   }
 
   Future<void> setEQGain(double gainDb) {
@@ -212,6 +229,12 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.request(const PlayerHostRequestGetAllState());
   }
 
+  @override
+  void dispose() {
+    shutdown();
+    super.dispose();
+  }
+
   void _startPlayerStateUpdateTimer({required int milliseconds}) {
     _playerStateUpdateTimer?.cancel();
     _playerStateUpdateTimer =
@@ -226,31 +249,36 @@ class PlayerIsolate extends ChangeNotifier {
   bool? _lastEQState;
 
   void _playerStateUpdate() async {
-    if (!isLaunched) return;
-    final all = await getAllState();
-    if (all == null) return;
+    if (!isLaunched || _isUpdating) return;
+    _isUpdating = true;
+    try {
+      final all = await getAllState();
+      if (all == null) return;
 
-    bool shouldNotify = false;
+      bool shouldNotify = false;
 
-    if (all.playerState != _lastState) {
-      _lastState = all.playerState;
-      shouldNotify = true;
-    }
-    if (all.position != _lastPosition) {
-      _lastPosition = all.position;
-      shouldNotify = true;
-    }
-    if (all.duration != _lastDuration) {
-      _lastDuration = all.duration;
-      shouldNotify = true;
-    }
-    if (all.eqEnabled != _lastEQState) {
-      _lastEQState = all.eqEnabled;
-      shouldNotify = true;
-    }
+      if (all.playerState != _lastState) {
+        _lastState = all.playerState;
+        shouldNotify = true;
+      }
+      if (all.position != _lastPosition) {
+        _lastPosition = all.position;
+        shouldNotify = true;
+      }
+      if (all.duration != _lastDuration) {
+        _lastDuration = all.duration;
+        shouldNotify = true;
+      }
+      if (all.eqEnabled != _lastEQState) {
+        _lastEQState = all.eqEnabled;
+        shouldNotify = true;
+      }
 
-    if (shouldNotify) {
-      notifyListeners();
+      if (shouldNotify) {
+        notifyListeners();
+      }
+    } finally {
+      _isUpdating = false;
     }
   }
 
