@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/session/index.dart';
 
-class ConfigCard extends StatefulWidget {
+class ConfigCard extends StatelessWidget {
   const ConfigCard({
     super.key,
     required this.cardType,
@@ -12,14 +12,8 @@ class ConfigCard extends StatefulWidget {
   final ConfigCardType cardType;
 
   @override
-  State<ConfigCard> createState() => _ConfigCardState();
-}
-
-class _ConfigCardState extends State<ConfigCard> {
-  @override
   Widget build(BuildContext context) {
     final sessionValue = context.watch<SessionParameter>();
-    final configCardInfo = ConfigCardInfo(type: widget.cardType);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
@@ -32,7 +26,7 @@ class _ConfigCardState extends State<ConfigCard> {
           minVerticalPadding: 12,
           contentPadding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           title: Text(
-            configCardInfo.title,
+            cardType.title,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -40,7 +34,7 @@ class _ConfigCardState extends State<ConfigCard> {
             ),
           ),
           subtitle: Text(
-            configCardInfo.subtitle,
+            cardType.subtitle,
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -49,29 +43,29 @@ class _ConfigCardState extends State<ConfigCard> {
           trailing: DropdownButton(
             alignment: Alignment.centerRight,
             isDense: true,
-            value: (widget.cardType == ConfigCardType.startingBand) ? sessionValue.startingBand
-                :  (widget.cardType == ConfigCardType.gain) ? sessionValue.gain
-                :  (widget.cardType == ConfigCardType.qFactor) ? sessionValue.qFactor
-                :  (widget.cardType == ConfigCardType.filterType) ? sessionValue.filterType
-                :  (widget.cardType == ConfigCardType.threshold) ? sessionValue.threshold
+            value: (cardType == ConfigCardType.startingBand) ? sessionValue.startingBand
+                :  (cardType == ConfigCardType.gain) ? sessionValue.gain
+                :  (cardType == ConfigCardType.qFactor) ? sessionValue.qFactor
+                :  (cardType == ConfigCardType.filterType) ? sessionValue.filterType
+                :  (cardType == ConfigCardType.threshold) ? sessionValue.threshold
                 :  null,
             menuMaxHeight: MediaQuery.of(context).size.height * kCardDropDownMenuHeight,
-            items: (widget.cardType == ConfigCardType.startingBand || widget.cardType == ConfigCardType.gain || widget.cardType == ConfigCardType.threshold) ?
-                      configCardInfo.valueList.map<DropdownMenuItem<int>>((item) {
+            items: (cardType == ConfigCardType.startingBand || cardType == ConfigCardType.gain || cardType == ConfigCardType.threshold) ?
+                      cardType.valueList.map<DropdownMenuItem<int>>((item) {
                         return DropdownMenuItem<int>(
                           value: item,
                           child: Text(item.toString()),
                         );
                       }).toList()
-                :  (widget.cardType == ConfigCardType.qFactor) ?
-                      configCardInfo.valueList.map<DropdownMenuItem<double>>((dynamic item) {
+                :  (cardType == ConfigCardType.qFactor) ?
+                      cardType.valueList.map<DropdownMenuItem<double>>((dynamic item) {
                         return DropdownMenuItem<double>(
                           value: item,
                           child: Text(item.toString()),
                         );
                       }).toList()
-                :  (widget.cardType == ConfigCardType.filterType) ?
-                      configCardInfo.valueList.map<DropdownMenuItem<FilterType>>((item) {
+                :  (cardType == ConfigCardType.filterType) ?
+                      cardType.valueList.map<DropdownMenuItem<FilterType>>((item) {
                         return DropdownMenuItem<FilterType>(
                           value: item,
                           child: (item == FilterType.peak) ? Text("CONFIG_CARD_DDB_FT_P".tr())
@@ -82,7 +76,7 @@ class _ConfigCardState extends State<ConfigCard> {
                       }).toList()
                 :  null,
             onChanged: (dynamic value) {
-              switch(widget.cardType) {
+              switch(cardType) {
                 case ConfigCardType.startingBand: sessionValue.startingBand = value; break;
                 case ConfigCardType.gain: sessionValue.gain = value; break;
                 case ConfigCardType.qFactor: sessionValue.qFactor = value; break;
@@ -97,37 +91,34 @@ class _ConfigCardState extends State<ConfigCard> {
   }
 }
 
-class ConfigCardInfo {
-  final ConfigCardType type;
-
-  ConfigCardInfo({
-    required this.type,
-  });
-
+enum ConfigCardType { 
+  startingBand, gain, qFactor, filterType, threshold;
+  
   String get title {
-    if(type == ConfigCardType.startingBand) { return "CONFIG_CARD_TITLE_SB".tr(); }
-    else if(type == ConfigCardType.gain) { return "CONFIG_CARD_TITLE_G".tr(); }
-    else if(type == ConfigCardType.qFactor) { return "CONFIG_CARD_TITLE_QF".tr(); }
-    else if(type == ConfigCardType.filterType) { return "CONFIG_CARD_TITLE_FT".tr(); }
-    else if(type == ConfigCardType.threshold) { return "CONFIG_CARD_TITLE_T".tr(); }
-    else { return "?"; }
+    switch(this) {
+      case ConfigCardType.startingBand: return "CONFIG_CARD_TITLE_SB".tr();
+      case ConfigCardType.gain: return "CONFIG_CARD_TITLE_G".tr();
+      case ConfigCardType.qFactor: return "CONFIG_CARD_TITLE_QF".tr();
+      case ConfigCardType.filterType: return "CONFIG_CARD_TITLE_FT".tr();
+      case ConfigCardType.threshold: return "CONFIG_CARD_TITLE_T".tr();
+    }
   }
   String get subtitle {
-    if(type == ConfigCardType.startingBand) { return "CONFIG_CARD_SUBTITLE_SB".tr(); }
-    else if(type == ConfigCardType.gain) { return "CONFIG_CARD_SUBTITLE_G".tr(); }
-    else if(type == ConfigCardType.qFactor) { return "CONFIG_CARD_SUBTITLE_QF".tr(); }
-    else if(type == ConfigCardType.filterType) { return "CONFIG_CARD_SUBTITLE_FT".tr(); }
-    else if(type == ConfigCardType.threshold) { return "CONFIG_CARD_SUBTITLE_T".tr(); }
-    else { return "?"; }
+    switch(this) {
+      case ConfigCardType.startingBand: return "CONFIG_CARD_SUBTITLE_SB".tr();
+      case ConfigCardType.gain: return "CONFIG_CARD_SUBTITLE_G".tr();
+      case ConfigCardType.qFactor: return "CONFIG_CARD_SUBTITLE_QF".tr();
+      case ConfigCardType.filterType: return "CONFIG_CARD_SUBTITLE_FT".tr();
+      case ConfigCardType.threshold: return "CONFIG_CARD_SUBTITLE_T".tr();
+    }
   }
   List<dynamic> get valueList {
-    if(type == ConfigCardType.startingBand) { return [for(var i = 2; i <= 25; i+=1) i]; }
-    else if(type == ConfigCardType.gain) { return [3,4,5,6,8,10,15]; }
-    else if(type == ConfigCardType.qFactor) { return [0.1, 0.5, 1.0, 2.0, 5.0, 10.0]; }
-    else if(type == ConfigCardType.filterType) { return [FilterType.peak, FilterType.dip, FilterType.peakDip]; }
-    else if(type == ConfigCardType.threshold) { return [1, 3, 5, 10]; }
-    else { return []; }
+    switch(this) {
+      case ConfigCardType.startingBand: return [for(var i = 2; i <= 25; i+=1) i];
+      case ConfigCardType.gain: return [3,4,5,6,8,10,15];
+      case ConfigCardType.qFactor: return [0.1, 0.5, 1.0, 2.0, 5.0, 10.0];
+      case ConfigCardType.filterType: return [FilterType.peak, FilterType.dip, FilterType.peakDip];
+      case ConfigCardType.threshold: return [1, 3, 5, 10];
+    }
   }
 }
-
-enum ConfigCardType { startingBand, gain, qFactor, filterType, threshold }

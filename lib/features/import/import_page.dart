@@ -30,6 +30,13 @@ class _ImportPageState extends State<ImportPage> {
     _init();
   }
 
+  @override
+  void dispose() {
+    clipDivProvider.dispose();
+    importPlayer.dispose();
+    super.dispose();
+  }
+
   Future<void> _init() async {
     await importFile();
   }
@@ -40,7 +47,6 @@ class _ImportPageState extends State<ImportPage> {
       providers: [
         ChangeNotifierProvider<ImportAudioData>.value(value: clipDivProvider),
         ChangeNotifierProvider<ImportPlayer>.value(value: importPlayer),
-        // Remove local DI; use app-level providers for services
       ],
       child: PopScope(
         canPop: false,
@@ -100,7 +106,6 @@ class _ImportPageState extends State<ImportPage> {
                       child: CircularProgressIndicator(),
                     );
                   } else {
-                    clipDivProvider.clipEndTime = importPlayer.fetchDuration;
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.end,
