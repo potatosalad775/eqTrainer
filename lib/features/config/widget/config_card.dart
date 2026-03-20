@@ -1,4 +1,4 @@
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/theme_data.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -55,7 +55,7 @@ class _ConfigCardState extends State<ConfigCard> {
                 :  (widget.cardType == ConfigCardType.filterType) ? sessionValue.filterType
                 :  (widget.cardType == ConfigCardType.threshold) ? sessionValue.threshold
                 :  null,
-            menuMaxHeight: MediaQuery.of(context).size.height * reactiveElementData.cardDropDownMenuHeight,
+            menuMaxHeight: MediaQuery.of(context).size.height * kCardDropDownMenuHeight,
             items: (widget.cardType == ConfigCardType.startingBand || widget.cardType == ConfigCardType.gain || widget.cardType == ConfigCardType.threshold) ?
                       configCardInfo.valueList.map<DropdownMenuItem<int>>((item) {
                         return DropdownMenuItem<int>(

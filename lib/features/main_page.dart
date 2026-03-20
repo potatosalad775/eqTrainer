@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/features/config/config_page.dart';
 import 'package:eq_trainer/features/playlist/playlist_page.dart';
 import 'package:eq_trainer/features/settings/settings_page.dart';
@@ -25,8 +25,8 @@ class _MainPageState extends State<MainPage> {
     var navBarProvider = Provider.of<NavBarProvider>(context);
     // Add bottom padding if device doesn't already have it.
     double bottomPaddingValue = MediaQuery.of(context).viewPadding.bottom == 0 ? 11 : 0;
-    double sidePaddingValue = MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
-        ? 0 : (MediaQuery.of(context).size.width - reactiveElementData.maximumWidgetWidth) / 2;
+    double sidePaddingValue = MediaQuery.of(context).size.width <= kMaxWidgetWidth
+        ? 0 : (MediaQuery.of(context).size.width - kMaxWidgetWidth) / 2;
 
     return Scaffold(
       appBar: AppBar(
@@ -34,13 +34,13 @@ class _MainPageState extends State<MainPage> {
         scrolledUnderElevation: 4,
         shadowColor: Theme.of(context).colorScheme.shadow,
         toolbarHeight: (MediaQuery.of(context).size.height *
-                reactiveElementData.appbarHeight)
+                kAppbarHeight)
             .clamp(90, 120),
         titleSpacing: 13 +
-            (MediaQuery.of(context).size.width <= reactiveElementData.maximumWidgetWidth
+            (MediaQuery.of(context).size.width <= kMaxWidgetWidth
             ? 0
             : (MediaQuery.of(context).size.width -
-                reactiveElementData.maximumWidgetWidth) / 2
+                kMaxWidgetWidth) / 2
             ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,7 +49,7 @@ class _MainPageState extends State<MainPage> {
               tr(pageTitle[navBarProvider.currentIndex][0], context: context),
               style: TextStyle(
                 fontSize: (MediaQuery.of(context).size.height *
-                        reactiveElementData.appbarFontSize)
+                        kAppbarFontSize)
                     .clamp(24, 32),
               ),
             ),
@@ -57,7 +57,7 @@ class _MainPageState extends State<MainPage> {
               tr(pageTitle[navBarProvider.currentIndex][1], context: context),
               style: TextStyle(
                 fontSize: (MediaQuery.of(context).size.height *
-                        reactiveElementData.appbarFontSize)
+                        kAppbarFontSize)
                     .clamp(24, 32),
                 fontWeight: FontWeight.bold,
               ),
@@ -68,7 +68,7 @@ class _MainPageState extends State<MainPage> {
       body: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: reactiveElementData.maximumWidgetWidth,
+            maxWidth: kMaxWidgetWidth,
           ),
           child: Column(
             children: [

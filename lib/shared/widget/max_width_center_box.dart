@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/theme_data.dart';
 
 class MaxWidthCenterBox extends StatelessWidget {
   final Widget child;
@@ -11,7 +11,7 @@ class MaxWidthCenterBox extends StatelessWidget {
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: reactiveElementData.maximumWidgetWidth * (ratio ?? 1.0),
+          maxWidth: kMaxWidgetWidth * (ratio ?? 1.0),
         ),
         child: child,
       ),

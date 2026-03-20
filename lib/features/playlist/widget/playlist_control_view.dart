@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/error.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
@@ -71,7 +71,7 @@ class PlaylistControlView extends StatelessWidget {
                     icon: const Icon(Icons.skip_previous),
                     enableFeedback: false,
                   ),
-                  SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
+                  SizedBox(width: MediaQuery.of(context).size.width * kControlSpacer),
                   // Play Pause
                   IconButton(
                     onPressed: () {
@@ -96,7 +96,7 @@ class PlaylistControlView extends StatelessWidget {
                     icon: Icon(playerState.isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded),
                     enableFeedback: false,
                   ),
-                  SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
+                  SizedBox(width: MediaQuery.of(context).size.width * kControlSpacer),
                   // Close
                   IconButton(
                     onPressed: () {

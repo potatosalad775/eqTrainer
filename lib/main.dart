@@ -11,7 +11,6 @@ import 'package:window_size/window_size.dart';
 import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
-import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
@@ -203,7 +202,6 @@ class AppState extends State<App> {
 
 //const mainFormat = AudioFormat(sampleRate: 48000, channels: 2);
 //final mainSessionData = SessionParameter();
-final reactiveElementData = ReactiveElementData();
 
 String backendBoxName = "backendBox";
 String backendKey = "backendKey";

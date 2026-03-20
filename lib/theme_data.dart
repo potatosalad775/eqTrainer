@@ -22,12 +22,10 @@ class CustomTrackShape extends RoundedRectSliderTrackShape {
   }
 }
 
-class ReactiveElementData {
-  double get appbarHeight => 0.15;
-  double get appbarFontSize => 0.04;
-  double get navbarHeight => 0.1;
-  double get cardDropDownMenuHeight => 0.4;
-  double get controlSpacer => 0.05;
-  double get sessionPickerLandscapeWidth => 0.1;
-  double get maximumWidgetWidth => 600;
-}
+const double kAppbarHeight = 0.15;
+const double kAppbarFontSize = 0.04;
+const double kNavbarHeight = 0.1;
+const double kCardDropDownMenuHeight = 0.4;
+const double kControlSpacer = 0.05;
+const double kSessionPickerLandscapeWidth = 0.1;
+const double kMaxWidgetWidth = 600.0;
