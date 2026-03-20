@@ -309,3 +309,10 @@ app.*.map.json
 /macos/Podfile.lock
 /devtools_options.yaml
 /dist/
+
+# FVM related
+.fvm/
+.fvmrc
+
+# Agent related
+.claude/
