@@ -149,9 +149,9 @@ class _SessionPageState extends State<SessionPage> {
                     child: (MediaQuery.of(context).size.width < MediaQuery.of(context).size.height
                         && MediaQuery.of(context).orientation == Orientation.portrait)
                     // 'Portrait View'
-                        ? sessionViewPortrait()
+                        ? _SessionViewPortrait(player: player)
                     // 'Landscape View'
-                        : sessionViewLandscape(),
+                        : _SessionViewLandscape(player: player),
                   ),
                 );
               }
@@ -159,65 +159,6 @@ class _SessionPageState extends State<SessionPage> {
           )
         ),
       ),
-    );
-  }
-
-  Widget sessionViewLandscape() {
-    return MaxWidthCenterBox(
-      ratio: 3,
-      child: Row(
-        children: [
-          const Flexible(
-              child: SessionGraph()
-          ),
-          Flexible(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const SessionPickerLandscape(),
-                Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          const DeviceDropdown(),
-                          const Spacer(),
-                          const SessionPositionSlider(),
-                          SessionControl(player: player),
-                          const SizedBox(height: 32),
-                          SessionSelectorLandscape(player: player),
-                        ],
-                      ),
-                    )
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget sessionViewPortrait() {
-    return Column(
-      children: [
-        const Expanded(
-            child: SessionGraph()
-        ),
-        const SessionPickerPortrait(),
-        const SizedBox(height: 20),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(30, 10, 30, 0),
-          child: SessionPositionSlider(),
-        ),
-        SessionControl(player: player),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.all(15),
-          child: SessionSelectorPortrait(player: player),
-        ),
-      ],
     );
   }
 
@@ -249,5 +190,76 @@ class _SessionPageState extends State<SessionPage> {
     );
 
     return;
+  }
+}
+
+class _SessionViewLandscape extends StatelessWidget {
+  const _SessionViewLandscape({required this.player});
+  final PlayerIsolate player;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaxWidthCenterBox(
+      ratio: 3,
+      child: Row(
+        children: [
+          const Flexible(
+            child: SessionGraph(),
+          ),
+          Flexible(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const SessionPicker(isPortrait: false),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        const DeviceDropdown(),
+                        const Spacer(),
+                        const SessionPositionSlider(),
+                        SessionControl(player: player),
+                        const SizedBox(height: 32),
+                        SessionSelector(player: player, isPortrait: false),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SessionViewPortrait extends StatelessWidget {
+  const _SessionViewPortrait({required this.player});
+  final PlayerIsolate player;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const Expanded(
+          child: SessionGraph(),
+        ),
+        const SessionPicker(isPortrait: true),
+        const SizedBox(height: 20),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(30, 10, 30, 0),
+          child: SessionPositionSlider(),
+        ),
+        SessionControl(player: player),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.all(15),
+          child: SessionSelector(player: player, isPortrait: true),
+        ),
+      ],
+    );
   }
 }
