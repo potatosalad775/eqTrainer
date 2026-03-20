@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:eq_trainer/features/import/widget/editor_clip_button_group.dart';
+import 'package:eq_trainer/features/import/widget/editor_clip_save_button.dart';
+import 'package:eq_trainer/features/import/widget/editor_control_button_group.dart';
+import 'package:eq_trainer/features/import/widget/editor_position_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/features/import/widget/editor_control_view.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
@@ -106,13 +109,20 @@ class _ImportPageState extends State<ImportPage> {
                       child: CircularProgressIndicator(),
                     );
                   } else {
-                    return Column(
+                    return const Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.end,
-                      children: const [
-                        SizedBox(height: 8),
-                        EditorControlView(),
+                      children: [
+                        // Position Slider with Timestamp
+                        EditorPositionSlider(),
+                        // Audio Control Button Row
+                        EditorControlButtonGroup(),
+                        SizedBox(height: 32),
+                        // Set Start / End Buttons
+                        EditorClipButtonGroup(),
                         SizedBox(height: 16),
+                        // Done Button - add to Database
+                        EditorClipSaveButton(),
                       ],
                     );
                   }
