@@ -16,8 +16,14 @@ import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/index.dart';
-import 'package:eq_trainer/features/session/index.dart';
+import 'package:eq_trainer/shared/service/app_directories.dart';
+import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/import_workflow_service.dart';
+import 'package:eq_trainer/shared/service/playlist_service.dart';
+import 'package:eq_trainer/shared/service/upgrader_service.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
+import 'package:eq_trainer/features/session/model/session_store.dart';
+import 'package:eq_trainer/features/session/model/session_controller.dart';
 
 Future<void> main() async {
   // Initialize Packages
@@ -51,10 +57,10 @@ Future<void> main() async {
   await Hive.openBox<AudioClip>(audioClipBoxName);
 
   // Set Android System UI Style
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       systemStatusBarContrastEnforced: false,
       systemNavigationBarIconBrightness: Brightness.dark,
-      statusBarIconBrightness: Brightness.dark
+      statusBarIconBrightness: Brightness.dark,
   ));
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: [SystemUiOverlay.top]);
 

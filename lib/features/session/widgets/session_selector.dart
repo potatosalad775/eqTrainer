@@ -6,29 +6,25 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
-import 'package:eq_trainer/features/session/data/index.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 class SessionSelector extends StatelessWidget {
   const SessionSelector({super.key, required this.player, required this.isPortrait});
   final PlayerIsolate player;
   final bool isPortrait;
 
-  @override
-  Widget build(BuildContext context) {
-    final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
-    final audioState = context.read<AudioState>();
-    final sessionStore = context.read<SessionStore>();
-    final sessionController = context.read<SessionController>();
-    final gap = isPortrait ? 16.0 : 20.0;
-
-    final originalButton = Expanded(
+  Widget _buildOriginalButton(
+    BuildContext context, {
+    required bool pEQState,
+    required SessionController sessionController,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Expanded(
       child: ElevatedButton(
-        onPressed: (pEQState == true)
-            ? () { sessionController.setEqEnabled(player, false); }
-            : null,
+        onPressed: pEQState ? () { sessionController.setEqEnabled(player, false); } : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          backgroundColor: colors.primary,
+          foregroundColor: colors.onPrimary,
           minimumSize: isPortrait ? null : const Size(100, 50),
         ),
         child: Padding(
@@ -37,15 +33,20 @@ class SessionSelector extends StatelessWidget {
         ),
       ),
     );
+  }
 
-    final eqButton = Expanded(
+  Widget _buildEqButton(
+    BuildContext context, {
+    required bool pEQState,
+    required SessionController sessionController,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Expanded(
       child: ElevatedButton(
-        onPressed: (pEQState == false)
-            ? () { sessionController.setEqEnabled(player, true); }
-            : null,
+        onPressed: !pEQState ? () { sessionController.setEqEnabled(player, true); } : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          backgroundColor: colors.primary,
+          foregroundColor: colors.onPrimary,
           minimumSize: isPortrait ? null : const Size(100, 50),
         ),
         child: Padding(
@@ -54,6 +55,16 @@ class SessionSelector extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
+    final audioState = context.read<AudioState>();
+    final sessionStore = context.read<SessionStore>();
+    final sessionController = context.read<SessionController>();
+    final colors = Theme.of(context).colorScheme;
+    final gap = isPortrait ? 16.0 : 20.0;
 
     void onSubmit() => sessionController.submitAnswer(
       player: player,
@@ -65,22 +76,19 @@ class SessionSelector extends StatelessWidget {
     if (isPortrait) {
       return Row(
         children: [
-          originalButton,
+          _buildOriginalButton(context, pEQState: pEQState, sessionController: sessionController),
           SizedBox(width: gap),
-          eqButton,
+          _buildEqButton(context, pEQState: pEQState, sessionController: sessionController),
           SizedBox(width: gap),
           ElevatedButton(
             onPressed: onSubmit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.tertiary,
-              foregroundColor: Theme.of(context).colorScheme.onTertiary,
+              backgroundColor: colors.tertiary,
+              foregroundColor: colors.onTertiary,
               minimumSize: const Size(50, 50),
               shape: const CircleBorder(),
             ),
-            child: Icon(
-              Icons.next_plan_outlined,
-              color: Theme.of(context).colorScheme.onTertiary,
-            ),
+            child: Icon(Icons.next_plan_outlined, color: colors.onTertiary),
           ),
         ],
       );
@@ -89,23 +97,20 @@ class SessionSelector extends StatelessWidget {
         children: [
           Row(
             children: [
-              originalButton,
+              _buildOriginalButton(context, pEQState: pEQState, sessionController: sessionController),
               SizedBox(width: gap),
-              eqButton,
+              _buildEqButton(context, pEQState: pEQState, sessionController: sessionController),
             ],
           ),
           SizedBox(height: gap),
           ElevatedButton.icon(
             onPressed: onSubmit,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.tertiary,
-              foregroundColor: Theme.of(context).colorScheme.onTertiary,
+              backgroundColor: colors.tertiary,
+              foregroundColor: colors.onTertiary,
               minimumSize: const Size.fromHeight(60),
             ),
-            icon: Icon(
-              Icons.next_plan_outlined,
-              color: Theme.of(context).colorScheme.onTertiary,
-            ),
+            icon: Icon(Icons.next_plan_outlined, color: colors.onTertiary),
             label: Text("SESSION_BUTTON_SUBMIT".tr(), style: filterButtonStyle),
           ),
         ],

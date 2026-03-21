@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:eq_trainer/features/session/model/frequency_calculator.dart';
-import 'package:eq_trainer/features/session/data/index.dart';
+import 'package:eq_trainer/features/session/data/graph_state.dart';
+import 'package:eq_trainer/features/session/data/session_state.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 /// SessionStore aggregates session-related UI state into a single source of truth.
 /// Holds frequency/graph data computed by the pure FrequencyCalculator.

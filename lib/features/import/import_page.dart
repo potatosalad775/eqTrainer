@@ -12,7 +12,8 @@ import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
-import 'package:eq_trainer/shared/service/index.dart';
+import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});

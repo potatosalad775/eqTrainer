@@ -1,8 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
-import 'package:eq_trainer/shared/index.dart';
+import 'package:eq_trainer/shared/player/import_player.dart';
+import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:eq_trainer/theme_data.dart';
 
 class EditorClipSaveButton extends StatelessWidget {
   const EditorClipSaveButton({super.key});
@@ -24,8 +26,8 @@ class EditorClipSaveButton extends StatelessWidget {
         if(context.mounted) Navigator.pop(context);
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        backgroundColor: context.colors.primary,
+        foregroundColor: context.colors.onPrimary,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),

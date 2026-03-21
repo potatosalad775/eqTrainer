@@ -1,10 +1,12 @@
 import 'package:eq_trainer/main.dart';
 import 'package:flutter/material.dart';
+import 'package:eq_trainer/theme_data.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
-import 'package:eq_trainer/features/session/data/index.dart';
+import 'package:eq_trainer/features/session/data/graph_state.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 class SessionGraph extends StatelessWidget {
   const SessionGraph({super.key});
@@ -26,7 +28,7 @@ class SessionGraph extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text("SESSION_ALERT_ERROR_TITLE".tr(),
-                      style: Theme.of(context).textTheme.titleMedium),
+                      style: context.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Text("SESSION_ALERT_ERROR_CONTENT".tr()),
                 ],
@@ -80,7 +82,7 @@ class SessionGraph extends StatelessWidget {
           borderData: FlBorderData(
               show: true,
               border: Border.all(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: context.colors.onSurfaceVariant,
               )
           ),
           titlesData: _graphTitleData(context),
@@ -122,8 +124,8 @@ class SessionGraph extends StatelessWidget {
           width: 84,
           height: 44,
           child: Card(
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            surfaceTintColor: Theme.of(context).colorScheme.onSecondaryContainer,
+            color: context.colors.secondaryContainer,
+            surfaceTintColor: context.colors.onSecondaryContainer,
             elevation: 3,
             child: Center(
               child: Text(
@@ -148,8 +150,8 @@ class SessionGraph extends StatelessWidget {
             width: 84,
             height: 44,
             child: Card(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              surfaceTintColor: Theme.of(context).colorScheme.onSecondaryContainer,
+              color: context.colors.secondaryContainer,
+              surfaceTintColor: context.colors.onSecondaryContainer,
               elevation: 3,
               child: Center(
                 child: Text(
@@ -214,7 +216,7 @@ class SessionGraph extends StatelessWidget {
                   text,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: context.colors.onSurfaceVariant,
                   ),
                 ),
               );
@@ -231,13 +233,13 @@ class SessionGraph extends StatelessWidget {
     return ExtraLinesData(
       extraLinesOnTop: false,
       verticalLines: [
-        VerticalLine(x: 7, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),   // 50
-        VerticalLine(x: 13, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),   // 100
-        VerticalLine(x: 20, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),   // 200
-        VerticalLine(x: 27, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),  // 1k
-        VerticalLine(x: 40, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),  // 2k
-        VerticalLine(x: 47, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),  // 5k
-        VerticalLine(x: 53, strokeWidth: 0.3, color: Theme.of(context).colorScheme.onSurfaceVariant),  // 10k
+        VerticalLine(x: 7, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),   // 50
+        VerticalLine(x: 13, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),   // 100
+        VerticalLine(x: 20, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),   // 200
+        VerticalLine(x: 27, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),  // 1k
+        VerticalLine(x: 40, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),  // 2k
+        VerticalLine(x: 47, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),  // 5k
+        VerticalLine(x: 53, strokeWidth: 0.3, color: context.colors.onSurfaceVariant),  // 10k
       ]
     );
   }

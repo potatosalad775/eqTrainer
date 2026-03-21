@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eq_trainer/theme_data.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
@@ -137,7 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: context.colors.onSurface,
                 ),
               ),
               const SizedBox(height: 3,),
@@ -146,14 +147,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: context.colors.onSurface,
                 ),
               ),
             ],
           ),
         ),
-        // Added another '40' bottom padding since main navigation bar is floating
-        SizedBox(height: 40),
+        const SizedBox(height: 40),
       ],
     );
   }

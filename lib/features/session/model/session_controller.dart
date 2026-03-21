@@ -5,7 +5,8 @@ import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
-import 'package:eq_trainer/features/session/data/index.dart';
+import 'package:eq_trainer/features/session/data/session_state.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:toastification/toastification.dart';
 
 class SessionSubmitResult {

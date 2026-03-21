@@ -1,5 +1,6 @@
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
-import 'package:eq_trainer/shared/index.dart';
+import 'package:eq_trainer/shared/player/import_player.dart';
+import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/model/error.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

@@ -15,53 +15,62 @@ class SessionControl extends StatelessWidget {
   });
   final PlayerIsolate player;
 
+  Future<void> _relaunchWith(
+    BuildContext context,
+    String path, {
+    required AudioDeviceBackend backend,
+    required AudioDeviceId? outputDeviceId,
+  }) async {
+    await player.pause();
+    await player.shutdown();
+    await player.launch(
+      backend: backend,
+      outputDeviceId: outputDeviceId,
+      path: path,
+    );
+    if (context.mounted) await context.read<SessionController>().updatePlayerState(player);
+    await player.play();
+  }
+
+  Future<void> _playerNext(
+    BuildContext context, {
+    required AudioDeviceBackend backend,
+    required AudioDeviceId? outputDeviceId,
+  }) async {
+    final sessionStore = context.read<SessionStore>();
+    if (sessionStore.playlistPaths.isEmpty) return;
+    sessionStore.nextTrack();
+    final nextPath = sessionStore.currentClipPath;
+    if (nextPath != null) {
+      await _relaunchWith(context, nextPath, backend: backend, outputDeviceId: outputDeviceId);
+    }
+  }
+
+  Future<void> _playerPrevious(
+    BuildContext context, {
+    required AudioDeviceBackend backend,
+    required AudioDeviceId? outputDeviceId,
+  }) async {
+    // If player position > 3 seconds, reset to 0 instead of going to previous
+    if (player.fetchPosition > const AudioTime(3)) {
+      player.seek(AudioTime.zero);
+      return;
+    }
+    final sessionStore = context.read<SessionStore>();
+    if (sessionStore.playlistPaths.isEmpty) return;
+    sessionStore.previousTrack();
+    final prevPath = sessionStore.currentClipPath;
+    if (prevPath != null) {
+      await _relaunchWith(context, prevPath, backend: backend, outputDeviceId: outputDeviceId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final audioState = context.watch<AudioState>();
+    final (backend, outputDeviceId) = context.select<AudioState, (AudioDeviceBackend, AudioDeviceId?)>(
+      (s) => (s.backend, s.outputDevice?.id),
+    );
     final playerState = context.select<PlayerIsolate, PlayerStateResponse>((p) => p.fetchPlayerState);
-    final sessionStore = context.read<SessionStore>();
-
-    Future<void> relaunchWith(String path) async {
-      await player.pause();
-      await player.shutdown();
-      await player.launch(
-        backend: audioState.backend,
-        outputDeviceId: audioState.outputDevice?.id,
-        path: path,
-      );
-      if(context.mounted) await context.read<SessionController>().updatePlayerState(player);
-      await player.play();
-    }
-
-    Future<void> playerNext() async {
-      if (sessionStore.playlistPaths.isEmpty) return;
-      sessionStore.nextTrack();
-      final nextPath = sessionStore.currentClipPath;
-      if (nextPath != null) {
-        await relaunchWith(nextPath);
-      }
-      return;
-    }
-
-    Future<void> playerPrevious() async {
-      // if player position is greater than 3 seconds,
-      // Previous button will reset player position to 0
-      if(player.fetchPosition > const AudioTime(3)) {
-        player.seek(AudioTime.zero);
-        return;
-      }
-      if (sessionStore.playlistPaths.isEmpty) return;
-      // Else, play previous clip
-      sessionStore.previousTrack();
-      final prevPath = sessionStore.currentClipPath;
-      if (prevPath != null) {
-        await relaunchWith(prevPath);
-      }
-
-      return;
-    }
-
-    //if(player.state == MabAudioPlayerState.finished) playerNext();
 
     return Column(
       children: [
@@ -70,28 +79,26 @@ class SessionControl extends StatelessWidget {
           children: [
             IconButton(
               onPressed: () {
-                playerPrevious();
+                _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId);
               },
               iconSize: 50,
               icon: const Icon(Icons.skip_previous),
               enableFeedback: false,
             ),
-            //SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
             IconButton(
               onPressed: () {
                 if (playerState.isPlaying) {
                   player.pause();
                 } else {
                   player.play().onError((e, _) {
-                    if(context.mounted) {
+                    if (context.mounted) {
                       showPlayerErrorDialog(context,
                           action: () {
                             player.shutdown();
                             Navigator.of(context).pop();
                             Navigator.of(context).pop();
                           },
-                          error: e
-                      );
+                          error: e);
                     }
                   });
                 }
@@ -99,14 +106,12 @@ class SessionControl extends StatelessWidget {
               iconSize: 64,
               icon: Icon(playerState.isPlaying
                   ? Icons.pause_circle_filled_rounded
-                  : Icons.play_circle_fill_rounded
-              ),
+                  : Icons.play_circle_fill_rounded),
               enableFeedback: false,
             ),
-            //SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
             IconButton(
-              onPressed: () async {
-                await playerNext();
+              onPressed: () {
+                _playerNext(context, backend: backend, outputDeviceId: outputDeviceId);
               },
               iconSize: 50,
               icon: const Icon(Icons.skip_next),

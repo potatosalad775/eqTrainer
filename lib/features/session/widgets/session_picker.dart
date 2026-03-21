@@ -15,12 +15,12 @@ class SessionPicker extends StatelessWidget {
     final size = MediaQuery.of(context).size;
 
     final selectedStyle = TextStyle(
-      color: Theme.of(context).colorScheme.secondary,
+      color: context.colors.secondary,
       fontWeight: FontWeight.bold,
       fontSize: 40,
     );
     final normalStyle = TextStyle(
-      color: Theme.of(context).colorScheme.onSurface,
+      color: context.colors.onSurface,
       fontSize: 20,
     );
 
@@ -77,7 +77,7 @@ class SessionPicker extends StatelessWidget {
 
     if (isPortrait) {
       return Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: context.colors.surfaceContainerHighest,
         child: RepaintBoundary(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -87,7 +87,7 @@ class SessionPicker extends StatelessWidget {
       );
     } else {
       return Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: context.colors.surfaceContainerHighest,
         width: (size.width * kSessionPickerLandscapeWidth).clamp(80, 120),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,

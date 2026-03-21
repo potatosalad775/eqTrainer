@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:eq_trainer/features/session/index.dart';
+import 'package:eq_trainer/theme_data.dart';
+import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +14,7 @@ class ResultPage extends StatelessWidget {
         ? 20
         : MediaQuery.of(context).viewPadding.bottom - 10;
     double bottomMarginValue = MediaQuery.of(context).viewPadding.bottom == 0 ? 11 : 0;
-    final store = context.read<SessionStore>();
+    final store = context.watch<SessionStore>();
 
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +31,7 @@ class ResultPage extends StatelessWidget {
                   child: Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                    color: context.colors.surfaceContainerHigh,
                     child: ListTile(
                       contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                       minVerticalPadding: 10,
@@ -38,14 +39,14 @@ class ResultPage extends StatelessWidget {
                       title: Text(
                         SessionStore.resultFrequencyLabelList[index][0].tr(),
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: context.colors.onSurface,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(
                         SessionStore.resultFrequencyLabelList[index][1],
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: context.colors.onSurface,
                         ),
                       ),
                       trailing: Column(
@@ -75,11 +76,11 @@ class ResultPage extends StatelessWidget {
                 bottom: bottomMarginValue,
               ),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondary,
-                borderRadius: BorderRadius.only(
+                color: context.colors.secondary,
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(10),
-                  topRight: Radius.circular(10)
-                )
+                  topRight: Radius.circular(10),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -89,7 +90,7 @@ class ResultPage extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSecondary,
+                      color: context.colors.onSecondary,
                     ),
                   ),
                   (store.elapsedSession != 0)
@@ -103,7 +104,7 @@ class ResultPage extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSecondary,
+                          color: context.colors.onSecondary,
                         ),
                       ),
                     ],
@@ -114,7 +115,7 @@ class ResultPage extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 25,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSecondary,
+                      color: context.colors.onSecondary,
                     ),
                   )
                 ]

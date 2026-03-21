@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:eq_trainer/theme_data.dart';
 
 class SettingsCard extends StatelessWidget {
   const SettingsCard({
@@ -19,18 +20,18 @@ class SettingsCard extends StatelessWidget {
       child: Card(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        color: Theme.of(context).colorScheme.surfaceContainer,
+        color: context.colors.surfaceContainer,
         child: ListTile(
           contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
           leading: FaIcon(
             icon,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            color: context.colors.onSurfaceVariant,
           ),
           title: Text(
             title,
             style: TextStyle(
               fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: context.colors.onSurfaceVariant,
             ),
           ),
           trailing: trailing,

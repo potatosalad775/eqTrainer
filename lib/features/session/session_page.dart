@@ -1,5 +1,6 @@
 import 'package:eq_trainer/shared/widget/interaction_lock.dart';
 import 'package:flutter/material.dart';
+import 'package:eq_trainer/theme_data.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/result/result_page.dart';
@@ -12,7 +13,11 @@ import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
-import 'package:eq_trainer/features/session/widgets/index.dart';
+import 'package:eq_trainer/features/session/widgets/session_control.dart';
+import 'package:eq_trainer/features/session/widgets/session_graph.dart';
+import 'package:eq_trainer/features/session/widgets/session_picker.dart';
+import 'package:eq_trainer/features/session/widgets/session_position_slider.dart';
+import 'package:eq_trainer/features/session/widgets/session_selector.dart';
 
 class SessionPage extends StatefulWidget {
   const SessionPage({super.key});
@@ -113,7 +118,7 @@ class _SessionPageState extends State<SessionPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text("SESSION_ALERT_EMPTY_TITLE".tr(),
-                          style: Theme.of(context).textTheme.titleLarge),
+                          style: context.textTheme.titleLarge),
                       const SizedBox(height: 12),
                       Text("SESSION_ALERT_EMPTY_CONTENT".tr()),
                       const SizedBox(height: 20),
@@ -130,7 +135,7 @@ class _SessionPageState extends State<SessionPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text("SESSION_ALERT_ERROR_TITLE".tr(),
-                          style: Theme.of(context).textTheme.titleLarge),
+                          style: context.textTheme.titleLarge),
                       const SizedBox(height: 12),
                       Text("SESSION_ALERT_ERROR_CONTENT".tr()),
                       const SizedBox(height: 20),
@@ -180,7 +185,7 @@ class _SessionPageState extends State<SessionPage> {
               // dispose() handles player.shutdown(); just navigate.
               Navigator.of(context).pop(true);
               Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => ResultPage())
+                MaterialPageRoute(builder: (context) => const ResultPage())
               );
             },
             child: Text("SESSION_ALERT_EXIT_BUTTON_YES".tr()),
