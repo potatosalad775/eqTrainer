@@ -121,7 +121,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: backends.values.any((v) => v)
-          ? () {
+          ? () async {
             // Apply Audio Backend API
             final AudioDeviceContext deviceContext;
             try {
@@ -146,9 +146,9 @@ class _DevBackendPageState extends State<DevBackendPage> {
                 .where((e) => e.value)
                 .map((e) => _backendKey(e.key))
                 .toList();
-            Hive.openBox<BackendData>(backendBoxName).then((backendBox) => {
-              backendBox.put(backendKey, BackendData(selectedBackendList))
-            });
+            final backendBox = await Hive.openBox<BackendData>(backendBoxName);
+            await backendBox.put(backendKey, BackendData(selectedBackendList));
+            if (!context.mounted) return;
             // Notify
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

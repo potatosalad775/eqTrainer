@@ -2,9 +2,9 @@ import 'package:coast_audio/coast_audio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/theme_data.dart';
 
 class EditorClipButtonGroup extends StatelessWidget {
   const EditorClipButtonGroup({super.key});
@@ -16,6 +16,7 @@ class EditorClipButtonGroup extends StatelessWidget {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      spacing: 12,
       children: [
         Expanded(
           child: ElevatedButton(

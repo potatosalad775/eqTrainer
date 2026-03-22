@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,7 +8,6 @@ import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:window_size/window_size.dart';
-import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/features/main_page.dart';
@@ -42,15 +41,14 @@ Future<void> main() async {
   Hive.registerAdapter(BackendDataAdapter());
   Hive.registerAdapter(MiscSettingsAdapter());
 
-  // Load Backend Setting value
+  // Load Backend Setting value (opened and closed once — not needed after startup)
   final backendBox = await Hive.openBox<BackendData>(backendBoxName);
   backendList = backendBox.get(backendKey)?.backendList ?? [];
-  backendBox.close();
+  await backendBox.close();
 
-  // Load Miscellaneous Settings
+  // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
   final miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
   savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false);
-  miscSettingsBox.close();
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
@@ -62,26 +60,24 @@ Future<void> main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
       statusBarIconBrightness: Brightness.dark,
   ));
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: [SystemUiOverlay.top]);
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: [SystemUiOverlay.top]);
 
   // Prepare Upgrader
   final upgrader = await UpgraderService().getInstance();
 
   runApp(
-    EasyDynamicThemeWidget(
-      child: EasyLocalization(
-        supportedLocales: const [Locale('en'), Locale('ko')],
-        path: 'assets/translations',
-        fallbackLocale: const Locale('en'),
-        useOnlyLangCode: true,
-        assetLoader: const YamlAssetLoader(),
-        child: ToastificationWrapper(
-          child: App(
-            upgrader: upgrader,
-          ),
+    EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('ko')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en'),
+      useOnlyLangCode: true,
+      assetLoader: const YamlAssetLoader(),
+      child: ToastificationWrapper(
+        child: App(
+          upgrader: upgrader,
         ),
       ),
-    )
+    ),
   );
 }
 
@@ -105,17 +101,10 @@ class AppState extends State<App> {
   void initState() {
     super.initState();
     _audioState = AudioState.initialize(backendList: backendList);
-    //_upgrader.initialize();
   }
 
   @override
-  void dispose() {
-    _audioState.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
     // Detect Device Screen Info
     final deviceScreenData = MediaQueryData.fromView(View.of(context));
     // Lock Orientation into Portrait if Screen's shortest side is too short
@@ -132,9 +121,21 @@ class AppState extends State<App> {
         DeviceOrientation.landscapeRight,
       ]);
     }
+    super.didChangeDependencies();
+  }
 
+  @override
+  void dispose() {
+    _audioState.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+
         // UI-level
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
         ChangeNotifierProvider<AudioState>.value(value: _audioState),
@@ -169,24 +170,11 @@ class AppState extends State<App> {
         // Controller
         Provider<SessionController>(create: (_) => SessionController()),
       ],
-      child: MaterialApp(
+      builder: (context, child) => MaterialApp(
         title: 'eq_trainer',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF375778)),
-          fontFamily: 'PretendardVariable',
-          typography: Typography.material2021(platform: defaultTargetPlatform),
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF375778),
-            brightness: Brightness.dark,
-          ),
-          fontFamily: 'PretendardVariable',
-          typography: Typography.material2021(platform: defaultTargetPlatform),
-          useMaterial3: true,
-        ),
-        themeMode: EasyDynamicTheme.of(context).themeMode,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: context.watch<ThemeProvider>().themeMode,
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
         locale: context.locale,
@@ -206,14 +194,11 @@ class AppState extends State<App> {
   }
 }
 
-//const mainFormat = AudioFormat(sampleRate: 48000, channels: 2);
-//final mainSessionData = SessionParameter();
-
-String backendBoxName = "backendBox";
-String backendKey = "backendKey";
-String miscSettingsBoxName = "miscSettingsBox";
-String miscSettingsKey = "miscSettingsKey";
-String audioClipBoxName = "audioClipBox";
+const String backendBoxName = "backendBox";
+const String backendKey = "backendKey";
+const String miscSettingsBoxName = "miscSettingsBox";
+const String miscSettingsKey = "miscSettingsKey";
+const String audioClipBoxName = "audioClipBox";
 
 late Directory appSupportDir;
 

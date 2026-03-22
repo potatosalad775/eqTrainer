@@ -26,6 +26,9 @@ linter:
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
     prefer_const_constructors: true
     prefer_const_literals_to_create_immutables: true
+    use_build_context_synchronously: true
+    avoid_empty_else: true
+    unawaited_futures: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

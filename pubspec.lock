@@ -314,14 +314,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.3"
-  easy_dynamic_theme:
-    dependency: "direct main"
-    description:
-      name: easy_dynamic_theme
-      sha256: be7e4d323fcd494b9e93e89f8e8392906d408803b5e7a1a6f9953b3b4e073a62
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.3.1"
   easy_localization:
     dependency: "direct main"
     description:
@@ -471,7 +463,7 @@ packages:
     source: hosted
     version: "10.10.0"
   freezed_annotation:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: freezed_annotation
       sha256: "7294967ff0a6d98638e7acb774aac3af2550777accd8149c90af5b014e6d44d8"

@@ -14,19 +14,6 @@ class FrequencyTooltipCard extends StatefulWidget {
 }
 
 class _FrequencyTooltipCardState extends State<FrequencyTooltipCard> {
-  late final Box<MiscSettings> miscSettingsBox;
-
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    // Load Miscellaneous Settings
-    miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
-  }
-
   @override
   Widget build(BuildContext context) {
     return SettingsCard(
@@ -37,21 +24,14 @@ class _FrequencyTooltipCardState extends State<FrequencyTooltipCard> {
         onChanged: (bool value) {
           setState(() {
             savedMiscSettingsValue.frequencyToolTip = value;
-            miscSettingsBox.put(
+            // Box is opened at app startup — access it synchronously.
+            Hive.box<MiscSettings>(miscSettingsBoxName).put(
               miscSettingsKey,
-              savedMiscSettingsValue.copyWith(
-                inputFrequencyToolTip: value,
-              )
+              savedMiscSettingsValue.copyWith(inputFrequencyToolTip: value),
             );
           });
         },
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    miscSettingsBox.close();
   }
 }

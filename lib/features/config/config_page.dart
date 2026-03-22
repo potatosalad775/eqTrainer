@@ -1,5 +1,5 @@
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/features/config/widget/config_card.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:url_launcher/url_launcher.dart';

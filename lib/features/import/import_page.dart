@@ -4,6 +4,7 @@ import 'package:eq_trainer/features/import/widget/editor_clip_button_group.dart'
 import 'package:eq_trainer/features/import/widget/editor_clip_save_button.dart';
 import 'package:eq_trainer/features/import/widget/editor_control_button_group.dart';
 import 'package:eq_trainer/features/import/widget/editor_position_slider.dart';
+import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -110,21 +111,24 @@ class _ImportPageState extends State<ImportPage> {
                       child: CircularProgressIndicator(),
                     );
                   } else {
-                    return const Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        // Position Slider with Timestamp
-                        EditorPositionSlider(),
-                        // Audio Control Button Row
-                        EditorControlButtonGroup(),
-                        SizedBox(height: 32),
-                        // Set Start / End Buttons
-                        EditorClipButtonGroup(),
-                        SizedBox(height: 16),
-                        // Done Button - add to Database
-                        EditorClipSaveButton(),
-                      ],
+                    return const Padding(
+                      padding: EdgeInsets.all(AppDimens.padding),
+                      child:  Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // Position Slider with Timestamp
+                          EditorPositionSlider(),
+                          // Audio Control Button Row
+                          EditorControlButtonGroup(),
+                          SizedBox(height: 32),
+                          // Set Start / End Buttons
+                          EditorClipButtonGroup(),
+                          SizedBox(height: 16),
+                          // Done Button - add to Database
+                          EditorClipSaveButton(),
+                        ],
+                      ),
                     );
                   }
                 },
@@ -154,19 +158,24 @@ class _ImportPageState extends State<ImportPage> {
       allowedExtensions: allowedExtensions,
     );
 
-    //debugPrint(importResult.toString());
+    if (!mounted) return;
 
-    if (importResult == null) {
+    if (importResult == null || importResult.files.isEmpty) {
       importPageState.value = ImportPageState.aborted;
       return;
     }
 
-    final fileNameList = importResult.files.single.name.split('.');
-    fileNameList.removeLast();
+    final pickedFile = importResult.files.first;
+    final filePath = pickedFile.path;
+    if (filePath == null) {
+      importPageState.value = ImportPageState.error;
+      return;
+    }
 
+    final fileNameList = pickedFile.name.split('.');
+    if (fileNameList.length > 1) fileNameList.removeLast();
     final fileName = fileNameList.join();
-    final filePath = importResult.files.single.path!;
-    final fileExtension = importResult.files.single.extension?.toLowerCase();
+    final fileExtension = pickedFile.extension?.toLowerCase();
 
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       if (["mp3", "wav", "flac"].contains(fileExtension)) {

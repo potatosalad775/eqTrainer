@@ -1,7 +1,7 @@
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/theme_data.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 
 class SessionPicker extends StatelessWidget {
@@ -88,7 +88,6 @@ class SessionPicker extends StatelessWidget {
     } else {
       return Container(
         color: context.colors.surfaceContainerHighest,
-        width: (size.width * kSessionPickerLandscapeWidth).clamp(80, 120),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [prevButton, picker, nextButton],

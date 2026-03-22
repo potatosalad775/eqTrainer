@@ -57,7 +57,7 @@ class UpgraderService {
       final regExp = RegExp(regExpSource, caseSensitive: false);
       final match = regExp.firstMatch(release);
       final version = match?.namedGroup('version');
-      osVersionString = version;
+      if (version != null) osVersionString = version;
     } else if (upgraderOS.isWeb) {
       osVersionString = '0.0.0';
     } else if (upgraderOS.isWindows) {

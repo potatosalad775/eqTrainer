@@ -299,6 +299,7 @@ class PlayerIsolate extends ChangeNotifier {
     final message = initialMessage as _PlayerMessage;
 
     // Initialize the audio player with the specified file or buffer
+    if (message.path == null) return;
     final AudioInputDataSource dataSource;
     dataSource =
         AudioFileDataSource(file: File(message.path!), mode: FileMode.read);

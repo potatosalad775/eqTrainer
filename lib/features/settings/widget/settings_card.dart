@@ -1,6 +1,6 @@
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:eq_trainer/theme_data.dart';
 
 class SettingsCard extends StatelessWidget {
   const SettingsCard({

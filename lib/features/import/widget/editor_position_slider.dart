@@ -26,7 +26,6 @@ class EditorPositionSlider extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              //Text("File Path : ${player.filePath ?? "NOT AVAILABLE"}"),
               const Text("IMPORT_EDITOR_TIMESTAMP_START").tr(namedArgs: {'_TIME': clipTimeData.clipStartTime.formatMMSS()}),
               const Text("IMPORT_EDITOR_TIMESTAMP_END").tr(namedArgs: {'_TIME': clipTimeData.clipEndTime.formatMMSS()}),
             ],

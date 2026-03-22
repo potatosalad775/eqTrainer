@@ -1,4 +1,4 @@
-import 'package:eq_trainer/theme_data.dart';
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -37,16 +37,14 @@ class ConfigCard extends StatelessWidget {
           contentPadding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           title: Text(
             cardType.title,
-            style: TextStyle(
-              fontSize: 16,
+            style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: colors.onSurfaceVariant,
             ),
           ),
           subtitle: Text(
             cardType.subtitle,
-            style: TextStyle(
-              fontSize: 14,
+            style: context.textTheme.bodyMedium?.copyWith(
               color: colors.onSurfaceVariant,
             ),
           ),
@@ -54,7 +52,7 @@ class ConfigCard extends StatelessWidget {
             alignment: Alignment.centerRight,
             isDense: true,
             value: currentValue,
-            menuMaxHeight: MediaQuery.sizeOf(context).height * kCardDropDownMenuHeight,
+            menuMaxHeight: MediaQuery.sizeOf(context).height * 0.5,
             items: (cardType == ConfigCardType.startingBand || cardType == ConfigCardType.gain || cardType == ConfigCardType.threshold)
                 ? cardType.valueList.map<DropdownMenuItem<int>>((item) {
                     return DropdownMenuItem<int>(
