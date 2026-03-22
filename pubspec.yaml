@@ -39,7 +39,6 @@ dependencies:
   hive_ce: ^2.13.1
   hive_ce_flutter: ^2.3.2
   path_provider: ^2.0.15
-  ffmpeg_kit_flutter_new_audio: ^1.0.1
   path: any
   fl_chart: ^1.0.0
   easy_localization: ^3.0.2
@@ -63,6 +62,10 @@ dependencies:
     git:
       url: https://github.com/potatosalad775/coast_audio.git
       ref: mac_and_win
+  audio_decoder: 
+    git:
+      url: https://github.com/potatosalad775/audio_decoder.git
+      ref: fix-windows
 
 dev_dependencies:
   flutter_test:

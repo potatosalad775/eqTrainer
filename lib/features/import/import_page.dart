@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:eq_trainer/features/import/widget/editor_clip_button_group.dart';
 import 'package:eq_trainer/features/import/widget/editor_clip_save_button.dart';
 import 'package:eq_trainer/features/import/widget/editor_control_button_group.dart';
@@ -13,7 +12,6 @@ import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
-import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 
 class ImportPage extends StatefulWidget {
@@ -144,14 +142,9 @@ class _ImportPageState extends State<ImportPage> {
     final audioState = Provider.of<AudioState>(context, listen: false);
     final workflow = context.read<ImportWorkflowService>();
 
-    late final List<String> allowedExtensions;
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      allowedExtensions = [
-        'wav', 'aiff', 'flac', 'mp3', 'aac', 'wma', 'ogg', 'm4a', 'opus'
-      ];
-    } else {
-      allowedExtensions = ['wav', 'mp3', 'flac'];
-    }
+    const allowedExtensions = [
+      'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus'
+    ];
 
     final importResult = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -166,7 +159,7 @@ class _ImportPageState extends State<ImportPage> {
     }
 
     final pickedFile = importResult.files.first;
-    final filePath = pickedFile.path;
+    String? filePath = pickedFile.path;
     if (filePath == null) {
       importPageState.value = ImportPageState.error;
       return;
@@ -177,62 +170,32 @@ class _ImportPageState extends State<ImportPage> {
     final fileName = fileNameList.join();
     final fileExtension = pickedFile.extension?.toLowerCase();
 
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
-      if (["mp3", "wav", "flac"].contains(fileExtension)) {
-        try {
-          final duration = await workflow.loadAudioFile(
-            audioState: audioState,
-            importPlayer: importPlayer,
-            filePath: filePath,
-          );
-          clipDivProvider.clipEndTime = duration;
-          importPageState.value = ImportPageState.ready;
-        } catch (e) {
-          debugPrint("Error loading audio file: $e");
-          importPageState.value = ImportPageState.error;
-        }
-      } else {
-        importPageState.value = ImportPageState.converting;
-        try {
-          final converted = await workflow.convertToFlac(
-            fileNameWithoutExt: fileName,
-            sourcePath: filePath,
-          );
-          final duration = await workflow.loadAudioFile(
-            audioState: audioState,
-            importPlayer: importPlayer,
-            filePath: converted,
-          );
-          clipDivProvider.clipEndTime = duration;
-          importPageState.value = ImportPageState.ready;
-        } catch (e) {
-          debugPrint("Error converting/loading audio file: $e");
-          importPageState.value = ImportPageState.error;
-        }
-      }
-    } else {
+    // Convert unsupported formats to WAV on all platforms
+    if (!['mp3', 'wav', 'flac'].contains(fileExtension)) {
+      importPageState.value = ImportPageState.converting;
       try {
-        if(!mounted) return;
-        final clipService = context.read<AudioClipService>();
-
-        final duration = await workflow.loadAudioFile(
-          audioState: audioState,
-          importPlayer: importPlayer,
-          filePath: filePath,
-        );
-        await clipService.createClip(
+        filePath = await workflow.convertToWav(
+          fileNameWithoutExt: fileName,
           sourcePath: filePath,
-          startSec: 0,
-          endSec: duration.seconds,
-          isEdit: false,
         );
-
-        if(!mounted) return;
-        Navigator.of(context).pop();
       } catch (e) {
-        debugPrint("Error importing on desktop: $e");
+        debugPrint("Error converting audio file: $e");
         importPageState.value = ImportPageState.error;
+        return;
       }
+    }
+
+    try {
+      final duration = await workflow.loadAudioFile(
+        audioState: audioState,
+        importPlayer: importPlayer,
+        filePath: filePath,
+      );
+      clipDivProvider.clipEndTime = duration;
+      importPageState.value = ImportPageState.ready;
+    } catch (e) {
+      debugPrint("Error loading audio file: $e");
+      importPageState.value = ImportPageState.error;
     }
   }
 

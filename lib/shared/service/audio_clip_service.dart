@@ -1,6 +1,6 @@
 import 'dart:io';
+import 'package:audio_decoder/audio_decoder.dart';
 import 'package:path/path.dart' as p;
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
@@ -26,31 +26,25 @@ class AudioClipService {
     final audioClipPath = await _dirs.getClipsPath();
     String ext = p.extension(sourcePath).toLowerCase();
     if (ext != '.wav' && ext != '.mp3' && ext != '.flac') {
-      ext = '.flac';
+      ext = '.wav';
     }
     final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
     // Generate Clip File
     late final double duration;
-    if ((Platform.isAndroid || Platform.isIOS || Platform.isMacOS) && isEdit) {
-      final int startMs = (startSec * 1000).toInt();
-      final int durMs = (endSec * 1000).toInt() - startMs;
+    if (isEdit) {
+      final start = Duration(milliseconds: (startSec * 1000).toInt());
+      final end = Duration(milliseconds: (endSec * 1000).toInt());
       duration = endSec - startSec;
-      final args = [
-        '-y',
-        '-vn',
-        '-ss',
-        '${startMs}ms',
-        '-i',
-        sourcePath,
-        '-to',
-        '${durMs}ms',
-        destPath,
-      ];
       try {
-        await FFmpegKit.executeWithArguments(args);
+        await AudioDecoder.trimAudio(
+          sourcePath,
+          destPath,
+          start,
+          end,
+        );
       } catch (e) {
-        throw Exception('FFmpeg execution failed: $e');
+        throw Exception('Audio trim failed: $e');
       }
     } else {
       duration = endSec;
