@@ -574,14 +574,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.4"
-  infinite_listview:
-    dependency: transitive
-    description:
-      name: infinite_listview
-      sha256: f6062c1720eb59be553dfa6b89813d3e8dd2f054538445aaa5edaddfa5195ce6
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
   intl:
     dependency: transitive
     description:
@@ -718,15 +710,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.0"
-  numberpicker:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: master
-      resolved-ref: "4c74b765dcb05a8a6be279157d293f407eff60f4"
-      url: "https://github.com/potatosalad775/NumberPicker_Flutter.git"
-    source: git
-    version: "2.1.2"
   os_detect:
     dependency: transitive
     description:
