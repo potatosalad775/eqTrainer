@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:eq_trainer/features/import/widget/editor_clip_button_group.dart';
+import 'package:eq_trainer/features/import/widget/editor_clip_save_button.dart';
+import 'package:eq_trainer/features/import/widget/editor_control_button_group.dart';
+import 'package:eq_trainer/features/import/widget/editor_position_slider.dart';
+import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/features/import/widget/editor_control_view.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
-import 'package:eq_trainer/shared/service/index.dart';
+import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -30,6 +35,13 @@ class _ImportPageState extends State<ImportPage> {
     _init();
   }
 
+  @override
+  void dispose() {
+    clipDivProvider.dispose();
+    importPlayer.dispose();
+    super.dispose();
+  }
+
   Future<void> _init() async {
     await importFile();
   }
@@ -40,7 +52,6 @@ class _ImportPageState extends State<ImportPage> {
       providers: [
         ChangeNotifierProvider<ImportAudioData>.value(value: clipDivProvider),
         ChangeNotifierProvider<ImportPlayer>.value(value: importPlayer),
-        // Remove local DI; use app-level providers for services
       ],
       child: PopScope(
         canPop: false,
@@ -100,15 +111,24 @@ class _ImportPageState extends State<ImportPage> {
                       child: CircularProgressIndicator(),
                     );
                   } else {
-                    clipDivProvider.clipEndTime = importPlayer.fetchDuration;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: const [
-                        SizedBox(height: 8),
-                        EditorControlView(),
-                        SizedBox(height: 16),
-                      ],
+                    return const Padding(
+                      padding: EdgeInsets.all(AppDimens.padding),
+                      child:  Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // Position Slider with Timestamp
+                          EditorPositionSlider(),
+                          // Audio Control Button Row
+                          EditorControlButtonGroup(),
+                          SizedBox(height: 32),
+                          // Set Start / End Buttons
+                          EditorClipButtonGroup(),
+                          SizedBox(height: 16),
+                          // Done Button - add to Database
+                          EditorClipSaveButton(),
+                        ],
+                      ),
                     );
                   }
                 },
@@ -138,19 +158,24 @@ class _ImportPageState extends State<ImportPage> {
       allowedExtensions: allowedExtensions,
     );
 
-    //debugPrint(importResult.toString());
+    if (!mounted) return;
 
-    if (importResult == null) {
+    if (importResult == null || importResult.files.isEmpty) {
       importPageState.value = ImportPageState.aborted;
       return;
     }
 
-    final fileNameList = importResult.files.single.name.split('.');
-    fileNameList.removeLast();
+    final pickedFile = importResult.files.first;
+    final filePath = pickedFile.path;
+    if (filePath == null) {
+      importPageState.value = ImportPageState.error;
+      return;
+    }
 
+    final fileNameList = pickedFile.name.split('.');
+    if (fileNameList.length > 1) fileNameList.removeLast();
     final fileName = fileNameList.join();
-    final filePath = importResult.files.single.path!;
-    final fileExtension = importResult.files.single.extension?.toLowerCase();
+    final fileExtension = pickedFile.extension?.toLowerCase();
 
     if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
       if (["mp3", "wav", "flac"].contains(fileExtension)) {
@@ -227,7 +252,6 @@ class _ImportPageState extends State<ImportPage> {
           ),
           TextButton(
             onPressed: () {
-              importPlayer.shutdown();
               Navigator.of(context).pop(true);
               Navigator.of(context).pop();
             },

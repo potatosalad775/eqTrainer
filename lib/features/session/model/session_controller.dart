@@ -5,7 +5,8 @@ import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
-import 'package:eq_trainer/features/session/data/index.dart';
+import 'package:eq_trainer/features/session/data/session_state.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:toastification/toastification.dart';
 
 class SessionSubmitResult {
@@ -95,9 +96,6 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
   }) async {
-    // Reset pEQ Status
-    await player.setEQ(false);
-
     // Num of Graph
     final int numOfGraph = sessionStore.graphBarDataList.length;
 
@@ -123,9 +121,15 @@ class SessionController {
       _answerGain = sessionParameter.gain.toDouble();
     }
 
-    await updatePlayerState(player);
+    // Disable EQ and set new freq/gain in a single isolate round-trip.
+    await player.setEQParams(
+      enableEQ: false,
+      frequency: _answerCenterFreq,
+      gainDb: _answerGain,
+    );
   }
 
+  /// Re-applies the current answer's EQ parameters to the player (e.g. after track switch).
   Future<void> updatePlayerState(PlayerIsolate player) async {
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);

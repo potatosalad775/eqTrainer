@@ -1,7 +1,8 @@
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:easy_dynamic_theme/easy_dynamic_theme.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 import 'package:eq_trainer/features/settings/widget/freq_tooltip_card.dart';
@@ -17,7 +18,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
-    var themeMode = EasyDynamicTheme.of(context).themeMode;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(5, 0, 5, 5),
       children: [
@@ -52,14 +54,14 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: IconButton(
               padding: EdgeInsets.zero,
               icon: Icon(
-                  (themeMode == ThemeMode.system)
+                  (themeProvider.themeMode == ThemeMode.system)
                       ? Icons.brightness_auto
-                      : (themeMode == ThemeMode.light)
+                      : (themeProvider.themeMode == ThemeMode.light)
                       ? Icons.brightness_high
                       : Icons.brightness_4
               ),
               onPressed: () {
-                EasyDynamicTheme.of(context).changeTheme();
+                themeProvider.toggleTheme();
               },
             )
         ),
@@ -126,8 +128,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         // Version Info
-        Padding(
-          padding: const EdgeInsets.all(10),
+        const Padding(
+          padding: EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -136,24 +138,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 15
                 ),
               ),
-              const SizedBox(height: 3,),
+              SizedBox(height: 3,),
               Text(
                 'Powered by Flutter & Open-source Community',
                 textAlign: TextAlign.left,
                 style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 13
                 ),
               ),
             ],
           ),
         ),
-        // Added another '40' bottom padding since main navigation bar is floating
-        SizedBox(height: 40),
+        const SizedBox(height: 40),
       ],
     );
   }

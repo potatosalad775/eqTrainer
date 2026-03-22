@@ -1,3 +1,4 @@
+import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/features/config/widget/config_card.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -7,27 +8,26 @@ import 'package:eq_trainer/features/session/session_page.dart';
 class ConfigPage extends StatelessWidget {
   const ConfigPage({super.key});
 
+  static const _cardTypeList = <ConfigCardType>[
+    ConfigCardType.startingBand,
+    ConfigCardType.gain,
+    ConfigCardType.qFactor,
+    ConfigCardType.filterType,
+    ConfigCardType.threshold,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final cardTypeList = <ConfigCardType>[
-      ConfigCardType.startingBand,
-      ConfigCardType.gain,
-      ConfigCardType.qFactor,
-      ConfigCardType.filterType,
-      ConfigCardType.threshold,
-    ];
-
     return Container(
       constraints: const BoxConstraints.expand(),
       child: ListView.builder(
-        itemCount: cardTypeList.length + 1,
+        itemCount: _cardTypeList.length + 1,
         itemBuilder: (BuildContext context, int index) {
-          if (index < cardTypeList.length) {
-            return ConfigCard(cardType: cardTypeList[index]);
+          if (index < _cardTypeList.length) {
+            return ConfigCard(cardType: _cardTypeList[index]);
           }
           return Padding(
-            // Added another '40' bottom padding since main navigation bar is floating
-            padding: const EdgeInsets.fromLTRB(13, 3, 13, 13 + 40),
+            padding: const EdgeInsets.fromLTRB(13, 3, 13, 13),
             child: Row(
               spacing: 12,
               children: [
@@ -43,7 +43,7 @@ class ConfigPage extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    backgroundColor: context.colors.secondary,
                     fixedSize: const Size(70, 70),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -52,7 +52,7 @@ class ConfigPage extends StatelessWidget {
                   icon: Icon(
                     Icons.help_outline,
                     size: 30,
-                    color: Theme.of(context).colorScheme.onSecondary,
+                    color: context.colors.onSecondary,
                   ),
                 ),
                 Expanded(
@@ -68,7 +68,7 @@ class ConfigPage extends StatelessWidget {
                     icon: Icon(
                       Icons.play_arrow,
                       size: 35,
-                      color: Theme.of(context).colorScheme.onPrimary,
+                      color: context.colors.onPrimary,
                     ),
                     label: Text(
                       "CONFIG_BUTTON_START".tr(),
@@ -82,8 +82,8 @@ class ConfigPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       fixedSize: const Size(double.infinity, 70),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      backgroundColor: context.colors.primary,
+                      foregroundColor: context.colors.onPrimary,
                       elevation: 0,
                     ),
                   ),

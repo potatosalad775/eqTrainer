@@ -75,6 +75,17 @@ class PlayerHostRequestGetAllState extends PlayerHostRequest {
   const PlayerHostRequestGetAllState();
 }
 
+class PlayerHostRequestSetEQParams extends PlayerHostRequest {
+  const PlayerHostRequestSetEQParams({
+    required this.enableEQ,
+    required this.frequency,
+    required this.gainDb,
+  });
+  final bool enableEQ;
+  final double frequency;
+  final double gainDb;
+}
+
 class PlayerAllStateResponse {
   const PlayerAllStateResponse({
     required this.playerState,
@@ -130,14 +141,14 @@ class _PlayerMessage {
 
 /// A player isolate that plays audio from a file or buffer.
 class PlayerIsolate extends ChangeNotifier {
-  // Add a constant for the state update interval
-  static const int _stateUpdateIntervalMs = 500;
+  static const int _stateUpdateIntervalMs = 50;
 
   PlayerIsolate();
   final _isolate = AudioIsolate<_PlayerMessage>(_worker);
 
   bool get isLaunched => _isolate.isLaunched;
   Timer? _playerStateUpdateTimer;
+  bool _isUpdating = false;
 
   Future<void> launch({
     required AudioDeviceBackend backend,
@@ -151,7 +162,8 @@ class PlayerIsolate extends ChangeNotifier {
         path: path,
       ),
     );
-    // Use the defined constant for timer interval
+    // Fetch initial state immediately so widgets don't wait for the first tick.
+    _playerStateUpdate();
     _startPlayerStateUpdateTimer(milliseconds: _stateUpdateIntervalMs);
   }
 
@@ -159,29 +171,46 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.attach();
   }
 
-  Future<void> shutdown() {
+  Future<void> shutdown() async {
     _playerStateUpdateTimer?.cancel();
-    return _isolate.shutdown();
+    if (!_isolate.isLaunched) return;
+    await _isolate.shutdown();
   }
 
-  Future<void> play() {
-    return _isolate.request(const PlayerHostRequestStart());
+  Future<void> play() async {
+    await _isolate.request(const PlayerHostRequestStart());
+    if (_lastState != null) {
+      _lastState = PlayerStateResponse(
+          isPlaying: true, outputFormat: _lastState!.outputFormat);
+      notifyListeners();
+    }
   }
 
-  Future<void> pause() {
-    return _isolate.request(const PlayerHostRequestPause());
+  Future<void> pause() async {
+    await _isolate.request(const PlayerHostRequestPause());
+    if (_lastState != null) {
+      _lastState = PlayerStateResponse(
+          isPlaying: false, outputFormat: _lastState!.outputFormat);
+      notifyListeners();
+    }
   }
 
-  Future<PlayerPositionResponse?> seek(AudioTime position) {
-    return _isolate.request(PlayerHostRequestSeek(position: position));
+  Future<PlayerPositionResponse?> seek(AudioTime position) async {
+    final result =
+        await _isolate.request(PlayerHostRequestSeek(position: position));
+    _lastPosition = position;
+    notifyListeners();
+    return result;
   }
 
   Future<void> setVolume(double volume) {
     return _isolate.request(PlayerHostRequestSetVolume(volume: volume));
   }
 
-  Future<void> setEQ(bool enableEQ) {
-    return _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+  Future<void> setEQ(bool enableEQ) async {
+    await _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+    _lastEQState = enableEQ;
+    notifyListeners();
   }
 
   Future<void> setEQGain(double gainDb) {
@@ -190,6 +219,20 @@ class PlayerIsolate extends ChangeNotifier {
 
   Future<void> setEQFreq(double frequency) {
     return _isolate.request(PlayerHostRequestSetEQFreq(frequency: frequency));
+  }
+
+  Future<void> setEQParams({
+    required bool enableEQ,
+    required double frequency,
+    required double gainDb,
+  }) async {
+    await _isolate.request(PlayerHostRequestSetEQParams(
+      enableEQ: enableEQ,
+      frequency: frequency,
+      gainDb: gainDb,
+    ));
+    _lastEQState = enableEQ;
+    notifyListeners();
   }
 
   Future<PlayerStateResponse?> getState() {
@@ -212,6 +255,12 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.request(const PlayerHostRequestGetAllState());
   }
 
+  @override
+  void dispose() {
+    shutdown();
+    super.dispose();
+  }
+
   void _startPlayerStateUpdateTimer({required int milliseconds}) {
     _playerStateUpdateTimer?.cancel();
     _playerStateUpdateTimer =
@@ -226,31 +275,36 @@ class PlayerIsolate extends ChangeNotifier {
   bool? _lastEQState;
 
   void _playerStateUpdate() async {
-    if (!isLaunched) return;
-    final all = await getAllState();
-    if (all == null) return;
+    if (!isLaunched || _isUpdating) return;
+    _isUpdating = true;
+    try {
+      final all = await getAllState();
+      if (all == null) return;
 
-    bool shouldNotify = false;
+      bool shouldNotify = false;
 
-    if (all.playerState != _lastState) {
-      _lastState = all.playerState;
-      shouldNotify = true;
-    }
-    if (all.position != _lastPosition) {
-      _lastPosition = all.position;
-      shouldNotify = true;
-    }
-    if (all.duration != _lastDuration) {
-      _lastDuration = all.duration;
-      shouldNotify = true;
-    }
-    if (all.eqEnabled != _lastEQState) {
-      _lastEQState = all.eqEnabled;
-      shouldNotify = true;
-    }
+      if (all.playerState != _lastState) {
+        _lastState = all.playerState;
+        shouldNotify = true;
+      }
+      if (all.position != _lastPosition) {
+        _lastPosition = all.position;
+        shouldNotify = true;
+      }
+      if (all.duration != _lastDuration) {
+        _lastDuration = all.duration;
+        shouldNotify = true;
+      }
+      if (all.eqEnabled != _lastEQState) {
+        _lastEQState = all.eqEnabled;
+        shouldNotify = true;
+      }
 
-    if (shouldNotify) {
-      notifyListeners();
+      if (shouldNotify) {
+        notifyListeners();
+      }
+    } finally {
+      _isUpdating = false;
     }
   }
 
@@ -271,6 +325,7 @@ class PlayerIsolate extends ChangeNotifier {
     final message = initialMessage as _PlayerMessage;
 
     // Initialize the audio player with the specified file or buffer
+    if (message.path == null) return;
     final AudioInputDataSource dataSource;
     dataSource =
         AudioFileDataSource(file: File(message.path!), mode: FileMode.read);
@@ -320,6 +375,11 @@ class PlayerIsolate extends ChangeNotifier {
               duration: player.duration,
               eqEnabled: player.getEqState(),
             );
+          case PlayerHostRequestSetEQParams():
+            player.setEQ(request.enableEQ);
+            player.setEQFreq(request.frequency);
+            player.setEQGain(request.gainDb);
+            break;
         }
       },
     );
@@ -392,9 +452,12 @@ class AudioPlayer {
       }
     }
 
+    final isMobile = Platform.isAndroid || Platform.isIOS;
     return AudioPlayer(
       context: AudioDeviceContext(backends: [backend]),
       decoder: decoder,
+      bufferDuration: AudioTime(isMobile ? 0.4 : 0.25),
+      chunkFrames: isMobile ? 2048 : 4096,
       initialDeviceId: deviceId,
     );
   }
@@ -629,9 +692,10 @@ class AudioPlayer {
 }
 
 // Compute the ring buffer capacity (in frames) for pre-decoding.
-// Default to ~1.5 seconds of audio to absorb decode spikes.
+// Mobile gets 2.0s to absorb decode spikes under CPU throttling; desktop uses 1.5s.
 int _ringCapacityFrames(AudioFormat format) {
-  return (format.sampleRate * 3) ~/ 2; // 1.5s
+  final multiplier = (Platform.isAndroid || Platform.isIOS) ? 2.0 : 1.5;
+  return (format.sampleRate * multiplier).floor();
 }
 
 /// A simple data source node that reads PCM frames from a FrameRingBuffer.

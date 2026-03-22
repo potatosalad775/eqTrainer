@@ -314,14 +314,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.3"
-  easy_dynamic_theme:
-    dependency: "direct main"
-    description:
-      name: easy_dynamic_theme
-      sha256: be7e4d323fcd494b9e93e89f8e8392906d408803b5e7a1a6f9953b3b4e073a62
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.3.1"
   easy_localization:
     dependency: "direct main"
     description:
@@ -471,7 +463,7 @@ packages:
     source: hosted
     version: "10.10.0"
   freezed_annotation:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: freezed_annotation
       sha256: "7294967ff0a6d98638e7acb774aac3af2550777accd8149c90af5b014e6d44d8"
@@ -582,14 +574,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.4"
-  infinite_listview:
-    dependency: transitive
-    description:
-      name: infinite_listview
-      sha256: f6062c1720eb59be553dfa6b89813d3e8dd2f054538445aaa5edaddfa5195ce6
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
   intl:
     dependency: transitive
     description:
@@ -682,10 +666,10 @@ packages:
     dependency: transitive
     description:
       name: meta
-      sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
+      sha256: e3641ec5d63ebf0d9b41bd43201a66e3fc79a65db5f61fc181f04cd27aab950c
       url: "https://pub.dev"
     source: hosted
-    version: "1.17.0"
+    version: "1.16.0"
   mime:
     dependency: transitive
     description:
@@ -726,15 +710,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.0"
-  numberpicker:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: master
-      resolved-ref: "4c74b765dcb05a8a6be279157d293f407eff60f4"
-      url: "https://github.com/potatosalad775/NumberPicker_Flutter.git"
-    source: git
-    version: "2.1.2"
   os_detect:
     dependency: transitive
     description:
@@ -1065,10 +1040,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: ab2726c1a94d3176a45960b6234466ec367179b87dd74f1611adb1f3b5fb9d55
+      sha256: "522f00f556e73044315fa4585ec3270f1808a4b186c936e612cab0b565ff1e00"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.7"
+    version: "0.7.6"
   toastification:
     dependency: "direct main"
     description:

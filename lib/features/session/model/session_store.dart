@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:eq_trainer/features/session/model/frequency_calculator.dart';
-import 'package:eq_trainer/features/session/data/index.dart';
+import 'package:eq_trainer/features/session/data/graph_state.dart';
+import 'package:eq_trainer/features/session/data/session_state.dart';
+import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 /// SessionStore aggregates session-related UI state into a single source of truth.
 /// Holds frequency/graph data computed by the pure FrequencyCalculator.
@@ -49,6 +51,7 @@ class SessionStore extends ChangeNotifier {
 
   void setCurrentSessionPoint(int point) {
     _currentSessionPoint = point;
+    notifyListeners();
   }
 
   void incrementSessionPoint() {
@@ -67,13 +70,13 @@ class SessionStore extends ChangeNotifier {
   int _elapsedSession = 0;
   int get elapsedSession => _elapsedSession;
 
-  List<int> _elapsedSessionPerFreq = [0, 0, 0, 0, 0, 0, 0];
+  List<int> _elapsedSessionPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
   List<int> get elapsedSessionPerFreq => List<int>.from(_elapsedSessionPerFreq);
 
   int _resultCorrect = 0;
   int get resultCorrect => _resultCorrect;
 
-  List<int> _correctAnswerPerFreq = [0, 0, 0, 0, 0, 0, 0];
+  List<int> _correctAnswerPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
   List<int> get correctAnswerPerFreq => List<int>.from(_correctAnswerPerFreq);
 
   int _resultIncorrect = 0;
@@ -82,9 +85,9 @@ class SessionStore extends ChangeNotifier {
   // Reset Session Results
   void resetResult() {
     _elapsedSession = 0;
-    _elapsedSessionPerFreq = [0, 0, 0, 0, 0, 0, 0];
+    _elapsedSessionPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
     _resultCorrect = 0;
-    _correctAnswerPerFreq = [0, 0, 0, 0, 0, 0, 0];
+    _correctAnswerPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
     _resultIncorrect = 0;
   }
 
@@ -186,15 +189,23 @@ class SessionStore extends ChangeNotifier {
     setPickerValue(1);
   }
 
+  @override
+  void dispose() {
+    graphStateNotifier.dispose();
+    super.dispose();
+  }
+
   // --- Playlist controls ---
   void setPlaylistPaths(List<String> paths) {
     _playlistPaths = List<String>.from(paths);
     _currentPlayingAudioIndex = 0;
+    notifyListeners();
   }
 
   void clearPlaylist() {
     _playlistPaths = const [];
     _currentPlayingAudioIndex = 0;
+    notifyListeners();
   }
 
   void setCurrentPlayingIndex(int index) {
@@ -203,11 +214,13 @@ class SessionStore extends ChangeNotifier {
     } else {
       _currentPlayingAudioIndex = index.clamp(0, _playlistPaths.length - 1);
     }
+    notifyListeners();
   }
 
   void nextTrack() {
     if (_playlistPaths.isEmpty) return;
     _currentPlayingAudioIndex = (_currentPlayingAudioIndex + 1) % _playlistPaths.length;
+    notifyListeners();
   }
 
   void previousTrack({Duration threshold = const Duration(seconds: 3), Duration? currentPosition}) {
@@ -219,5 +232,6 @@ class SessionStore extends ChangeNotifier {
     } else {
       _currentPlayingAudioIndex -= 1;
     }
+    notifyListeners();
   }
 }

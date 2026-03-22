@@ -15,6 +15,39 @@ class DevBackendPage extends StatefulWidget {
   State<DevBackendPage> createState() => _DevBackendPageState();
 }
 
+String _backendName(AudioDeviceBackend backend) => switch (backend) {
+  AudioDeviceBackend.coreAudio  => 'Core Audio',
+  AudioDeviceBackend.aaudio     => 'AAudio',
+  AudioDeviceBackend.openSLES   => 'OpenSL ES',
+  AudioDeviceBackend.wasapi     => 'WASAPI',
+  AudioDeviceBackend.alsa       => 'ALSA',
+  AudioDeviceBackend.pulseAudio => 'PulseAudio',
+  AudioDeviceBackend.jack       => 'JACK',
+  AudioDeviceBackend.dummy      => 'Dummy',
+};
+
+String _backendPlatform(AudioDeviceBackend backend) => switch (backend) {
+  AudioDeviceBackend.coreAudio  => 'macOS, iOS',
+  AudioDeviceBackend.aaudio     => 'Android 8+',
+  AudioDeviceBackend.openSLES   => 'Android 4.1+',
+  AudioDeviceBackend.wasapi     => 'Windows Vista+',
+  AudioDeviceBackend.alsa       => 'Linux',
+  AudioDeviceBackend.pulseAudio => 'Linux',
+  AudioDeviceBackend.jack       => 'Linux',
+  AudioDeviceBackend.dummy      => 'All platforms',
+};
+
+String _backendKey(AudioDeviceBackend backend) => switch (backend) {
+  AudioDeviceBackend.coreAudio  => 'coreAudio',
+  AudioDeviceBackend.aaudio     => 'aaudio',
+  AudioDeviceBackend.openSLES   => 'openSLES',
+  AudioDeviceBackend.wasapi     => 'wasapi',
+  AudioDeviceBackend.alsa       => 'alsa',
+  AudioDeviceBackend.pulseAudio => 'pulseAudio',
+  AudioDeviceBackend.jack       => 'jack',
+  AudioDeviceBackend.dummy      => 'dummy',
+};
+
 class _DevBackendPageState extends State<DevBackendPage> {
   final backends = <AudioDeviceBackend, bool>{};
   List<AudioDeviceBackend> supportedBackends = [];
@@ -72,30 +105,8 @@ class _DevBackendPageState extends State<DevBackendPage> {
               final backend = supportedBackends[index];
               return CheckboxListTile.adaptive(
                 value: backends[backend],
-                title: Text(
-                  switch (backend) {
-                    AudioDeviceBackend.coreAudio => 'Core Audio',
-                    AudioDeviceBackend.aaudio => 'AAudio',
-                    AudioDeviceBackend.openSLES => 'OpenSL ES',
-                    AudioDeviceBackend.wasapi => 'WASAPI',
-                    AudioDeviceBackend.alsa => 'ALSA',
-                    AudioDeviceBackend.pulseAudio => 'PulseAudio',
-                    AudioDeviceBackend.jack => 'JACK',
-                    AudioDeviceBackend.dummy => 'Dummy',
-                  },
-                ),
-                subtitle: Text(
-                  switch (backend) {
-                    AudioDeviceBackend.coreAudio => 'macOS, iOS',
-                    AudioDeviceBackend.aaudio => 'Android 8+',
-                    AudioDeviceBackend.openSLES => 'Android 4.1+',
-                    AudioDeviceBackend.wasapi => 'Windows Vista+',
-                    AudioDeviceBackend.alsa => 'Linux',
-                    AudioDeviceBackend.pulseAudio => 'Linux',
-                    AudioDeviceBackend.jack => 'Linux',
-                    AudioDeviceBackend.dummy => 'All platforms',
-                  },
-                ),
+                title: Text(_backendName(backend)),
+                subtitle: Text(_backendPlatform(backend)),
                 onChanged: (isChecked) {
                   setState(() {
                     backends[backend] = isChecked!;
@@ -110,7 +121,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: backends.values.any((v) => v)
-          ? () {
+          ? () async {
             // Apply Audio Backend API
             final AudioDeviceContext deviceContext;
             try {
@@ -131,37 +142,19 @@ class _DevBackendPageState extends State<DevBackendPage> {
               return;
             }
             // Save Backend List
-            final selectedBackendList = backends.entries.where((e) => e.value).map((e) =>
-              switch(e.key) {
-                AudioDeviceBackend.coreAudio => 'coreAudio',
-                AudioDeviceBackend.aaudio => 'aaudio',
-                AudioDeviceBackend.openSLES => 'openSLES',
-                AudioDeviceBackend.wasapi => 'wasapi',
-                AudioDeviceBackend.alsa => 'alsa',
-                AudioDeviceBackend.pulseAudio => 'pulseAudio',
-                AudioDeviceBackend.jack => 'jack',
-                AudioDeviceBackend.dummy => 'dummy',
-              }
-            ).toList();
-            Hive.openBox<BackendData>(backendBoxName).then((backendBox) => {
-              backendBox.put(backendKey, BackendData(selectedBackendList))
-            });
+            final selectedBackendList = backends.entries
+                .where((e) => e.value)
+                .map((e) => _backendKey(e.key))
+                .toList();
+            final backendBox = await Hive.openBox<BackendData>(backendBoxName);
+            await backendBox.put(backendKey, BackendData(selectedBackendList));
+            if (!context.mounted) return;
             // Notify
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text("DEV_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
                   namedArgs: {
-                    "_BACKEND":
-                    '\'${switch (deviceContext.activeBackend) {
-                      AudioDeviceBackend.coreAudio => 'Core Audio',
-                      AudioDeviceBackend.aaudio => 'AAudio',
-                      AudioDeviceBackend.openSLES => 'OpenSL ES',
-                      AudioDeviceBackend.wasapi => 'WASAPI',
-                      AudioDeviceBackend.alsa => 'ALSA',
-                      AudioDeviceBackend.pulseAudio => 'PulseAudio',
-                      AudioDeviceBackend.jack => 'JACK',
-                      AudioDeviceBackend.dummy => 'Dummy',
-                    }}\''
+                    "_BACKEND": '\'${_backendName(deviceContext.activeBackend)}\''
                   }
                 ),
               ),

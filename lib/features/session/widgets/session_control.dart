@@ -4,117 +4,102 @@ import 'package:coast_audio/coast_audio.dart';
 import 'package:eq_trainer/shared/model/error.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 
 class SessionControl extends StatelessWidget {
 
-  const SessionControl({
-    super.key,
-    required this.player,
-  });
-  final PlayerIsolate player;
+  const SessionControl({super.key});
+
+  Future<void> _relaunchWith(
+    BuildContext context,
+    String path, {
+    required AudioDeviceBackend backend,
+    required AudioDeviceId? outputDeviceId,
+  }) async {
+    final player = context.read<PlayerIsolate>();
+    await player.pause();
+    await player.shutdown();
+    await player.launch(
+      backend: backend,
+      outputDeviceId: outputDeviceId,
+      path: path,
+    );
+    if (context.mounted) await context.read<SessionController>().updatePlayerState(player);
+    await player.play();
+  }
+
+  Future<void> _playerNext(
+    BuildContext context, {
+    required AudioDeviceBackend backend,
+    required AudioDeviceId? outputDeviceId,
+  }) async {
+    final sessionStore = context.read<SessionStore>();
+    if (sessionStore.playlistPaths.isEmpty) return;
+    sessionStore.nextTrack();
+    final nextPath = sessionStore.currentClipPath;
+    if (nextPath != null) {
+      await _relaunchWith(context, nextPath, backend: backend, outputDeviceId: outputDeviceId);
+    }
+  }
+
+  Future<void> _playerPrevious(
+    BuildContext context, {
+    required AudioDeviceBackend backend,
+    required AudioDeviceId? outputDeviceId,
+  }) async {
+    final player = context.read<PlayerIsolate>();
+    
+    // If player position > 3 seconds, reset to 0 instead of going to previous
+    if (player.fetchPosition > const AudioTime(3)) {
+      await player.seek(AudioTime.zero);
+      return;
+    }
+    final sessionStore = context.read<SessionStore>();
+    if (sessionStore.playlistPaths.isEmpty) return;
+    sessionStore.previousTrack();
+    final prevPath = sessionStore.currentClipPath;
+    if (prevPath != null) {
+      await _relaunchWith(context, prevPath, backend: backend, outputDeviceId: outputDeviceId);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final audioState = context.watch<AudioState>();
+    final (backend, outputDeviceId) = context.select<AudioState, (AudioDeviceBackend, AudioDeviceId?)>(
+      (s) => (s.backend, s.outputDevice?.id),
+    );
+    final player = context.read<PlayerIsolate>();
     final playerState = context.select<PlayerIsolate, PlayerStateResponse>((p) => p.fetchPlayerState);
-    final sessionStore = context.read<SessionStore>();
 
-    Future<void> relaunchWith(String path) async {
-      await player.pause();
-      await player.shutdown();
-      await player.launch(
-        backend: audioState.backend,
-        outputDeviceId: audioState.outputDevice?.id,
-        path: path,
-      );
-      if(context.mounted) await context.read<SessionController>().updatePlayerState(player);
-      await player.play();
-    }
-
-    Future<void> playerNext() async {
-      if (sessionStore.playlistPaths.isEmpty) return;
-      sessionStore.nextTrack();
-      final nextPath = sessionStore.currentClipPath;
-      if (nextPath != null) {
-        await relaunchWith(nextPath);
-      }
-      return;
-    }
-
-    Future<void> playerPrevious() async {
-      // if player position is greater than 3 seconds,
-      // Previous button will reset player position to 0
-      if(player.fetchPosition > const AudioTime(3)) {
-        player.seek(AudioTime.zero);
-        return;
-      }
-      if (sessionStore.playlistPaths.isEmpty) return;
-      // Else, play previous clip
-      sessionStore.previousTrack();
-      final prevPath = sessionStore.currentClipPath;
-      if (prevPath != null) {
-        await relaunchWith(prevPath);
-      }
-
-      return;
-    }
-
-    //if(player.state == MabAudioPlayerState.finished) playerNext();
-
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              onPressed: () {
-                playerPrevious();
-              },
-              iconSize: 50,
-              icon: const Icon(Icons.skip_previous),
-              enableFeedback: false,
-            ),
-            //SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
-            IconButton(
-              onPressed: () {
-                if (playerState.isPlaying) {
-                  player.pause();
-                } else {
-                  player.play().onError((e, _) {
-                    if(context.mounted) {
-                      showPlayerErrorDialog(context,
-                          action: () {
-                            player.shutdown();
-                            Navigator.of(context).pop();
-                            Navigator.of(context).pop();
-                          },
-                          error: e
-                      );
-                    }
-                  });
-                }
-              },
-              iconSize: 64,
-              icon: Icon(playerState.isPlaying
-                  ? Icons.pause_circle_filled_rounded
-                  : Icons.play_circle_fill_rounded
-              ),
-              enableFeedback: false,
-            ),
-            //SizedBox(width: MediaQuery.of(context).size.width * reactiveElementData.controlSpacer),
-            IconButton(
-              onPressed: () async {
-                await playerNext();
-              },
-              iconSize: 50,
-              icon: const Icon(Icons.skip_next),
-              enableFeedback: false,
-            ),
-          ],
-        ),
-      ],
+    return PlayerControlButtons(
+      isPlaying: playerState.isPlaying,
+      onPrevious: () async {
+        await _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId);
+      },
+      onPlayPause: () {
+        if (playerState.isPlaying) {
+          player.pause();
+        } else {
+          player.play().onError((e, _) {
+            if (context.mounted) {
+              showPlayerErrorDialog(context,
+                action: () {
+                  player.shutdown();
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pop();
+                },
+                error: e,
+              );
+            }
+          });
+        }
+      },
+      thirdIcon: Icons.skip_next,
+      onThird: () async {
+        await _playerNext(context, backend: backend, outputDeviceId: outputDeviceId);
+      },
     );
   }
 }

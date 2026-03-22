@@ -59,7 +59,7 @@ final class AudioState extends ChangeNotifier {
           backends: backends.entries.where((e) => e.value).map((e) => e.key).toList()
       );
     } on MaException catch (e) {
-      throw Exception([e.toString()]);
+      throw Exception(e.toString());
     }
 
     return AudioState(

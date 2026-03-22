@@ -18,8 +18,5 @@ class ImportAudioData extends ChangeNotifier {
     notifyListeners();
   }
 
-  void initEndTime(AudioTime value) {
-    _clipEndTime = value;
-  }
 }
 

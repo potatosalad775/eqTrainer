@@ -5,14 +5,28 @@ import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-class DeviceDropdown extends StatelessWidget {
+class DeviceDropdown extends StatefulWidget {
   const DeviceDropdown({super.key});
+
+  @override
+  State<DeviceDropdown> createState() => _DeviceDropdownState();
+}
+
+class _DeviceDropdownState extends State<DeviceDropdown> {
+  late AudioDeviceContext _deviceContext;
+  late List<AudioDeviceInfo> _devices;
+
+  @override
+  void initState() {
+    super.initState();
+    final audioState = Provider.of<AudioState>(context, listen: false);
+    _deviceContext = AudioDeviceContext(backends: [audioState.backend]);
+    _devices = _deviceContext.getDevices(AudioDeviceType.playback);
+  }
 
   @override
   Widget build(BuildContext context) {
     final audioState = Provider.of<AudioState>(context, listen: false);
-    late final deviceContext = AudioDeviceContext(backends: [audioState.backend]);
-    late final devices = deviceContext.getDevices(AudioDeviceType.playback);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -24,7 +38,7 @@ class DeviceDropdown extends StatelessWidget {
             Expanded(
               child: RepaintBoundary(
                 child: DropdownButton<String>(
-                  items: devices.map((e) => e.name).map((e) =>
+                  items: _devices.map((e) => e.name).map((e) =>
                     DropdownMenuItem<String>(
                       value: e,
                       child: Text(
@@ -35,9 +49,12 @@ class DeviceDropdown extends StatelessWidget {
                   isExpanded: true,
                   value: audioState.outputDevice?.name,
                   onChanged: (deviceName) {
-                    final audioState = Provider.of<AudioState>(context, listen: false);
+                    final device = _devices
+                        .where((d) => d.name == deviceName)
+                        .firstOrNull;
+                    if (device == null) return;
                     App.of(context).applyAudioState(
-                      audioState.copyWith(outputDevice: devices.firstWhere((device) => device.name == deviceName))
+                      audioState.copyWith(outputDevice: device),
                     );
                   },
                 ),
