@@ -96,9 +96,6 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
   }) async {
-    // Reset pEQ Status
-    await player.setEQ(false);
-
     // Num of Graph
     final int numOfGraph = sessionStore.graphBarDataList.length;
 
@@ -124,9 +121,15 @@ class SessionController {
       _answerGain = sessionParameter.gain.toDouble();
     }
 
-    await updatePlayerState(player);
+    // Disable EQ and set new freq/gain in a single isolate round-trip.
+    await player.setEQParams(
+      enableEQ: false,
+      frequency: _answerCenterFreq,
+      gainDb: _answerGain,
+    );
   }
 
+  /// Re-applies the current answer's EQ parameters to the player (e.g. after track switch).
   Future<void> updatePlayerState(PlayerIsolate player) async {
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);

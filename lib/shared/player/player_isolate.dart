@@ -75,6 +75,17 @@ class PlayerHostRequestGetAllState extends PlayerHostRequest {
   const PlayerHostRequestGetAllState();
 }
 
+class PlayerHostRequestSetEQParams extends PlayerHostRequest {
+  const PlayerHostRequestSetEQParams({
+    required this.enableEQ,
+    required this.frequency,
+    required this.gainDb,
+  });
+  final bool enableEQ;
+  final double frequency;
+  final double gainDb;
+}
+
 class PlayerAllStateResponse {
   const PlayerAllStateResponse({
     required this.playerState,
@@ -130,7 +141,7 @@ class _PlayerMessage {
 
 /// A player isolate that plays audio from a file or buffer.
 class PlayerIsolate extends ChangeNotifier {
-  static const int _stateUpdateIntervalMs = 100;
+  static const int _stateUpdateIntervalMs = 50;
 
   PlayerIsolate();
   final _isolate = AudioIsolate<_PlayerMessage>(_worker);
@@ -208,6 +219,20 @@ class PlayerIsolate extends ChangeNotifier {
 
   Future<void> setEQFreq(double frequency) {
     return _isolate.request(PlayerHostRequestSetEQFreq(frequency: frequency));
+  }
+
+  Future<void> setEQParams({
+    required bool enableEQ,
+    required double frequency,
+    required double gainDb,
+  }) async {
+    await _isolate.request(PlayerHostRequestSetEQParams(
+      enableEQ: enableEQ,
+      frequency: frequency,
+      gainDb: gainDb,
+    ));
+    _lastEQState = enableEQ;
+    notifyListeners();
   }
 
   Future<PlayerStateResponse?> getState() {
@@ -350,6 +375,11 @@ class PlayerIsolate extends ChangeNotifier {
               duration: player.duration,
               eqEnabled: player.getEqState(),
             );
+          case PlayerHostRequestSetEQParams():
+            player.setEQ(request.enableEQ);
+            player.setEQFreq(request.frequency);
+            player.setEQGain(request.gainDb);
+            break;
         }
       },
     );
@@ -422,9 +452,12 @@ class AudioPlayer {
       }
     }
 
+    final isMobile = Platform.isAndroid || Platform.isIOS;
     return AudioPlayer(
       context: AudioDeviceContext(backends: [backend]),
       decoder: decoder,
+      bufferDuration: AudioTime(isMobile ? 0.4 : 0.25),
+      chunkFrames: isMobile ? 2048 : 4096,
       initialDeviceId: deviceId,
     );
   }
@@ -659,9 +692,10 @@ class AudioPlayer {
 }
 
 // Compute the ring buffer capacity (in frames) for pre-decoding.
-// Default to ~1.5 seconds of audio to absorb decode spikes.
+// Mobile gets 2.0s to absorb decode spikes under CPU throttling; desktop uses 1.5s.
 int _ringCapacityFrames(AudioFormat format) {
-  return (format.sampleRate * 3) ~/ 2; // 1.5s
+  final multiplier = (Platform.isAndroid || Platform.isIOS) ? 2.0 : 1.5;
+  return (format.sampleRate * multiplier).floor();
 }
 
 /// A simple data source node that reads PCM frames from a FrameRingBuffer.

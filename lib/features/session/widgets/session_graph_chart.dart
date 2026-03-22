@@ -9,18 +9,22 @@ class SessionGraphChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.watch<SessionStore>();
-    final selectedIdx = store.currentPickerValue - 1;
-    final selectedColor = const Color(0xFF287DCC);
-    final unselectedColor = const Color(0xFFD23232);
+    final graphBarDataList = context.select<SessionStore, List<LineChartBarData>>(
+      (s) => s.graphBarDataList,
+    );
+    final selectedIdx = context.select<SessionStore, int>(
+      (s) => s.currentPickerValue - 1,
+    );
+    const selectedColor = Color(0xFF287DCC);
+    const unselectedColor = Color(0xFFD23232);
 
     return LineChart(
       LineChartData(
         minX: 0, maxX: 60, minY: -3, maxY: 3,
         clipData: const FlClipData.all(),
         lineBarsData: [
-          for (int i = 0; i < store.graphBarDataList.length; i++)
-            store.graphBarDataList[i].copyWith(
+          for (int i = 0; i < graphBarDataList.length; i++)
+            graphBarDataList[i].copyWith(
               color: i == selectedIdx ? selectedColor : unselectedColor,
             ),
         ],
