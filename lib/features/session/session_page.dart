@@ -23,8 +23,7 @@ class _SessionPageState extends State<SessionPage> {
   @override
   void initState() {
     super.initState();
-    // Initializing Session
-    _init();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
   @override

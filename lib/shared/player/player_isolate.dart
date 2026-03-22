@@ -160,9 +160,10 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.attach();
   }
 
-  Future<void> shutdown() {
+  Future<void> shutdown() async {
     _playerStateUpdateTimer?.cancel();
-    return _isolate.shutdown();
+    if (!_isolate.isLaunched) return;
+    await _isolate.shutdown();
   }
 
   Future<void> play() async {

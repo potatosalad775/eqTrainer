@@ -252,7 +252,6 @@ class _ImportPageState extends State<ImportPage> {
           ),
           TextButton(
             onPressed: () {
-              importPlayer.shutdown();
               Navigator.of(context).pop(true);
               Navigator.of(context).pop();
             },
