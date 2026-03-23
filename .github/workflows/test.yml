@@ -1,0 +1,105 @@
+name: Test
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Unit tests — headless, no device required, fastest feedback
+  # ---------------------------------------------------------------------------
+  unit-test:
+    name: Unit Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.5
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run unit tests
+        run: flutter test test/ --reporter=github
+
+  # ---------------------------------------------------------------------------
+  # Integration tests (Linux desktop) — audio_decoder FFI, no audio hardware
+  # ---------------------------------------------------------------------------
+  integration-linux:
+    name: Integration Tests (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.5
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run integration tests (Linux desktop)
+        run: flutter test integration_test/ --device-id linux --reporter=github
+
+  # ---------------------------------------------------------------------------
+  # Integration tests (Windows desktop)
+  # ---------------------------------------------------------------------------
+  integration-windows:
+    name: Integration Tests (Windows)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.5
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run integration tests (Windows desktop)
+        run: flutter test integration_test/ --device-id windows --reporter=github
+
+  # ---------------------------------------------------------------------------
+  # Integration tests (macOS desktop)
+  # ---------------------------------------------------------------------------
+  integration-macos:
+    name: Integration Tests (macOS)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.5
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Install CocoaPods (required for coast_audio on macOS)
+        run: cd macos && pod install
+
+      - name: Run integration tests (macOS desktop)
+        run: flutter test integration_test/ --device-id macos --reporter=github
