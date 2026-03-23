@@ -64,7 +64,7 @@ dependencies:
   audio_decoder: 
     git:
       url: https://github.com/potatosalad775/audio_decoder.git
-      ref: fix-windows
+      ref: custom
 
 dev_dependencies:
   flutter_test:

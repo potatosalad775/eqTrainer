@@ -45,8 +45,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: fix-windows
-      resolved-ref: af8086b5e637809d573df21001921ad9f0337aac
+      ref: custom
+      resolved-ref: "4b7a822dd46ae24dd3966ce69fb65b58b5e5f2fc"
       url: "https://github.com/potatosalad775/audio_decoder.git"
     source: git
     version: "0.7.4"
