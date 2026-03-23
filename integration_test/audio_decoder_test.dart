@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
@@ -9,19 +10,28 @@ void main() {
 
   late Directory tempDir;
 
-  // Fixture files live at test/fixtures/audio/ relative to the project root.
-  // When `flutter test integration_test/` is run from the project root,
-  // Directory.current.path is the project root on all desktop platforms.
-  String fixture(String name) =>
-      p.join(Directory.current.path, 'test', 'fixtures', 'audio', name);
+  // Fixture files are bundled as Flutter assets and extracted to a temp
+  // directory at test startup. This works on all platforms, including
+  // sandboxed macOS where Directory.current.path is not the project root.
+  String fixture(String name) => p.join(tempDir.path, name);
 
-  String tempOut(String name) => p.join(tempDir.path, name);
+  String tempOut(String name) => p.join(tempDir.path, 'out_$name');
 
-  setUpAll(() {
-    tempDir = Directory.systemTemp.createTempSync('eqt_integ_');
+  setUpAll(() async {
+    tempDir = await Directory.systemTemp.createTemp('eqt_integ_');
+    for (final name in [
+      'sine_440hz_1s.wav',
+      'sine_440hz_3s.mp3',
+      'sine_440hz_3s.flac',
+      'silence_2s.wav',
+    ]) {
+      final data = await rootBundle.load('test/fixtures/audio/$name');
+      await File(p.join(tempDir.path, name))
+          .writeAsBytes(data.buffer.asUint8List());
+    }
   });
 
-  tearDownAll(() {
+  tearDownAll(() async {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 

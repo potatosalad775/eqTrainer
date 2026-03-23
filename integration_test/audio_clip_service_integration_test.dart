@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:hive_ce/hive.dart';
@@ -11,15 +12,35 @@ import 'package:eq_trainer/shared/service/app_directories.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  late Directory fixturesDir;
   late Directory hiveDir;
   late Directory clipsDir;
   late Box<AudioClip> box;
   late AudioClipRepository repo;
   late AudioClipService service;
 
-  // Fixture files at test/fixtures/audio/ relative to the project root
-  String fixture(String name) =>
-      p.join(Directory.current.path, 'test', 'fixtures', 'audio', name);
+  // Fixture files are bundled as Flutter assets and extracted to a temp
+  // directory at test startup. This works on all platforms, including
+  // sandboxed macOS where Directory.current.path is not the project root.
+  String fixture(String name) => p.join(fixturesDir.path, name);
+
+  setUpAll(() async {
+    fixturesDir = await Directory.systemTemp.createTemp('eqt_fixtures_');
+    for (final name in [
+      'sine_440hz_1s.wav',
+      'sine_440hz_3s.mp3',
+      'sine_440hz_3s.flac',
+      'silence_2s.wav',
+    ]) {
+      final data = await rootBundle.load('test/fixtures/audio/$name');
+      await File(p.join(fixturesDir.path, name))
+          .writeAsBytes(data.buffer.asUint8List());
+    }
+  });
+
+  tearDownAll(() async {
+    if (fixturesDir.existsSync()) fixturesDir.deleteSync(recursive: true);
+  });
 
   setUp(() async {
     hiveDir = await Directory.systemTemp.createTemp('eqt_hive_');
