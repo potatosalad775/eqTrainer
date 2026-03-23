@@ -40,9 +40,9 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
     
 | Platform | Minimum Version | Note                                                                                              |
 |----------|-----------------|---------------------------------------------------------------------------------------------------|
-| Windows  | Vista           | Works with WASAPI <br/> <sub>*Audio Editor is not available at the moment.*</sub>                 |
-| MacOS    | 11 Big Sur      | Supports Intel & Apple Silicon as Universal App                                                   |
-| Linux    | -               | Works with ALSA, Jack, PulseAudio <br/> <sub>*Audio Editor is not available at the moment.*</sub> |
+| Windows  | Vista           | Works with WASAPI                                                                                                       |
+| MacOS    | 11 Big Sur      | Supports Intel & Apple Silicon as Universal App                                                                         |
+| Linux    | -               | Works with ALSA, Jack, PulseAudio <br/> <sub>*GStreamer 1.0+ required for audio format conversion.*</sub>               |
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                                     |
 | iOS      | 14.0            | Manual Sideload Required. <br/> Use [Sideloadly][SIDELOADLY] or [Altstore][ALTSTORE].             |
 

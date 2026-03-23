@@ -1,24 +1,21 @@
 name: Build App
 
 on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
+      - uses: actions/checkout@v6
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.35.3
+          flutter-version: 3.41.5
 
       - name: Get Keystore
         id: android_keystore
@@ -44,7 +41,7 @@ jobs:
           flutter build appbundle --release
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-android
           path: build/app/outputs/bundle/release/*
@@ -52,14 +49,12 @@ jobs:
   build-iOS:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
+      - uses: actions/checkout@v6
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.35.3
+          flutter-version: 3.41.5
 
       - name: Setup Podfile
         run: |
@@ -78,7 +73,7 @@ jobs:
           mv Payload.zip build/ios/Payload.ipa
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-iOS
           path: build/ios/Payload.ipa
@@ -86,14 +81,12 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
+      - uses: actions/checkout@v6
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.35.3
+          flutter-version: 3.41.5
 
       - name: Build Windows
         run: |
@@ -101,7 +94,7 @@ jobs:
           flutter build windows --release
 
       - name: Upload EXE
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-windows
           path: build/windows/x64/runner/*
@@ -109,14 +102,12 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
+      - uses: actions/checkout@v6
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.35.3
+          flutter-version: 3.41.5
 
       - name: Setup Podfile
         run: |
@@ -148,7 +139,7 @@ jobs:
             "eq_trainer.app"
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-macOS
           path: build/macos/Build/Products/Release/eq_trainer.dmg
@@ -157,14 +148,12 @@ jobs:
     runs-on: ubuntu-latest
   
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: master
+      - uses: actions/checkout@v6
   
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.35.3
+          flutter-version: 3.41.5
 
       - name: Update system dependencies
         run: |
@@ -180,7 +169,7 @@ jobs:
           $HOME/.pub-cache/bin/flutter_distributor release --name=release --jobs=release-linux-deb
   
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-linux
           path: dist/*

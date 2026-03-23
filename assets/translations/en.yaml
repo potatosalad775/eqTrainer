@@ -72,7 +72,7 @@
   # Playlist Page
   "PLAYLIST_EMPTY_TEXT": "No Audio Clip Found",
   "PLAYLIST_FOOTER": "You can re-order playlist by dragging circular checkbox.",
-  "PLAYLIST_FOOTER_WINLINUX_1": "Only mp3 / wav / flac files are allowed.",
+  "PLAYLIST_FOOTER_WINLINUX_1": "mp3 / wav / flac / m4a / aac / ogg and more are supported.",
   "PLAYLIST_FOOTER_WINLINUX_2": "Audio Clip editor is not available in this platform at the moment.",
   "PLAYLIST_AUDIO_ACTION_DELETE": "Delete",
   ## Alert Dialog - Deleting Audio Clip
@@ -97,7 +97,7 @@
   "IMPORT_ALERT_ABORTED_BUTTON": "Okay",
   ## Loading Dialog - Converting Audio Clip
   "IMPORT_CONVERTING_1": "Please wait a moment...",
-  "IMPORT_CONVERTING_2": "converting unsupported file format into FLAC.",
+  "IMPORT_CONVERTING_2": "Converting unsupported file format into WAV.",
   ## CLIP EDITOR
   ### Time Stamp Indicator
   ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value

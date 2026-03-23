@@ -1,12 +1,12 @@
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
+import 'package:toastification/toastification.dart';
 
 class SessionSelector extends StatelessWidget {
   const SessionSelector({
@@ -57,16 +57,28 @@ class SessionSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final player = context.read<PlayerIsolate>();
     final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
-    final audioState = context.read<AudioState>();
     final sessionStore = context.read<SessionStore>();
     final sessionController = context.read<SessionController>();
     final gap = isPortrait ? 16.0 : 20.0;
 
     void onSubmit() => sessionController.submitAnswer(
       player: player,
-      audioState: audioState,
       sessionStore: sessionStore,
       sessionParameter: context.read<SessionParameter>(),
+      onResult: (isCorrect, correctIndex) {
+        toastification.show(
+          type: isCorrect ? ToastificationType.success : ToastificationType.error,
+          style: ToastificationStyle.flatColored,
+          description: Text(isCorrect
+              ? "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': correctIndex.toString()})
+              : "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': correctIndex.toString()})),
+          alignment: Alignment.topCenter,
+          autoCloseDuration: const Duration(seconds: 3),
+          animationDuration: const Duration(milliseconds: 300),
+          dragToClose: true,
+          closeOnClick: true,
+        );
+      },
     );
 
     if (isPortrait) {
