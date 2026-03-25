@@ -1,13 +1,10 @@
 import 'dart:math';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:flutter/material.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
-import 'package:toastification/toastification.dart';
 
 class SessionSubmitResult {
   const SessionSubmitResult({
@@ -76,7 +73,6 @@ class SessionController {
       // Start initialize Session (first round)
       await initSession(
         player,
-        audioState: audioState,
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
       );
@@ -92,7 +88,6 @@ class SessionController {
   // Collective Function for initializing a round.
   Future<void> initSession(
     PlayerIsolate player, {
-    required AudioState audioState,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
   }) async {
@@ -137,9 +132,9 @@ class SessionController {
 
   Future<SessionSubmitResult> submitAnswer({
     required PlayerIsolate player,
-    required AudioState audioState,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
+    void Function(bool isCorrect, int correctIndex)? onResult,
   }) async {
     // Mark loading
     sessionStore.setSessionState(SessionState.loading);
@@ -148,19 +143,8 @@ class SessionController {
     final int correctIndex = _answerGraphIndex + 1;
     final bool isCorrect = correctIndex == sessionStore.currentPickerValue;
 
-    // Show result via Toastification
-    toastification.show(
-      type: isCorrect ? ToastificationType.success : ToastificationType.error,
-      style: ToastificationStyle.flatColored,
-      description: Text(isCorrect
-          ? "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': (correctIndex).toString()})
-          : "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': (correctIndex).toString()})),
-      alignment: Alignment.topCenter,
-      autoCloseDuration: const Duration(seconds: 3),
-      animationDuration: const Duration(milliseconds: 300),
-      dragToClose: true,
-      closeOnClick: true,
-    );
+    // Notify caller (e.g. to show a toast) without coupling to widget layer
+    onResult?.call(isCorrect, correctIndex);
 
     // Apply result to session
     sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
@@ -182,7 +166,6 @@ class SessionController {
       player,
       sessionStore: sessionStore,
       sessionParameter: sessionParameter,
-      audioState: audioState,
     );
 
     sessionStore.setSessionState(SessionState.ready);

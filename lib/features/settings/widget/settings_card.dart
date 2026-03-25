@@ -9,7 +9,7 @@ class SettingsCard extends StatelessWidget {
     required this.title,
     required this.trailing
   });
-  final IconData icon;
+  final dynamic icon;
   final String title;
   final Widget trailing;
 
@@ -23,10 +23,11 @@ class SettingsCard extends StatelessWidget {
         color: context.colors.surfaceContainer,
         child: ListTile(
           contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-          leading: FaIcon(
-            icon,
-            color: context.colors.onSurfaceVariant,
-          ),
+          leading: (icon is FaIconData)
+            ? FaIcon(icon, color: context.colors.onSurfaceVariant) 
+            : (icon is IconData) 
+              ? Icon(icon, color: context.colors.onSurfaceVariant)
+              : Icon(Icons.error, color: context.colors.onSurfaceVariant),
           title: Text(
             title,
             style: TextStyle(
