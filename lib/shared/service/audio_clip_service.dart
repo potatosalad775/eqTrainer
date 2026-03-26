@@ -13,13 +13,13 @@ class AudioClipService {
 
   /// Generate Audio Clip from Source File
   /// - sourcePath: Original File Path
-  /// - startSec/endSec: start/end time in seconds (only used when isEdit is true)
-  /// - isEdit: If true, trim the source file to create a clip;
+  /// - startSec/endSec: start/end time in seconds
+  /// - isTrimmed: If true, trim the source file; otherwise convert to WAV.
   Future<void> createClip({
     required String sourcePath,
     required double startSec,
     required double endSec,
-    required bool isEdit,
+    required bool isTrimmed,
   }) async {
     // Prepare Paths
     final String fileBase = DateTime.now().microsecondsSinceEpoch.toString();
@@ -28,11 +28,13 @@ class AudioClipService {
     if (ext != '.wav' && ext != '.mp3' && ext != '.flac') {
       ext = '.wav';
     }
+    // When not trimming, always output WAV for maximum decoder compatibility
+    if (!isTrimmed) ext = '.wav';
     final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
     // Generate Clip File
     late final double duration;
-    if (isEdit) {
+    if (isTrimmed) {
       final start = Duration(milliseconds: (startSec * 1000).toInt());
       final end = Duration(milliseconds: (endSec * 1000).toInt());
       duration = endSec - startSec;
@@ -49,9 +51,9 @@ class AudioClipService {
     } else {
       duration = endSec;
       try {
-        await File(sourcePath).copy(destPath);
+        await AudioDecoder.convertToWav(sourcePath, destPath);
       } catch (e) {
-        throw Exception('File copy failed: $e');
+        throw Exception('Audio conversion failed: $e');
       }
     }
 

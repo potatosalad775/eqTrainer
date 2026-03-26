@@ -376,9 +376,9 @@ class PlayerIsolate extends ChangeNotifier {
               eqEnabled: player.getEqState(),
             );
           case PlayerHostRequestSetEQParams():
-            player.setEQ(request.enableEQ);
             player.setEQFreq(request.frequency);
             player.setEQGain(request.gainDb);
+            player.setEQ(request.enableEQ);
             break;
         }
       },
@@ -422,7 +422,8 @@ class AudioPlayer {
     _ringSourceNode.outputBus.connect(_volumeNode.inputBus);
     _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
     _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
-    _peakingEQNode.bypass = true;
+    // EQ filter stays in the chain at all times (no bypass toggle).
+    // Gain is set to 0 dB (transparent) until a session round begins.
     // Underrun/xrun logging
     _playbackNode.device.notification.listen((notification) {
       debugPrint(
@@ -671,15 +672,27 @@ class AudioPlayer {
     _playbackNode.device.stop();
   }
 
+  // Track EQ enabled state and the active gain for the current round.
+  bool _eqEnabled = false;
+  double _activeGainDb = 0;
+
   void setEQ(bool value) {
-    _peakingEQNode.bypass = !value;
+    _eqEnabled = value;
+    // Instead of toggling bypass (which causes an audible click due to
+    // instantaneous signal-path switching), keep the filter always active
+    // and set its gain to 0 dB (transparent) when EQ is "off".
+    _peakingEQNode.filter.update(gainDb: value ? _activeGainDb : 0);
   }
 
   void setEQGain(double value) {
+    _activeGainDb = value;
     // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
     // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
     _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
-    _peakingEQNode.filter.update(gainDb: value);
+    // Only apply gain to the filter if EQ is currently enabled.
+    if (_eqEnabled) {
+      _peakingEQNode.filter.update(gainDb: value);
+    }
   }
 
   void setEQFreq(double value) {
@@ -687,7 +700,7 @@ class AudioPlayer {
   }
 
   bool getEqState() {
-    return !_peakingEQNode.bypass;
+    return _eqEnabled;
   }
 }
 

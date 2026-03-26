@@ -23,7 +23,7 @@ class EditorClipSaveButton extends StatelessWidget {
           sourcePath: player.filePath,
           startSec: clipTimeData.clipStartTime.seconds,
           endSec: clipTimeData.clipEndTime.seconds,
-          isEdit: player.fetchDuration != clipTimeData.clipEndTime,
+          isTrimmed: player.fetchDuration != clipTimeData.clipEndTime,
         );
         if (!context.mounted) return;
         Navigator.pop(context);

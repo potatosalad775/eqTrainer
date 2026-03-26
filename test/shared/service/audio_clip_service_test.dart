@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
@@ -34,18 +35,40 @@ void main() {
 
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
       when(() => mockRepo.addClip(any())).thenAnswer((_) async {});
+
+      // Mock the audio_decoder platform channel so convertToWav works in unit
+      // tests by simply copying the source file to the destination.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('audio_decoder'),
+        (MethodCall call) async {
+          if (call.method == 'convertToWav') {
+            final args = call.arguments as Map;
+            final input = args['inputPath'] as String;
+            final output = args['outputPath'] as String;
+            await File(input).copy(output);
+            return output;
+          }
+          return null;
+        },
+      );
     });
 
     tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('audio_decoder'),
+        null,
+      );
       await tmpSrc.delete(recursive: true);
       await tmpClips.delete(recursive: true);
     });
 
     // -------------------------------------------------------------------------
-    // createClip — isEdit: false (full copy)
+    // createClip — isTrimmed: false (convert to WAV)
     // -------------------------------------------------------------------------
-    group('createClip (isEdit: false)', () {
-      test('copies WAV file and saves correct metadata', () async {
+    group('createClip (isTrimmed: false)', () {
+      test('converts file to WAV and saves correct metadata', () async {
         final srcFile = File(p.join(tmpSrc.path, 'track.wav'))
           ..writeAsBytesSync(List.filled(100, 0));
 
@@ -53,7 +76,7 @@ void main() {
           sourcePath: srcFile.path,
           startSec: 0.0,
           endSec: 5.5,
-          isEdit: false,
+          isTrimmed: false,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -64,13 +87,13 @@ void main() {
         expect(clip.duration, equals(5.5));
         expect(clip.isEnabled, isTrue);
 
-        // Verify the file was actually copied into the clips directory
+        // Verify the file was created in the clips directory
         final destFile = File(p.join(tmpClips.path, clip.fileName));
         expect(destFile.existsSync(), isTrue);
         expect(destFile.lengthSync(), equals(100));
       });
 
-      test('preserves .mp3 extension', () async {
+      test('always outputs .wav regardless of source extension', () async {
         final srcFile = File(p.join(tmpSrc.path, 'song.mp3'))
           ..writeAsBytesSync(List.filled(50, 0));
 
@@ -78,28 +101,13 @@ void main() {
           sourcePath: srcFile.path,
           startSec: 0.0,
           endSec: 180.0,
-          isEdit: false,
+          isTrimmed: false,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        expect(clip.fileName, endsWith('.mp3'));
-      });
-
-      test('preserves .flac extension', () async {
-        final srcFile = File(p.join(tmpSrc.path, 'hi_res.flac'))
-          ..writeAsBytesSync(List.filled(50, 0));
-
-        await service.createClip(
-          sourcePath: srcFile.path,
-          startSec: 0.0,
-          endSec: 60.0,
-          isEdit: false,
-        );
-
-        final captured = verify(() => mockRepo.addClip(captureAny())).captured;
-        final clip = captured.single as AudioClip;
-        expect(clip.fileName, endsWith('.flac'));
+        // isTrimmed: false always converts to WAV
+        expect(clip.fileName, endsWith('.wav'));
       });
 
       test('normalizes unsupported extension to .wav', () async {
@@ -110,7 +118,7 @@ void main() {
           sourcePath: srcFile.path,
           startSec: 0.0,
           endSec: 10.0,
-          isEdit: false,
+          isTrimmed: false,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -126,7 +134,7 @@ void main() {
           sourcePath: srcFile.path,
           startSec: 0.0,
           endSec: 3.0,
-          isEdit: false,
+          isTrimmed: false,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -134,15 +142,15 @@ void main() {
         expect(clip.ogAudioName, equals('my_favourite_track.wav'));
       });
 
-      test('duration equals endSec when isEdit is false', () async {
+      test('duration equals endSec when isTrimmed is false', () async {
         final srcFile = File(p.join(tmpSrc.path, 'long.wav'))
           ..writeAsBytesSync(List.filled(50, 0));
 
         await service.createClip(
           sourcePath: srcFile.path,
-          startSec: 5.0, // startSec is ignored in the full-copy path
+          startSec: 5.0, // startSec is ignored in the convert-to-wav path
           endSec: 42.7,
-          isEdit: false,
+          isTrimmed: false,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -156,7 +164,7 @@ void main() {
             sourcePath: p.join(tmpSrc.path, 'nonexistent.wav'),
             startSec: 0.0,
             endSec: 1.0,
-            isEdit: false,
+            isTrimmed: false,
           ),
           throwsException,
         );
@@ -164,7 +172,7 @@ void main() {
       });
     });
 
-    // Note: createClip (isEdit: true) invokes AudioDecoder.trimAudio() which
+    // Note: createClip (isTrimmed: true) invokes AudioDecoder.trimAudio() which
     // is a native platform channel and cannot run in a unit test environment.
     // The full trim+persist pipeline is covered by the integration tests in
     // integration_test/audio_clip_service_integration_test.dart.
