@@ -13,6 +13,8 @@ class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
 class MockAppDirectories extends Mock implements AppDirectories {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() {
     // mocktail requires a fallback value for custom types used with any()
     registerFallbackValue(AudioClip('', '', 0.0, false));
