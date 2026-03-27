@@ -149,6 +149,13 @@ class PlayerIsolate extends ChangeNotifier {
   bool get isLaunched => _isolate.isLaunched;
   Timer? _playerStateUpdateTimer;
   bool _isUpdating = false;
+  bool _eqToggleInFlight = false;
+  bool? _pendingEQValue;
+  DateTime _eqToggleLastEnd = DateTime(0);
+
+  bool _seekInFlight = false;
+  AudioTime? _pendingSeekPosition;
+  DateTime _seekLastEnd = DateTime(0);
 
   Future<void> launch({
     required AudioDeviceBackend backend,
@@ -196,11 +203,29 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<PlayerPositionResponse?> seek(AudioTime position) async {
-    final result =
-        await _isolate.request(PlayerHostRequestSeek(position: position));
     _lastPosition = position;
     notifyListeners();
-    return result;
+
+    if (_seekInFlight) {
+      _pendingSeekPosition = position;
+      return null;
+    }
+
+    _seekInFlight = true;
+    try {
+      var result =
+          await _isolate.request(PlayerHostRequestSeek(position: position));
+      while (_pendingSeekPosition != null) {
+        final next = _pendingSeekPosition!;
+        _pendingSeekPosition = null;
+        result =
+            await _isolate.request(PlayerHostRequestSeek(position: next));
+      }
+      return result;
+    } finally {
+      _seekInFlight = false;
+      _seekLastEnd = DateTime.now();
+    }
   }
 
   Future<void> setVolume(double volume) {
@@ -208,9 +233,32 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> setEQ(bool enableEQ) async {
-    await _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+    if (_lastEQState == enableEQ) return; // Skip redundant
+
     _lastEQState = enableEQ;
-    notifyListeners();
+    notifyListeners(); // Optimistic: UI disables button immediately
+
+    if (_eqToggleInFlight) {
+      _pendingEQValue = enableEQ; // Coalesce: remember latest
+      return;
+    }
+
+    _eqToggleInFlight = true;
+    try {
+      await _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+      // Drain pending (only the last value matters)
+      while (_pendingEQValue != null) {
+        final next = _pendingEQValue!;
+        _pendingEQValue = null;
+        if (next != enableEQ) {
+          enableEQ = next;
+          await _isolate.request(PlayerHostRequestSetEQ(enableEQ: next));
+        }
+      }
+    } finally {
+      _eqToggleInFlight = false;
+      _eqToggleLastEnd = DateTime.now();
+    }
   }
 
   Future<void> setEQGain(double gainDb) {
@@ -275,7 +323,11 @@ class PlayerIsolate extends ChangeNotifier {
   bool? _lastEQState;
 
   void _playerStateUpdate() async {
-    if (!isLaunched || _isUpdating) return;
+    if (!isLaunched || _isUpdating || _eqToggleInFlight || _seekInFlight) return;
+    // After an EQ toggle, give the audio isolate breathing room for MP3 decoding
+    // before resuming polling traffic.
+    if (DateTime.now().difference(_eqToggleLastEnd).inMilliseconds < 200) return;
+    if (DateTime.now().difference(_seekLastEnd).inMilliseconds < 100) return;
     _isUpdating = true;
     try {
       final all = await getAllState();
@@ -295,7 +347,7 @@ class PlayerIsolate extends ChangeNotifier {
         _lastDuration = all.duration;
         shouldNotify = true;
       }
-      if (all.eqEnabled != _lastEQState) {
+      if (all.eqEnabled != _lastEQState && !_eqToggleInFlight) {
         _lastEQState = all.eqEnabled;
         shouldNotify = true;
       }
@@ -441,17 +493,35 @@ class AudioPlayer {
     required AudioInputDataSource dataSource,
     AudioDeviceId? deviceId,
   }) {
-    // Find the decoder by trying to decode the audio data with different decoders
+    // Find the decoder by trying to decode the audio data with different decoders.
+    // Order: WAV (pure Dart) → AAC/M4A (FDK-AAC) → miniaudio fallback (MP3, FLAC, etc.)
     AudioDecoder decoder;
+    final errors = <String, String>{};
     try {
       decoder = WavAudioDecoder(dataSource: dataSource);
-    } on Exception catch (_) {
+    } on Exception catch (e) {
+      errors['WAV'] = e.toString();
+      if (dataSource.canSeek) dataSource.position = 0;
       try {
-        decoder = MaAudioDecoder(dataSource: dataSource);
+        decoder = AacAudioDecoder(dataSource: dataSource);
       } on Exception catch (e) {
-        throw Exception('Could not find the decoder.\nInner exception: $e');
+        errors['AAC'] = e.toString();
+        if (dataSource.canSeek) dataSource.position = 0;
+        try {
+          decoder = MaAudioDecoder(dataSource: dataSource);
+        } on Exception catch (e) {
+          errors['miniaudio'] = e.toString();
+          throw Exception(
+            'Could not find a suitable decoder.\n'
+            'Tried decoders:\n'
+            '${errors.entries.map((e) => '  ${e.key}: ${e.value}').join('\n')}',
+          );
+        }
       }
     }
+
+    debugPrint('[AudioPlayer.findDecoder] Selected ${decoder.runtimeType} '
+        '(format: ${decoder.outputFormat})');
 
     final isMobile = Platform.isAndroid || Platform.isIOS;
     return AudioPlayer(
@@ -672,27 +742,25 @@ class AudioPlayer {
     _playbackNode.device.stop();
   }
 
-  // Track EQ enabled state and the active gain for the current round.
+  // Track EQ enabled state for the current round.
   bool _eqEnabled = false;
-  double _activeGainDb = 0;
 
   void setEQ(bool value) {
     _eqEnabled = value;
-    // Instead of toggling bypass (which causes an audible click due to
-    // instantaneous signal-path switching), keep the filter always active
-    // and set its gain to 0 dB (transparent) when EQ is "off".
-    _peakingEQNode.filter.update(gainDb: value ? _activeGainDb : 0);
+    // Toggle the node bypass instead of recalculating filter coefficients via
+    // ma_peak2_reinit (FFI). This makes the toggle a simple boolean flip with
+    // zero native overhead, keeping the audio isolate's event loop free for
+    // MP3 decoding and device feeding.
+    _peakingEQNode.bypassed = !value;
   }
 
   void setEQGain(double value) {
-    _activeGainDb = value;
     // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
     // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
     _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
-    // Only apply gain to the filter if EQ is currently enabled.
-    if (_eqEnabled) {
-      _peakingEQNode.filter.update(gainDb: value);
-    }
+    // Always keep the filter configured with the active gain so it is ready
+    // when the user toggles EQ on (bypass off).
+    _peakingEQNode.filter.update(gainDb: value);
   }
 
   void setEQFreq(double value) {

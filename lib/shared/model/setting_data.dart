@@ -16,16 +16,22 @@ class BackendData {
 class MiscSettings {
   @HiveField(0, defaultValue: false)
   bool frequencyToolTip;
-  
+
+  @HiveField(1, defaultValue: 1) // Default to allM4A
+  int importFormat;
+
   MiscSettings(
     this.frequencyToolTip,
+    this.importFormat,
   );
 
   MiscSettings copyWith({
-    bool? inputFrequencyToolTip
+    bool? inputFrequencyToolTip,
+    int? inputImportFormat,
   }) {
     return MiscSettings(
-      inputFrequencyToolTip ?? frequencyToolTip
+      inputFrequencyToolTip ?? frequencyToolTip,
+      inputImportFormat ?? importFormat,
     );
   }
 }

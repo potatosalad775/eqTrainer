@@ -13,6 +13,8 @@ import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/main.dart';
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -143,7 +145,7 @@ class _ImportPageState extends State<ImportPage> {
     final workflow = context.read<ImportWorkflowService>();
 
     const allowedExtensions = [
-      'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus'
+      'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus', 'xmp4'
     ];
 
     final importResult = await FilePicker.platform.pickFiles(
@@ -170,18 +172,27 @@ class _ImportPageState extends State<ImportPage> {
     final fileName = fileNameList.join();
     final fileExtension = pickedFile.extension?.toLowerCase();
 
-    // Convert unsupported formats to WAV on all platforms
-    if (!['mp3', 'wav', 'flac'].contains(fileExtension)) {
+    // Determine target format based on user's import format setting
+    final sourceExt = '.${fileExtension ?? ''}';
+    final targetExt = targetExtForImport(sourceExt, savedMiscSettingsValue.importFormat);
+
+    if (targetExt != null) {
       importPageState.value = ImportPageState.converting;
       try {
-        filePath = await workflow.convertToWav(
-          fileNameWithoutExt: fileName,
-          sourcePath: filePath,
-        );
+        if (targetExt == '.m4a') {
+          filePath = await workflow.convertToM4a(
+            fileNameWithoutExt: fileName,
+            sourcePath: filePath,
+          );
+        } else {
+          filePath = await workflow.convertToWav(
+            fileNameWithoutExt: fileName,
+            sourcePath: filePath,
+          );
+        }
       } catch (e) {
         debugPrint("Error converting audio file: $e");
-        importPageState.value = ImportPageState.error;
-        return;
+        // Fall through with original file if conversion fails
       }
     }
 
@@ -189,7 +200,7 @@ class _ImportPageState extends State<ImportPage> {
       final duration = await workflow.loadAudioFile(
         audioState: audioState,
         importPlayer: importPlayer,
-        filePath: filePath,
+        filePath: filePath!,
       );
       clipDivProvider.clipEndTime = duration;
       importPageState.value = ImportPageState.ready;

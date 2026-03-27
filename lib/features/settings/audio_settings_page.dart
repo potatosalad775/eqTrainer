@@ -1,0 +1,53 @@
+import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dart';
+import 'package:eq_trainer/features/settings/widget/dev_backend_page.dart';
+import 'package:eq_trainer/features/settings/widget/settings_card.dart';
+import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/shared/themes/app_theme.dart';
+import 'package:flutter/material.dart';
+
+class AudioSettingsPage extends StatelessWidget {
+  const AudioSettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("AUDIO_SETTING_APPBAR_TITLE".tr()),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+        children: [
+          const AudioImportFormatCard(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC".tr()),
+          ),
+          if (savedMiscSettingsValue.importFormat == ImportFormat.keepOriginal)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+              child: Text("AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN".tr(), style: TextStyle(color: context.colors.error)),
+            ),
+          // Developer Settings
+          GestureDetector(
+            child: SettingsCard(
+              icon: Icons.build,
+              title: "AUDIO_SETTING_CARD_BACKEND_TITLE".tr(),
+              trailing: const Icon(Icons.keyboard_arrow_right),
+            ),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DevBackendPage())
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            child: Text("AUDIO_SETTING_CARD_BACKEND_DESC".tr()),
+          ),
+        ],
+      ),
+    );
+  }
+}

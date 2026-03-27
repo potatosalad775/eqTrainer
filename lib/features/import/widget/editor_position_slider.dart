@@ -21,41 +21,30 @@ class EditorPositionSlider extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Clip Time Info
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("IMPORT_EDITOR_TIMESTAMP_START").tr(namedArgs: {'_TIME': clipTimeData.clipStartTime.formatMMSS()}),
-              const Text("IMPORT_EDITOR_TIMESTAMP_END").tr(namedArgs: {'_TIME': clipTimeData.clipEndTime.formatMMSS()}),
-            ],
-          ),
-        ),
+        const Text("IMPORT_EDITOR_TIMESTAMP_START").tr(namedArgs: {'_TIME': clipTimeData.clipStartTime.formatMMSS()}),
+        const Text("IMPORT_EDITOR_TIMESTAMP_END").tr(namedArgs: {'_TIME': clipTimeData.clipEndTime.formatMMSS()}),
         // Clip Indicator
-        Padding(
-          padding: const EdgeInsets.fromLTRB(23, 0, 23, 0),
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment(
-                  (playerDuration == AudioTime.zero) ? -1
-                  : ((2 * clipTimeData.clipStartTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
-                ),
-                child: const Icon(Icons.arrow_downward),
+        Stack(
+          children: [
+            Align(
+              alignment: Alignment(
+                (playerDuration == AudioTime.zero) ? -1
+                : ((2 * clipTimeData.clipStartTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
               ),
-              Align(
-                alignment: Alignment(
-                  (playerDuration == AudioTime.zero) ? 1
-                  : ((2 * clipTimeData.clipEndTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
-                ),
-                child: const Icon(Icons.arrow_downward),
-              )
-            ],
-          ),
+              child: const Icon(Icons.arrow_downward),
+            ),
+            Align(
+              alignment: Alignment(
+                (playerDuration == AudioTime.zero) ? 1
+                : ((2 * clipTimeData.clipEndTime.seconds / playerDuration.seconds) - 1).clamp(-1, 1), 1
+              ),
+              child: const Icon(Icons.arrow_downward),
+            )
+          ],
         ),
         // Slider
         Padding(
-          padding: const EdgeInsets.fromLTRB(35, 0, 35, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
           child: ProgressBar(
             barHeight: 12,
             timeLabelPadding: 8,

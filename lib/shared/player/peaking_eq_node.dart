@@ -10,6 +10,9 @@ class PeakingEQNode extends AudioFilterNode {
   final AudioFormat format;
   final PeakingEQFilter filter;
 
+  /// When true, the filter is skipped entirely (pass-through).
+  bool bypassed = true;
+
   @override
   late final inputBus = AudioInputBus(node: this, formatResolver: (_) => format);
 
@@ -18,7 +21,9 @@ class PeakingEQNode extends AudioFilterNode {
 
   @override
   AudioReadResult process(AudioBuffer buffer, bool isEnd) {
-    filter.process(buffer, buffer);
-    return AudioReadResult(frameCount: buffer.sizeInFrames, isEnd: false);
+    if (!bypassed) {
+      filter.process(buffer, buffer);
+    }
+    return AudioReadResult(frameCount: buffer.sizeInFrames, isEnd: isEnd);
   }
 }

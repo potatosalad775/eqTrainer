@@ -3,6 +3,7 @@ import 'package:audio_decoder/audio_decoder.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 
 class AudioClipService {
@@ -14,7 +15,7 @@ class AudioClipService {
   /// Generate Audio Clip from Source File
   /// - sourcePath: Original File Path
   /// - startSec/endSec: start/end time in seconds
-  /// - isTrimmed: If true, trim the source file; otherwise convert to WAV.
+  /// - isTrimmed: If true, trim the source file; otherwise copy as-is.
   Future<void> createClip({
     required String sourcePath,
     required double startSec,
@@ -24,12 +25,10 @@ class AudioClipService {
     // Prepare Paths
     final String fileBase = DateTime.now().microsecondsSinceEpoch.toString();
     final audioClipPath = await _dirs.getClipsPath();
-    String ext = p.extension(sourcePath).toLowerCase();
-    if (ext != '.wav' && ext != '.mp3' && ext != '.flac') {
-      ext = '.wav';
-    }
-    // When not trimming, always output WAV for maximum decoder compatibility
-    if (!isTrimmed) ext = '.wav';
+    final sourceExt = p.extension(sourcePath).toLowerCase();
+
+    // trimAudio() only outputs .wav or .m4a — pick based on lossless/lossy
+    final String ext = isTrimmed ? trimOutputExt(sourceExt) : sourceExt;
     final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
     // Generate Clip File
@@ -51,9 +50,9 @@ class AudioClipService {
     } else {
       duration = endSec;
       try {
-        await AudioDecoder.convertToWav(sourcePath, destPath);
+        await File(sourcePath).copy(destPath);
       } catch (e) {
-        throw Exception('Audio conversion failed: $e');
+        throw Exception('Audio copy failed: $e');
       }
     }
 

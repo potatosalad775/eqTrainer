@@ -72,8 +72,6 @@
   # Playlist Page
   "PLAYLIST_EMPTY_TEXT": "No Audio Clip Found",
   "PLAYLIST_FOOTER": "You can re-order playlist by dragging circular checkbox.",
-  "PLAYLIST_FOOTER_WINLINUX_1": "mp3 / wav / flac / m4a / aac / ogg and more are supported.",
-  "PLAYLIST_FOOTER_WINLINUX_2": "Audio Clip editor is not available in this platform at the moment.",
   "PLAYLIST_AUDIO_ACTION_DELETE": "Delete",
   ## Alert Dialog - Deleting Audio Clip
   "PLAYLIST_AUDIO_ALERT_DELETE_TITLE": "Alert",
@@ -97,7 +95,7 @@
   "IMPORT_ALERT_ABORTED_BUTTON": "Okay",
   ## Loading Dialog - Converting Audio Clip
   "IMPORT_CONVERTING_1": "Please wait a moment...",
-  "IMPORT_CONVERTING_2": "Converting unsupported file format into WAV.",
+  "IMPORT_CONVERTING_2": "Optimizing audio file for playback.",
   ## CLIP EDITOR
   ### Time Stamp Indicator
   ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value
@@ -124,26 +122,33 @@
   "SETTING_CARD_CONTACT_TITLE": "Contact Dev",
   ## Setting Card - Open Source License
   "SETTING_CARD_LICENSE_TITLE": "Open Source License",
-  ## Setting Card - Developer Settings
-  "SETTING_CARD_DEV_SETTING_TITLE": "Developer Settings",
+  ## Setting Card - Audio Settings
+  "SETTING_CARD_AUDIO_SETTING_TITLE": "Audio Settings",
   ## Setting Card - Miscellaneous Settings
   "SETTING_CARD_MISC_SETTING_TITLE": "Miscellaneous Settings",
-
-  # Miscellaneous Settings Page
-  "MISC_SETTING_APPBAR_TITLE": "Miscellaneous Settings",
+  
   ## Misc Setting Card - Frequency Tooltip Toggle
   "MISC_SETTING_CARD_TOOLTIP_TITLE": "Graph Frequency Tooltip",
 
-  # Developer Settings Page
-  "DEV_SETTING_APPBAR_TITLE": "Developer Settings",
-  ## DEV SETTING CARD - Android Backend API
-  "DEV_SETTING_CARD_BACKEND_TITLE": "Audio API",
-  "DEV_SETTING_CARD_BACKEND_DESC":
-    "If audio is not playing as expected,\nTry changing audio backend API.",
-  ## DEV SETTING - Backend
-  "DEV_SETTING_BACKEND_APPBAR": "Audio Backend API Settings",
-  "DEV_SETTING_BACKEND_SNACKBAR_ERROR": "Failed at activating selected Audio Backends.",
-  "DEV_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND} Activated.",
+  # Audio Settings Page
+  "AUDIO_SETTING_APPBAR_TITLE": "Audio Settings",
+  ## Audio Setting Card - Audio Import Format
+  "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "Audio Import Format",
+  "AUDIO_SETTING_IMPORT_FORMAT_SMART": "Smart",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
+    "AAC and WAV formats offer superior playback performance. In 'Smart' mode, eqTrainer will convert lossless or lossy audio files into WAV or AAC format.",
+  "AUDIO_SETTING_IMPORT_FORMAT_M4A": "AAC (Lossy)",
+  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Lossless)",
+  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL": "Keep Original",
+  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN": "'Keep Original' option avoids conversion of MP3/FLAC files, but may cause performance issues with EQ processing.",
+  ## Audio Setting Card - Android Backend API
+  "AUDIO_SETTING_CARD_BACKEND_TITLE": "Audio API",
+  "AUDIO_SETTING_CARD_BACKEND_DESC":
+    "If audio is not playing as expected, Try changing audio backend API.",
+  ## Audio Setting - Backend
+  "AUDIO_SETTING_BACKEND_APPBAR": "Audio Backend API Settings",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_ERROR": "Failed at activating selected Audio Backends.",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND} Activated.",
 
   # Update Alert
   "UPDATE_ALERT_MESSAGE_BODY": "New version of eqTrainer is Available!",

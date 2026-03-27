@@ -41,7 +41,7 @@ class ImportWorkflowService {
     return duration;
   }
 
-  /// Convert an unsupported audio file to WAV in a temp directory.
+  /// Convert an audio file to WAV in a temp directory.
   /// Returns the path to the converted file.
   Future<String> convertToWav({
     required String fileNameWithoutExt,
@@ -54,6 +54,22 @@ class ImportWorkflowService {
     final String newFilePath = p.join(tempClipDir.path, "$fileNameWithoutExt.wav");
 
     await audio_decoder.AudioDecoder.convertToWav(sourcePath, newFilePath);
+    return newFilePath;
+  }
+
+  /// Convert an audio file to M4A (AAC) in a temp directory.
+  /// Returns the path to the converted file.
+  Future<String> convertToM4a({
+    required String fileNameWithoutExt,
+    required String sourcePath,
+  }) async {
+    final Directory appTempDir = await getTemporaryDirectory();
+    final Directory tempClipDir = await Directory(
+      p.join(appTempDir.path, 'temp')
+    ).create(recursive: true);
+    final String newFilePath = p.join(tempClipDir.path, "$fileNameWithoutExt.m4a");
+
+    await audio_decoder.AudioDecoder.convertToM4a(sourcePath, newFilePath);
     return newFilePath;
   }
 }
