@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:eq_trainer/shared/service/third_party_licenses.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -48,7 +49,7 @@ Future<void> main() async {
 
   // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
   final miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
-  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false);
+  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, 0);
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
@@ -61,6 +62,9 @@ Future<void> main() async {
       statusBarIconBrightness: Brightness.dark,
   ));
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge, overlays: [SystemUiOverlay.top]);
+
+  // Register additional licenses for bundled native libraries
+  registerThirdPartyLicenses();
 
   // Prepare Upgrader
   final upgrader = await UpgraderService().getInstance();
