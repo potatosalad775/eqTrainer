@@ -53,17 +53,20 @@ class MiscSettingsAdapter extends TypeAdapter<MiscSettings> {
     return MiscSettings(
       fields[0] == null ? false : fields[0] as bool,
       fields[1] == null ? 1 : (fields[1] as num).toInt(),
+      fields[2] == null ? false : fields[2] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, MiscSettings obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.frequencyToolTip)
       ..writeByte(1)
-      ..write(obj.importFormat);
+      ..write(obj.importFormat)
+      ..writeByte(2)
+      ..write(obj.volumeCompensation);
   }
 
   @override

@@ -133,10 +133,12 @@ class _PlayerMessage {
     required this.backend,
     required this.outputDeviceId,
     required this.path,
+    this.volumeCompensation = false,
   });
   final AudioDeviceBackend backend;
   final AudioDeviceId? outputDeviceId;
   final String? path;
+  final bool volumeCompensation;
 }
 
 /// A player isolate that plays audio from a file or buffer.
@@ -161,12 +163,14 @@ class PlayerIsolate extends ChangeNotifier {
     required AudioDeviceBackend backend,
     required AudioDeviceId? outputDeviceId,
     required String? path,
+    bool volumeCompensation = false,
   }) async {
     await _isolate.launch(
       initialMessage: _PlayerMessage(
         backend: backend,
         outputDeviceId: outputDeviceId,
         path: path,
+        volumeCompensation: volumeCompensation,
       ),
     );
     // Fetch initial state immediately so widgets don't wait for the first tick.
@@ -386,6 +390,7 @@ class PlayerIsolate extends ChangeNotifier {
       backend: message.backend,
       dataSource: dataSource,
       deviceId: message.outputDeviceId,
+      volumeCompensation: message.volumeCompensation,
     );
 
     messenger.listenRequest<PlayerHostRequest>(
@@ -449,7 +454,9 @@ class AudioPlayer {
     // Chunk size for adaptive feeding (tunable: 2048~8192)
     this.chunkFrames = 4096,
     AudioDeviceId? initialDeviceId,
-  })  : _decoderNode = DecoderNode(decoder: decoder),
+    bool volumeCompensation = false,
+  })  : _volumeCompensation = volumeCompensation,
+        _decoderNode = DecoderNode(decoder: decoder),
         _volumeNode = VolumeNode(volume: 0.9),
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
@@ -492,6 +499,7 @@ class AudioPlayer {
     required AudioDeviceBackend backend,
     required AudioInputDataSource dataSource,
     AudioDeviceId? deviceId,
+    bool volumeCompensation = false,
   }) {
     // Find the decoder by trying to decode the audio data with different decoders.
     // Order: WAV (pure Dart) → AAC/M4A (FDK-AAC) → miniaudio fallback (MP3, FLAC, etc.)
@@ -530,6 +538,7 @@ class AudioPlayer {
       bufferDuration: AudioTime(isMobile ? 0.4 : 0.25),
       chunkFrames: isMobile ? 2048 : 4096,
       initialDeviceId: deviceId,
+      volumeCompensation: volumeCompensation,
     );
   }
 
@@ -540,6 +549,8 @@ class AudioPlayer {
 
   // Adaptive feeding chunk size (frames)
   final int chunkFrames;
+
+  final bool _volumeCompensation;
 
   final DecoderNode _decoderNode;
 
@@ -755,9 +766,13 @@ class AudioPlayer {
   }
 
   void setEQGain(double value) {
-    // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
-    // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
-    _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
+    if (_volumeCompensation) {
+      // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
+      // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
+      _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
+    } else {
+      _volumeNode.volume = 0.9;
+    }
     // Always keep the filter configured with the active gain so it is ready
     // when the user toggles EQ on (bypass off).
     _peakingEQNode.filter.update(gainDb: value);

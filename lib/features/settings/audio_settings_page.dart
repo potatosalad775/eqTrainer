@@ -2,6 +2,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dart';
 import 'package:eq_trainer/features/settings/widget/dev_backend_page.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
+import 'package:eq_trainer/features/settings/widget/volume_compensation_card.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
@@ -34,6 +35,13 @@ class _AudioSettingsPageState extends State<AudioSettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
               child: Text("AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN".tr(), style: TextStyle(color: context.colors.error)),
             ),
+          const SizedBox(height: 12),
+          const VolumeCompensationCard(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            child: Text("AUDIO_SETTING_CARD_VOLUME_COMP_DESC".tr()),
+          ),
+          const Divider(indent: 6, endIndent: 6, height: 32),
           // Developer Settings
           GestureDetector(
             child: SettingsCard(

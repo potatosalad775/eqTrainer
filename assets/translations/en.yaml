@@ -141,6 +141,10 @@
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Lossless)",
   "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL": "Keep Original",
   "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN": "'Keep Original' option avoids conversion of MP3/FLAC files, but may cause performance issues with EQ processing.",
+  ## Audio Setting Card - Volume Compensation Toggle
+  "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "Gain Volume Compensation",
+  "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":
+    "Attenuates playback volume proportionally to the EQ gain to prevent clipping. Disabling this keeps volume constant but may cause clipping at higher gain values.",
   ## Audio Setting Card - Android Backend API
   "AUDIO_SETTING_CARD_BACKEND_TITLE": "Audio API",
   "AUDIO_SETTING_CARD_BACKEND_DESC":

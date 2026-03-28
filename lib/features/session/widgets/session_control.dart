@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
+import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/error.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
@@ -25,6 +26,7 @@ class SessionControl extends StatelessWidget {
       backend: backend,
       outputDeviceId: outputDeviceId,
       path: path,
+      volumeCompensation: savedMiscSettingsValue.volumeCompensation,
     );
     if (context.mounted) await context.read<SessionController>().updatePlayerState(player);
     await player.play();

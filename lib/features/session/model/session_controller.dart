@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
@@ -60,6 +61,7 @@ class SessionController {
           backend: audioState.backend,
           outputDeviceId: audioState.outputDevice?.id,
           path: sessionStore.playlistPaths[0],
+          volumeCompensation: savedMiscSettingsValue.volumeCompensation,
         );
       } else {
         // ... else notify the playlist is empty.

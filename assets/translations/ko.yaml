@@ -141,6 +141,10 @@
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무손실)",
   "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL": "원본 유지",
   "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN": "'원본 유지' 옵션은 MP3/FLAC 파일을 그대로 사용하지만, EQ 처리 성능에 영향을 줄 수 있습니다.",
+  ## Audio Setting Card - Volume Compensation Toggle
+  "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "게인 볼륨 보정",
+  "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":
+    "EQ 게인에 비례하여 재생 볼륨을 조절하고 클리핑을 방지합니다. 이 옵션을 비활성화하면 볼륨이 일정하게 유지되지만, 높은 게인 값에서 클리핑 현상이 발생할 수 있습니다.",
   ## Audio Setting Card - Android Backend API
   "AUDIO_SETTING_CARD_BACKEND_TITLE": "오디오 API",
   "AUDIO_SETTING_CARD_BACKEND_DESC":

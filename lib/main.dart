@@ -50,7 +50,7 @@ Future<void> main() async {
 
   // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
   final miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
-  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, ImportFormat.allM4a);
+  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, ImportFormat.allM4a, false);
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());

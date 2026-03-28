@@ -20,18 +20,24 @@ class MiscSettings {
   @HiveField(1, defaultValue: 1) // Default to allM4A
   int importFormat;
 
+  @HiveField(2, defaultValue: false)
+  bool volumeCompensation;
+
   MiscSettings(
     this.frequencyToolTip,
     this.importFormat,
+    this.volumeCompensation,
   );
 
   MiscSettings copyWith({
     bool? inputFrequencyToolTip,
     int? inputImportFormat,
+    bool? inputVolumeCompensation,
   }) {
     return MiscSettings(
       inputFrequencyToolTip ?? frequencyToolTip,
       inputImportFormat ?? importFormat,
+      inputVolumeCompensation ?? volumeCompensation,
     );
   }
 }
