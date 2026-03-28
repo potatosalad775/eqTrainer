@@ -13,6 +13,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
@@ -49,7 +50,7 @@ Future<void> main() async {
 
   // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
   final miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
-  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, 0);
+  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, ImportFormat.allM4a);
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
@@ -98,13 +99,22 @@ class App extends StatefulWidget {
   State<App> createState() => AppState();
 }
 
-class AppState extends State<App> {
+class AppState extends State<App> with WidgetsBindingObserver {
   late AudioState _audioState;
 
   @override
   void initState() {
     super.initState();
     _audioState = AudioState.initialize(backendList: backendList);
+    _audioState.startDevicePolling();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _audioState.refreshDevices();
+    }
   }
 
   @override
@@ -130,6 +140,7 @@ class AppState extends State<App> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _audioState.dispose();
     super.dispose();
   }

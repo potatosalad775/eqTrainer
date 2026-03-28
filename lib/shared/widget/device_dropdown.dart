@@ -13,20 +13,33 @@ class DeviceDropdown extends StatefulWidget {
 }
 
 class _DeviceDropdownState extends State<DeviceDropdown> {
-  late AudioDeviceContext _deviceContext;
-  late List<AudioDeviceInfo> _devices;
+  List<AudioDeviceInfo> _devices = [];
+
+  void _refreshDeviceList() {
+    final audioState = Provider.of<AudioState>(context, listen: false);
+    try {
+      final deviceContext = AudioDeviceContext(backends: [audioState.backend]);
+      _devices = deviceContext.getDevices(AudioDeviceType.playback);
+    } catch (_) {
+      // Keep existing list if enumeration fails.
+    }
+  }
 
   @override
-  void initState() {
-    super.initState();
-    final audioState = Provider.of<AudioState>(context, listen: false);
-    _deviceContext = AudioDeviceContext(backends: [audioState.backend]);
-    _devices = _deviceContext.getDevices(AudioDeviceType.playback);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _refreshDeviceList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final audioState = Provider.of<AudioState>(context, listen: false);
+    final audioState = context.watch<AudioState>();
+
+    // Ensure device list includes the current output device.
+    if (audioState.outputDevice != null &&
+        !_devices.any((d) => d.name == audioState.outputDevice!.name)) {
+      _refreshDeviceList();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -53,8 +66,12 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
                         .where((d) => d.name == deviceName)
                         .firstOrNull;
                     if (device == null) return;
+                    audioState.userSelectedDevice = true;
                     App.of(context).applyAudioState(
-                      audioState.copyWith(outputDevice: device),
+                      audioState.copyWith(
+                        outputDevice: device,
+                        userSelectedDevice: true,
+                      ),
                     );
                   },
                 ),
