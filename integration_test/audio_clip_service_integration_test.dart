@@ -71,10 +71,10 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // isTrimmed: false — convert to WAV path
+  // isTrimmed: false — copy as-is path
   // ---------------------------------------------------------------------------
   group('createClip (isTrimmed: false)', () {
-    testWidgets('converts WAV file and saves correct metadata to Hive', (tester) async {
+    testWidgets('copies WAV file and saves correct metadata to Hive', (tester) async {
       final sourcePath = fixture('sine_440hz_1s.wav');
 
       await service.createClip(
@@ -99,7 +99,7 @@ void main() {
       expect(destFile.lengthSync(), greaterThan(0));
     });
 
-    testWidgets('converts MP3 file to WAV', (tester) async {
+    testWidgets('copies MP3 file preserving extension', (tester) async {
       await service.createClip(
         sourcePath: fixture('sine_440hz_3s.mp3'),
         startSec: 0.0,
@@ -108,12 +108,12 @@ void main() {
       );
 
       final clip = repo.getAllClips().first;
-      // isTrimmed: false always converts to WAV
-      expect(clip.fileName, endsWith('.wav'));
+      // isTrimmed: false copies as-is; conversion happens at import time
+      expect(clip.fileName, endsWith('.mp3'));
       expect(File(p.join(clipsDir.path, clip.fileName)).existsSync(), isTrue);
     });
 
-    testWidgets('converts FLAC file to WAV', (tester) async {
+    testWidgets('copies FLAC file preserving extension', (tester) async {
       await service.createClip(
         sourcePath: fixture('sine_440hz_3s.flac'),
         startSec: 0.0,
@@ -122,8 +122,8 @@ void main() {
       );
 
       final clip = repo.getAllClips().first;
-      // isTrimmed: false always converts to WAV
-      expect(clip.fileName, endsWith('.wav'));
+      // isTrimmed: false copies as-is; conversion happens at import time
+      expect(clip.fileName, endsWith('.flac'));
     });
 
     testWidgets('multiple createClip calls store multiple clips', (tester) async {

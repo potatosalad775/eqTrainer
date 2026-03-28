@@ -67,10 +67,10 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
-    // createClip — isTrimmed: false (convert to WAV)
+    // createClip — isTrimmed: false (copy as-is)
     // -------------------------------------------------------------------------
     group('createClip (isTrimmed: false)', () {
-      test('converts file to WAV and saves correct metadata', () async {
+      test('copies file and saves correct metadata', () async {
         final srcFile = File(p.join(tmpSrc.path, 'track.wav'))
           ..writeAsBytesSync(List.filled(100, 0));
 
@@ -95,7 +95,7 @@ void main() {
         expect(destFile.lengthSync(), equals(100));
       });
 
-      test('always outputs .wav regardless of source extension', () async {
+      test('preserves source extension when not trimmed', () async {
         final srcFile = File(p.join(tmpSrc.path, 'song.mp3'))
           ..writeAsBytesSync(List.filled(50, 0));
 
@@ -108,11 +108,12 @@ void main() {
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        // isTrimmed: false always converts to WAV
-        expect(clip.fileName, endsWith('.wav'));
+        // isTrimmed: false copies as-is, preserving source extension
+        // (conversion to m4a/wav happens at import time, not in createClip)
+        expect(clip.fileName, endsWith('.mp3'));
       });
 
-      test('normalizes unsupported extension to .wav', () async {
+      test('preserves unsupported extension when not trimmed', () async {
         final srcFile = File(p.join(tmpSrc.path, 'audio.aac'))
           ..writeAsBytesSync(List.filled(50, 0));
 
@@ -125,7 +126,8 @@ void main() {
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        expect(clip.fileName, endsWith('.wav'));
+        // Source extension preserved; conversion happens at import time
+        expect(clip.fileName, endsWith('.aac'));
       });
 
       test('ogAudioName is basename of sourcePath', () async {
