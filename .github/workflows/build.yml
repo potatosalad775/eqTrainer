@@ -158,7 +158,10 @@ jobs:
       - name: Update system dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+          sudo apt-get install -y clang cmake git ninja-build \
+          pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
+          libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+          gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
   
       - name: Enable flutter_distributor
         run: |
