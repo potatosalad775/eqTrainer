@@ -7,7 +7,9 @@ import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 
 class AudioImportFormatCard extends StatefulWidget {
-  const AudioImportFormatCard({super.key});
+  const AudioImportFormatCard({super.key, this.onChanged});
+
+  final VoidCallback? onChanged;
 
   @override
   State<AudioImportFormatCard> createState() => _AudioImportFormatCardState();
@@ -50,6 +52,7 @@ class _AudioImportFormatCardState extends State<AudioImportFormatCard> {
               savedMiscSettingsValue.copyWith(inputImportFormat: value),
             );
           });
+          widget.onChanged?.call();
         },
       ),
     );

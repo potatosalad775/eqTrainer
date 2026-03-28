@@ -7,9 +7,14 @@ import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 
-class AudioSettingsPage extends StatelessWidget {
+class AudioSettingsPage extends StatefulWidget {
   const AudioSettingsPage({super.key});
 
+  @override
+  State<AudioSettingsPage> createState() => _AudioSettingsPageState();
+}
+
+class _AudioSettingsPageState extends State<AudioSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +24,7 @@ class AudioSettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         children: [
-          const AudioImportFormatCard(),
+          AudioImportFormatCard(onChanged: () => setState(() {})),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC".tr()),
