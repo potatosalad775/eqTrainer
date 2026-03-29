@@ -123,9 +123,18 @@ final class AudioState extends ChangeNotifier {
       throw Exception(e.toString());
     }
 
+    final activeBackend = deviceContext.activeBackend;
+    final defaultDevice = deviceContext.getDevices(AudioDeviceType.playback).where((d) => d.isDefault).firstOrNull;
+
+    // Dispose the probe context immediately — keeping it alive can interfere
+    // with the playback AudioDeviceContext created later in the audio isolate,
+    // especially on AAudio/Android where multiple ma_contexts on the same
+    // backend cause start-up failures.
+    AudioResourceManager.dispose(deviceContext.resourceId);
+
     return AudioState(
-      backend: deviceContext.activeBackend,
-      outputDevice: deviceContext.getDevices(AudioDeviceType.playback).where((d) => d.isDefault).firstOrNull,
+      backend: activeBackend,
+      outputDevice: defaultDevice,
     );
   }
 }
