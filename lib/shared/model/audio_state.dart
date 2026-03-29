@@ -104,7 +104,7 @@ final class AudioState extends ChangeNotifier {
       for (final backend in AudioDeviceBackend.values) {
         backends[backend] = switch (backend) {
           AudioDeviceBackend.coreAudio => Platform.isIOS || Platform.isMacOS,
-          AudioDeviceBackend.aaudio => Platform.isAndroid,
+          AudioDeviceBackend.aaudio => false,
           AudioDeviceBackend.openSLES => Platform.isAndroid,
           AudioDeviceBackend.wasapi => Platform.isWindows,
           AudioDeviceBackend.alsa => Platform.isLinux,

@@ -65,7 +65,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
       for (final backend in supportedBackends) {
         backends[backend] = switch (backend) {
           AudioDeviceBackend.coreAudio => Platform.isMacOS || Platform.isIOS,
-          AudioDeviceBackend.aaudio => Platform.isAndroid,
+          AudioDeviceBackend.aaudio => false,
           AudioDeviceBackend.openSLES => Platform.isAndroid,
           AudioDeviceBackend.wasapi => Platform.isWindows,
           AudioDeviceBackend.alsa => Platform.isLinux,
@@ -164,6 +164,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
                 backend: deviceContext.activeBackend,
                 outputDevice: deviceContext.getDevices(AudioDeviceType.playback).where((d) => d.isDefault).firstOrNull,
               ),
+              savedBackendList: selectedBackendList,
             );
           }
           : null,

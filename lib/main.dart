@@ -202,10 +202,15 @@ class AppState extends State<App> with WidgetsBindingObserver {
     );
   }
 
-  void applyAudioState(AudioState state) {
+  void applyAudioState(AudioState newState, {List<String>? savedBackendList}) {
+    _audioState.stopDevicePolling();
+    if (savedBackendList != null) {
+      backendList = savedBackendList;
+    }
     setState(() {
-      _audioState = state;
+      _audioState = newState;
     });
+    _audioState.startDevicePolling();
   }
 }
 
