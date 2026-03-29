@@ -95,7 +95,7 @@
   "IMPORT_ALERT_ABORTED_BUTTON": "확인",
   ## Loading Dialog - Converting Audio Clip
   "IMPORT_CONVERTING_1": "잠시만 기다려주세요...",
-  "IMPORT_CONVERTING_2": "호환되지 않는 오디오 파일을 변환하는 중입니다.",
+  "IMPORT_CONVERTING_2": "오디오 파일을 최적화하는 중입니다.",
   ## CLIP EDITOR
   ### Time Stamp Indicator
   ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value

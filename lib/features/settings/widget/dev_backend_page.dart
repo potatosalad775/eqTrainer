@@ -94,7 +94,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("DEV_SETTING_BACKEND_APPBAR").tr(),
+        title: const Text("AUDIO_SETTING_BACKEND_APPBAR").tr(),
       ),
       body: MaxWidthCenterBox(
         child: ListView.builder(
@@ -133,7 +133,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
                 case MaResult.noBackend:
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text("DEV_SETTING_BACKEND_SNACKBAR_ERROR").tr(),
+                      content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_ERROR").tr(),
                     ),
                   );
                 default:
@@ -152,7 +152,7 @@ class _DevBackendPageState extends State<DevBackendPage> {
             // Notify
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text("DEV_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
+                content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
                   namedArgs: {
                     "_BACKEND": '\'${_backendName(deviceContext.activeBackend)}\''
                   }
