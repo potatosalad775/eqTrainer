@@ -46,7 +46,7 @@ packages:
     description:
       path: "."
       ref: custom
-      resolved-ref: "8725e6e88ba02e0e69dc352be27b5136e0a0903a"
+      resolved-ref: d2f6752e3301475ec6a76d5cc79eb128bfe063e2
       url: "https://github.com/potatosalad775/audio_decoder.git"
     source: git
     version: "0.7.4"

@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
-import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
@@ -64,75 +63,78 @@ class _ImportPageState extends State<ImportPage> {
             title: Text("IMPORT_APPBAR_TITLE".tr()),
           ),
           body: SafeArea(
-            child: MaxWidthCenterBox(
-              child: ValueListenableBuilder<ImportPageState>(
-                valueListenable: importPageState,
-                builder: (context, value, _) {
-                  if (value == ImportPageState.error ||
-                      value == ImportPageState.timeout) {
-                    return AlertDialog(
-                      title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                      content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
-                        )
-                      ],
-                    );
-                  } else if (value == ImportPageState.aborted) {
-                    return AlertDialog(
-                      title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                      content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
-                        )
-                      ],
-                    );
-                  } else if (value == ImportPageState.converting) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 20),
-                          const Text("IMPORT_CONVERTING_1").tr(),
-                          const Text("IMPORT_CONVERTING_2").tr(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: AppDimens.maxWidgetWidth),
+                child: ValueListenableBuilder<ImportPageState>(
+                  valueListenable: importPageState,
+                  builder: (context, value, _) {
+                    if (value == ImportPageState.error ||
+                        value == ImportPageState.timeout) {
+                      return AlertDialog(
+                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                        content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
+                          )
                         ],
-                      ),
-                    );
-                  } else if (value == ImportPageState.loading) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  } else {
-                    return const Padding(
-                      padding: EdgeInsets.all(AppDimens.padding),
-                      child:  Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // Position Slider with Timestamp
-                          EditorPositionSlider(),
-                          // Audio Control Button Row
-                          EditorControlButtonGroup(),
-                          SizedBox(height: 32),
-                          // Set Start / End Buttons
-                          EditorClipButtonGroup(),
-                          SizedBox(height: 16),
-                          // Done Button - add to Database
-                          EditorClipSaveButton(),
+                      );
+                    } else if (value == ImportPageState.aborted) {
+                      return AlertDialog(
+                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                        content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
+                          )
                         ],
-                      ),
-                    );
-                  }
-                },
+                      );
+                    } else if (value == ImportPageState.converting) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 20),
+                            const Text("IMPORT_CONVERTING_1").tr(),
+                            const Text("IMPORT_CONVERTING_2").tr(),
+                          ],
+                        ),
+                      );
+                    } else if (value == ImportPageState.loading) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    } else {
+                      return const Padding(
+                        padding: EdgeInsets.all(AppDimens.padding),
+                        child:  Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // Position Slider with Timestamp
+                            EditorPositionSlider(),
+                            // Audio Control Button Row
+                            EditorControlButtonGroup(),
+                            SizedBox(height: 32),
+                            // Set Start / End Buttons
+                            EditorClipButtonGroup(),
+                            SizedBox(height: 16),
+                            // Done Button - add to Database
+                            EditorClipSaveButton(),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
             ),
           ),

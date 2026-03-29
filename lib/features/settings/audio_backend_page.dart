@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:coast_audio/coast_audio.dart';
@@ -6,13 +7,12 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
-import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 
-class DevBackendPage extends StatefulWidget {
-  const DevBackendPage({super.key});
+class AudioBackendPage extends StatefulWidget {
+  const AudioBackendPage({super.key});
 
   @override
-  State<DevBackendPage> createState() => _DevBackendPageState();
+  State<AudioBackendPage> createState() => _AudioBackendPageState();
 }
 
 String _backendName(AudioDeviceBackend backend) => switch (backend) {
@@ -48,7 +48,7 @@ String _backendKey(AudioDeviceBackend backend) => switch (backend) {
   AudioDeviceBackend.dummy      => 'dummy',
 };
 
-class _DevBackendPageState extends State<DevBackendPage> {
+class _AudioBackendPageState extends State<AudioBackendPage> {
   final backends = <AudioDeviceBackend, bool>{};
   List<AudioDeviceBackend> supportedBackends = [];
 
@@ -96,27 +96,30 @@ class _DevBackendPageState extends State<DevBackendPage> {
       appBar: AppBar(
         title: const Text("AUDIO_SETTING_BACKEND_APPBAR").tr(),
       ),
-      body: MaxWidthCenterBox(
-        child: ListView.builder(
-          shrinkWrap: false,
-          itemCount: supportedBackends.length + 1,
-          itemBuilder: (context, index) {
-            if(index != supportedBackends.length) {
-              final backend = supportedBackends[index];
-              return CheckboxListTile.adaptive(
-                value: backends[backend],
-                title: Text(_backendName(backend)),
-                subtitle: Text(_backendPlatform(backend)),
-                onChanged: (isChecked) {
-                  setState(() {
-                    backends[backend] = isChecked!;
-                  });
-                },
-              );
-            } else {
-              return Container(height: 80);
-            }
-          },
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppDimens.maxWidgetWidth),
+          child: ListView.builder(
+            shrinkWrap: false,
+            itemCount: supportedBackends.length + 1,
+            itemBuilder: (context, index) {
+              if(index != supportedBackends.length) {
+                final backend = supportedBackends[index];
+                return CheckboxListTile.adaptive(
+                  value: backends[backend],
+                  title: Text(_backendName(backend)),
+                  subtitle: Text(_backendPlatform(backend)),
+                  onChanged: (isChecked) {
+                    setState(() {
+                      backends[backend] = isChecked!;
+                    });
+                  },
+                );
+              } else {
+                return Container(height: 80);
+              }
+            },
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
