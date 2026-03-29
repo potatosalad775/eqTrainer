@@ -11,9 +11,9 @@ class PeakingEQNode extends AudioFilterNode {
   final AudioFormat format;
   final PeakingEQFilter filter;
 
-  /// Pre-allocated scratch buffer for storing dry samples during bypass.
+  /// Pre-allocated scratch buffer for storing dry bytes during bypass.
   /// Sized lazily on first use; reused across all subsequent process() calls.
-  Float32List? _scratchBuffer;
+  Uint8List? _scratchBuffer;
 
   bool _bypassed = true;
 
@@ -34,15 +34,15 @@ class PeakingEQNode extends AudioFilterNode {
   @override
   AudioReadResult process(AudioBuffer buffer, bool isEnd) {
     if (_bypassed) {
-      final samples = buffer.asFloat32ListView();
-      final len = samples.length;
+      final bytes = buffer.asUint8ListViewBytes();
+      final len = bytes.length;
       // Lazily allocate scratch buffer; reuse across calls (zero GC pressure).
       if (_scratchBuffer == null || _scratchBuffer!.length < len) {
-        _scratchBuffer = Float32List(len);
+        _scratchBuffer = Uint8List(len);
       }
-      _scratchBuffer!.setRange(0, len, samples);
+      _scratchBuffer!.setRange(0, len, bytes);
       filter.process(buffer, buffer);
-      samples.setRange(0, len, _scratchBuffer!);
+      bytes.setRange(0, len, _scratchBuffer!);
     } else {
       filter.process(buffer, buffer);
     }
