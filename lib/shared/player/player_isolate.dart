@@ -457,7 +457,6 @@ class AudioPlayer {
     bool volumeCompensation = false,
   })  : _volumeCompensation = volumeCompensation,
         _decoderNode = DecoderNode(decoder: decoder),
-        _volumeNode = VolumeNode(volume: 0.9),
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
             filter: PeakingEQFilter(
@@ -478,8 +477,7 @@ class AudioPlayer {
     _ringSourceNode =
         _RingBufferSourceNode(ring: _ringBuffer, format: decoder.outputFormat);
 
-    _ringSourceNode.outputBus.connect(_volumeNode.inputBus);
-    _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
+    _ringSourceNode.outputBus.connect(_peakingEQNode.inputBus);
     _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
     // EQ filter stays in the chain at all times (no bypass toggle).
     // Gain is set to 0 dB (transparent) until a session round begins.
@@ -553,8 +551,6 @@ class AudioPlayer {
   final bool _volumeCompensation;
 
   final DecoderNode _decoderNode;
-
-  final VolumeNode _volumeNode;
 
   final PeakingEQNode _peakingEQNode;
 
@@ -698,7 +694,10 @@ class AudioPlayer {
       final buffer = frames.lock();
       final res = _decoderNode.outputBus.read(buffer);
       if (res.frameCount > 0) {
-        final wrote = _ringBuffer.write(buffer.limit(res.frameCount));
+        final writeBuf = res.frameCount == buffer.sizeInFrames
+            ? buffer
+            : buffer.limit(res.frameCount);
+        final wrote = _ringBuffer.write(writeBuf);
         if (wrote <= 0) {
           frames.unlock();
           break; // ring full or cannot write
@@ -712,6 +711,11 @@ class AudioPlayer {
       safety++;
     }
 
+    // Pre-compute constants used every tick.
+    final deviceCapacity = _deviceBufferCapacityFrames ?? capacityFrames;
+    final deviceTargetFill = (deviceCapacity * 0.9).floor();
+    final ringHighWater = (_ringBuffer.capacity * 0.9).floor();
+
     // Short tick (10ms) and adaptive while-fill based on available write frames
     AudioIntervalClock(const AudioTime(0.01)).runWithBuffer(
       frames: _chunkBuffer!,
@@ -722,12 +726,8 @@ class AudioPlayer {
 
         // Compute available space in device buffer (capacity - currently queued frames)
         final availableRead = _playbackNode.device.availableReadFrames;
-        final capacity = _deviceBufferCapacityFrames ?? capacityFrames;
-        var availableWrite = capacity - availableRead;
-
-        // Keep the device buffer around ~90% full; leave small headroom
-        final targetFill = (capacity * 0.9).floor();
-        availableWrite = (targetFill - availableRead).clamp(0, capacity);
+        var availableWrite =
+            (deviceTargetFill - availableRead).clamp(0, deviceCapacity);
 
         while (availableWrite >= buffer.sizeInFrames) {
           final result = _playbackNode.outputBus.read(buffer);
@@ -750,12 +750,14 @@ class AudioPlayer {
           return false; // stop when paused/stopped
         }
 
-        // Fill up to ~90% of ring capacity each tick to avoid long bursts
-        final highWater = (_ringBuffer.capacity * 0.9).floor();
-        while (_ringBuffer.length + buffer.sizeInFrames <= highWater) {
+        while (_ringBuffer.length + buffer.sizeInFrames <= ringHighWater) {
           final res = _decoderNode.outputBus.read(buffer);
           if (res.frameCount > 0) {
-            final wrote = _ringBuffer.write(buffer.limit(res.frameCount));
+            // Skip limit() allocation when decoder returned a full chunk.
+            final writeBuf = res.frameCount == buffer.sizeInFrames
+                ? buffer
+                : buffer.limit(res.frameCount);
+            final wrote = _ringBuffer.write(writeBuf);
             if (wrote <= 0) {
               break;
             }
@@ -790,9 +792,10 @@ class AudioPlayer {
     if (_volumeCompensation) {
       // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
       // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
-      _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
+      // Applied at the device level so VolumeNode stays at 1.0 (fast-path skip).
+      _playbackNode.device.volume = pow(10, -value.abs() / 20.0).toDouble();
     } else {
-      _volumeNode.volume = 0.9;
+      _playbackNode.device.volume = 0.9;
     }
     // Always keep the filter configured with the active gain so it is ready
     // when the user toggles EQ on (bypass off).
