@@ -159,7 +159,7 @@ packages:
     description:
       path: "."
       ref: custom
-      resolved-ref: "9496c645bf056be58961c8de1fbf631e60cc830d"
+      resolved-ref: "2166f8414d2a489bc3e11bad2603629cf69e5067"
       url: "https://github.com/potatosalad775/coast_audio.git"
     source: git
     version: "1.0.0"
