@@ -133,10 +133,12 @@ class _PlayerMessage {
     required this.backend,
     required this.outputDeviceId,
     required this.path,
+    this.volumeCompensation = false,
   });
   final AudioDeviceBackend backend;
   final AudioDeviceId? outputDeviceId;
   final String? path;
+  final bool volumeCompensation;
 }
 
 /// A player isolate that plays audio from a file or buffer.
@@ -149,17 +151,26 @@ class PlayerIsolate extends ChangeNotifier {
   bool get isLaunched => _isolate.isLaunched;
   Timer? _playerStateUpdateTimer;
   bool _isUpdating = false;
+  bool _eqToggleInFlight = false;
+  bool? _pendingEQValue;
+  DateTime _eqToggleLastEnd = DateTime(0);
+
+  bool _seekInFlight = false;
+  AudioTime? _pendingSeekPosition;
+  DateTime _seekLastEnd = DateTime(0);
 
   Future<void> launch({
     required AudioDeviceBackend backend,
     required AudioDeviceId? outputDeviceId,
     required String? path,
+    bool volumeCompensation = false,
   }) async {
     await _isolate.launch(
       initialMessage: _PlayerMessage(
         backend: backend,
         outputDeviceId: outputDeviceId,
         path: path,
+        volumeCompensation: volumeCompensation,
       ),
     );
     // Fetch initial state immediately so widgets don't wait for the first tick.
@@ -196,11 +207,29 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<PlayerPositionResponse?> seek(AudioTime position) async {
-    final result =
-        await _isolate.request(PlayerHostRequestSeek(position: position));
     _lastPosition = position;
     notifyListeners();
-    return result;
+
+    if (_seekInFlight) {
+      _pendingSeekPosition = position;
+      return null;
+    }
+
+    _seekInFlight = true;
+    try {
+      var result =
+          await _isolate.request(PlayerHostRequestSeek(position: position));
+      while (_pendingSeekPosition != null) {
+        final next = _pendingSeekPosition!;
+        _pendingSeekPosition = null;
+        result =
+            await _isolate.request(PlayerHostRequestSeek(position: next));
+      }
+      return result;
+    } finally {
+      _seekInFlight = false;
+      _seekLastEnd = DateTime.now();
+    }
   }
 
   Future<void> setVolume(double volume) {
@@ -208,9 +237,32 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> setEQ(bool enableEQ) async {
-    await _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+    if (_lastEQState == enableEQ) return; // Skip redundant
+
     _lastEQState = enableEQ;
-    notifyListeners();
+    notifyListeners(); // Optimistic: UI disables button immediately
+
+    if (_eqToggleInFlight) {
+      _pendingEQValue = enableEQ; // Coalesce: remember latest
+      return;
+    }
+
+    _eqToggleInFlight = true;
+    try {
+      await _isolate.request(PlayerHostRequestSetEQ(enableEQ: enableEQ));
+      // Drain pending (only the last value matters)
+      while (_pendingEQValue != null) {
+        final next = _pendingEQValue!;
+        _pendingEQValue = null;
+        if (next != enableEQ) {
+          enableEQ = next;
+          await _isolate.request(PlayerHostRequestSetEQ(enableEQ: next));
+        }
+      }
+    } finally {
+      _eqToggleInFlight = false;
+      _eqToggleLastEnd = DateTime.now();
+    }
   }
 
   Future<void> setEQGain(double gainDb) {
@@ -275,7 +327,11 @@ class PlayerIsolate extends ChangeNotifier {
   bool? _lastEQState;
 
   void _playerStateUpdate() async {
-    if (!isLaunched || _isUpdating) return;
+    if (!isLaunched || _isUpdating || _eqToggleInFlight || _seekInFlight) return;
+    // After an EQ toggle, give the audio isolate breathing room for MP3 decoding
+    // before resuming polling traffic.
+    if (DateTime.now().difference(_eqToggleLastEnd).inMilliseconds < 200) return;
+    if (DateTime.now().difference(_seekLastEnd).inMilliseconds < 100) return;
     _isUpdating = true;
     try {
       final all = await getAllState();
@@ -295,7 +351,7 @@ class PlayerIsolate extends ChangeNotifier {
         _lastDuration = all.duration;
         shouldNotify = true;
       }
-      if (all.eqEnabled != _lastEQState) {
+      if (all.eqEnabled != _lastEQState && !_eqToggleInFlight) {
         _lastEQState = all.eqEnabled;
         shouldNotify = true;
       }
@@ -334,6 +390,7 @@ class PlayerIsolate extends ChangeNotifier {
       backend: message.backend,
       dataSource: dataSource,
       deviceId: message.outputDeviceId,
+      volumeCompensation: message.volumeCompensation,
     );
 
     messenger.listenRequest<PlayerHostRequest>(
@@ -376,9 +433,9 @@ class PlayerIsolate extends ChangeNotifier {
               eqEnabled: player.getEqState(),
             );
           case PlayerHostRequestSetEQParams():
-            player.setEQ(request.enableEQ);
             player.setEQFreq(request.frequency);
             player.setEQGain(request.gainDb);
+            player.setEQ(request.enableEQ);
             break;
         }
       },
@@ -397,8 +454,9 @@ class AudioPlayer {
     // Chunk size for adaptive feeding (tunable: 2048~8192)
     this.chunkFrames = 4096,
     AudioDeviceId? initialDeviceId,
-  })  : _decoderNode = DecoderNode(decoder: decoder),
-        _volumeNode = VolumeNode(volume: 0.9),
+    bool volumeCompensation = false,
+  })  : _volumeCompensation = volumeCompensation,
+        _decoderNode = DecoderNode(decoder: decoder),
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
             filter: PeakingEQFilter(
@@ -419,10 +477,10 @@ class AudioPlayer {
     _ringSourceNode =
         _RingBufferSourceNode(ring: _ringBuffer, format: decoder.outputFormat);
 
-    _ringSourceNode.outputBus.connect(_volumeNode.inputBus);
-    _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
+    _ringSourceNode.outputBus.connect(_peakingEQNode.inputBus);
     _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
-    _peakingEQNode.bypass = true;
+    // EQ filter stays in the chain at all times (no bypass toggle).
+    // Gain is set to 0 dB (transparent) until a session round begins.
     // Underrun/xrun logging
     _playbackNode.device.notification.listen((notification) {
       debugPrint(
@@ -439,18 +497,37 @@ class AudioPlayer {
     required AudioDeviceBackend backend,
     required AudioInputDataSource dataSource,
     AudioDeviceId? deviceId,
+    bool volumeCompensation = false,
   }) {
-    // Find the decoder by trying to decode the audio data with different decoders
+    // Find the decoder by trying to decode the audio data with different decoders.
+    // Order: WAV (pure Dart) → AAC/M4A (FDK-AAC) → miniaudio fallback (MP3, FLAC, etc.)
     AudioDecoder decoder;
+    final errors = <String, String>{};
     try {
       decoder = WavAudioDecoder(dataSource: dataSource);
-    } on Exception catch (_) {
+    } on Exception catch (e) {
+      errors['WAV'] = e.toString();
+      if (dataSource.canSeek) dataSource.position = 0;
       try {
-        decoder = MaAudioDecoder(dataSource: dataSource);
+        decoder = AacAudioDecoder(dataSource: dataSource);
       } on Exception catch (e) {
-        throw Exception('Could not find the decoder.\nInner exception: $e');
+        errors['AAC'] = e.toString();
+        if (dataSource.canSeek) dataSource.position = 0;
+        try {
+          decoder = MaAudioDecoder(dataSource: dataSource);
+        } on Exception catch (e) {
+          errors['miniaudio'] = e.toString();
+          throw Exception(
+            'Could not find a suitable decoder.\n'
+            'Tried decoders:\n'
+            '${errors.entries.map((e) => '  ${e.key}: ${e.value}').join('\n')}',
+          );
+        }
       }
     }
+
+    debugPrint('[AudioPlayer.findDecoder] Selected ${decoder.runtimeType} '
+        '(format: ${decoder.outputFormat})');
 
     final isMobile = Platform.isAndroid || Platform.isIOS;
     return AudioPlayer(
@@ -459,6 +536,7 @@ class AudioPlayer {
       bufferDuration: AudioTime(isMobile ? 0.4 : 0.25),
       chunkFrames: isMobile ? 2048 : 4096,
       initialDeviceId: deviceId,
+      volumeCompensation: volumeCompensation,
     );
   }
 
@@ -470,9 +548,9 @@ class AudioPlayer {
   // Adaptive feeding chunk size (frames)
   final int chunkFrames;
 
-  final DecoderNode _decoderNode;
+  final bool _volumeCompensation;
 
-  final VolumeNode _volumeNode;
+  final DecoderNode _decoderNode;
 
   final PeakingEQNode _peakingEQNode;
 
@@ -555,11 +633,13 @@ class AudioPlayer {
       return;
     }
 
+    // ca_device_start handles the AAudio async-start race condition internally
+    // (force-stop + retry).  If it still throws here, the device truly failed.
     try {
       _playbackNode.device.start();
     } catch (e) {
-      debugPrint("Error while starting device : $e");
-      throw Exception('DeviceInitException : $e');
+      debugPrint("Error while starting device: $e");
+      return;
     }
 
     // Calculate device buffer capacity in frames using the current decoder output format
@@ -595,7 +675,10 @@ class AudioPlayer {
       final buffer = frames.lock();
       final res = _decoderNode.outputBus.read(buffer);
       if (res.frameCount > 0) {
-        final wrote = _ringBuffer.write(buffer.limit(res.frameCount));
+        final writeBuf = res.frameCount == buffer.sizeInFrames
+            ? buffer
+            : buffer.limit(res.frameCount);
+        final wrote = _ringBuffer.write(writeBuf);
         if (wrote <= 0) {
           frames.unlock();
           break; // ring full or cannot write
@@ -609,6 +692,11 @@ class AudioPlayer {
       safety++;
     }
 
+    // Pre-compute constants used every tick.
+    final deviceCapacity = _deviceBufferCapacityFrames ?? capacityFrames;
+    final deviceTargetFill = (deviceCapacity * 0.9).floor();
+    final ringHighWater = (_ringBuffer.capacity * 0.9).floor();
+
     // Short tick (10ms) and adaptive while-fill based on available write frames
     AudioIntervalClock(const AudioTime(0.01)).runWithBuffer(
       frames: _chunkBuffer!,
@@ -619,12 +707,8 @@ class AudioPlayer {
 
         // Compute available space in device buffer (capacity - currently queued frames)
         final availableRead = _playbackNode.device.availableReadFrames;
-        final capacity = _deviceBufferCapacityFrames ?? capacityFrames;
-        var availableWrite = capacity - availableRead;
-
-        // Keep the device buffer around ~90% full; leave small headroom
-        final targetFill = (capacity * 0.9).floor();
-        availableWrite = (targetFill - availableRead).clamp(0, capacity);
+        var availableWrite =
+            (deviceTargetFill - availableRead).clamp(0, deviceCapacity);
 
         while (availableWrite >= buffer.sizeInFrames) {
           final result = _playbackNode.outputBus.read(buffer);
@@ -647,12 +731,14 @@ class AudioPlayer {
           return false; // stop when paused/stopped
         }
 
-        // Fill up to ~90% of ring capacity each tick to avoid long bursts
-        final highWater = (_ringBuffer.capacity * 0.9).floor();
-        while (_ringBuffer.length + buffer.sizeInFrames <= highWater) {
+        while (_ringBuffer.length + buffer.sizeInFrames <= ringHighWater) {
           final res = _decoderNode.outputBus.read(buffer);
           if (res.frameCount > 0) {
-            final wrote = _ringBuffer.write(buffer.limit(res.frameCount));
+            // Skip limit() allocation when decoder returned a full chunk.
+            final writeBuf = res.frameCount == buffer.sizeInFrames
+                ? buffer
+                : buffer.limit(res.frameCount);
+            final wrote = _ringBuffer.write(writeBuf);
             if (wrote <= 0) {
               break;
             }
@@ -671,14 +757,29 @@ class AudioPlayer {
     _playbackNode.device.stop();
   }
 
+  // Track EQ enabled state for the current round.
+  bool _eqEnabled = false;
+
   void setEQ(bool value) {
-    _peakingEQNode.bypass = !value;
+    _eqEnabled = value;
+    // Toggle the node bypass instead of recalculating filter coefficients via
+    // ma_peak2_reinit (FFI). This makes the toggle a simple boolean flip with
+    // zero native overhead, keeping the audio isolate's event loop free for
+    // MP3 decoding and device feeding.
+    _peakingEQNode.bypassed = !value;
   }
 
   void setEQGain(double value) {
-    // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
-    // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
-    _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
+    if (_volumeCompensation) {
+      // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
+      // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
+      // Applied at the device level so VolumeNode stays at 1.0 (fast-path skip).
+      _playbackNode.device.volume = pow(10, -value.abs() / 20.0).toDouble();
+    } else {
+      _playbackNode.device.volume = 0.9;
+    }
+    // Always keep the filter configured with the active gain so it is ready
+    // when the user toggles EQ on (bypass off).
     _peakingEQNode.filter.update(gainDb: value);
   }
 
@@ -687,7 +788,7 @@ class AudioPlayer {
   }
 
   bool getEqState() {
-    return !_peakingEQNode.bypass;
+    return _eqEnabled;
   }
 }
 

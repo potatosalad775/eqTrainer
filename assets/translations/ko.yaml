@@ -72,8 +72,6 @@
   # Playlist Page
   "PLAYLIST_EMPTY_TEXT": "발견된 오디오 클립이 없습니다",
   "PLAYLIST_FOOTER": "원형 체크박스를 드래그하여 순서를 바꿀 수 있습니다.",
-  "PLAYLIST_FOOTER_WINLINUX_1": "mp3 / wav / flac / m4a / aac / ogg 등 다양한 오디오 파일을 사용할 수 있습니다.",
-  "PLAYLIST_FOOTER_WINLINUX_2": "사용 중인 플랫폼에서는 현재 오디오 편집 기능이 제공되지 않습니다.",
   "PLAYLIST_AUDIO_ACTION_DELETE": "삭제",
   ## Alert Dialog - Deleting Audio Clip
   "PLAYLIST_AUDIO_ALERT_DELETE_TITLE": "경고",
@@ -97,7 +95,7 @@
   "IMPORT_ALERT_ABORTED_BUTTON": "확인",
   ## Loading Dialog - Converting Audio Clip
   "IMPORT_CONVERTING_1": "잠시만 기다려주세요...",
-  "IMPORT_CONVERTING_2": "호환되지 않는 오디오 파일을 WAV로 변환하는 중입니다.",
+  "IMPORT_CONVERTING_2": "오디오 파일을 최적화하는 중입니다.",
   ## CLIP EDITOR
   ### Time Stamp Indicator
   ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value
@@ -124,26 +122,37 @@
   "SETTING_CARD_CONTACT_TITLE": "개발자와 연락하기",
   ## Setting Card - Open Source License
   "SETTING_CARD_LICENSE_TITLE": "오픈소스 라이선스",
-  ## Setting Card - Developer Settings
-  "SETTING_CARD_DEV_SETTING_TITLE": "개발자 설정",
+  ## Setting Card - Audio Settings
+  "SETTING_CARD_AUDIO_SETTING_TITLE": "오디오 설정",
   ## Setting Card - Miscellaneous Settings
   "SETTING_CARD_MISC_SETTING_TITLE": "기타 설정",
 
-  # Miscellaneous Settings Page
-  "MISC_SETTING_APPBAR_TITLE": "기타 설정",
   ## Misc Setting Card - Frequency Tooltip Toggle
   "MISC_SETTING_CARD_TOOLTIP_TITLE": "그래프 중심 주파수 표시",
 
-  # Developer Settings Page
-  "DEV_SETTING_APPBAR_TITLE": "개발자 설정",
-  ## DEV SETTING CARD - Android Backend API
-  "DEV_SETTING_CARD_BACKEND_TITLE": "오디오 API",
-  "DEV_SETTING_CARD_BACKEND_DESC":
-    "소리가 생각보다 잘 재생되지 않는다면\n오디오 API를 바꿔보세요.",
-  ## DEV SETTING - Backend
-  "DEV_SETTING_BACKEND_APPBAR": "오디오 백엔드 API 설정",
-  "DEV_SETTING_BACKEND_SNACKBAR_ERROR": "선택하신 오디오 백엔드를 활성화하는데 실패했습니다.",
-  "DEV_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND}가 활성화되었습니다.",
+  # Audio Settings Page
+  "AUDIO_SETTING_APPBAR_TITLE": "오디오 설정",
+  ## Audio Setting Card - Audio Import Format
+  "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "오디오 가져오기 형식",
+  "AUDIO_SETTING_IMPORT_FORMAT_SMART": "스마트",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
+    "AAC 및 WAV 포맷은 우수한 재생 성능을 확보할 수 있습니다. '스마트' 모드에서는 eqTrainer가 무손실 및 손실 오디오 파일을 WAV 또는 AAC 형식으로 변환합니다.",
+  "AUDIO_SETTING_IMPORT_FORMAT_M4A": "AAC (손실)",
+  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무손실)",
+  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL": "원본 유지",
+  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN": "'원본 유지' 옵션은 MP3/FLAC 파일을 그대로 사용하지만, EQ 처리 성능에 영향을 줄 수 있습니다.",
+  ## Audio Setting Card - Volume Compensation Toggle
+  "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "게인 볼륨 보정",
+  "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":
+    "EQ 게인에 비례하여 재생 볼륨을 조절하고 클리핑을 방지합니다. 이 옵션을 비활성화하면 볼륨이 일정하게 유지되지만, 높은 게인 값에서 클리핑 현상이 발생할 수 있습니다.",
+  ## Audio Setting Card - Android Backend API
+  "AUDIO_SETTING_CARD_BACKEND_TITLE": "오디오 API",
+  "AUDIO_SETTING_CARD_BACKEND_DESC":
+    "오디오가 원활하게 재생되지 않는다면, 오디오 백엔드 API를 변경해 보세요.",
+  ## Audio Setting - Backend
+  "AUDIO_SETTING_BACKEND_APPBAR": "오디오 백엔드 API 설정",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_ERROR": "선택한 오디오 백엔드를 활성화하는 데 실패했습니다.",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND}가 활성화되었습니다.",
 
   # Update Alert
   "UPDATE_ALERT_MESSAGE_BODY": "새로운 버전의 eqTrainer가 발견되었습니다!",

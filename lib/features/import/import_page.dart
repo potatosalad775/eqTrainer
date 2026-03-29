@@ -9,10 +9,11 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
-import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/main.dart';
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -26,6 +27,7 @@ class _ImportPageState extends State<ImportPage> {
       ValueNotifier<ImportPageState>(ImportPageState.loading);
   final clipDivProvider = ImportAudioData();
   final importPlayer = ImportPlayer();
+  bool _importing = false;
 
   @override
   void initState() {
@@ -61,75 +63,78 @@ class _ImportPageState extends State<ImportPage> {
             title: Text("IMPORT_APPBAR_TITLE".tr()),
           ),
           body: SafeArea(
-            child: MaxWidthCenterBox(
-              child: ValueListenableBuilder<ImportPageState>(
-                valueListenable: importPageState,
-                builder: (context, value, _) {
-                  if (value == ImportPageState.error ||
-                      value == ImportPageState.timeout) {
-                    return AlertDialog(
-                      title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                      content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
-                        )
-                      ],
-                    );
-                  } else if (value == ImportPageState.aborted) {
-                    return AlertDialog(
-                      title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                      content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
-                        )
-                      ],
-                    );
-                  } else if (value == ImportPageState.converting) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 20),
-                          const Text("IMPORT_CONVERTING_1").tr(),
-                          const Text("IMPORT_CONVERTING_2").tr(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: AppDimens.maxWidgetWidth),
+                child: ValueListenableBuilder<ImportPageState>(
+                  valueListenable: importPageState,
+                  builder: (context, value, _) {
+                    if (value == ImportPageState.error ||
+                        value == ImportPageState.timeout) {
+                      return AlertDialog(
+                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                        content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
+                          )
                         ],
-                      ),
-                    );
-                  } else if (value == ImportPageState.loading) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  } else {
-                    return const Padding(
-                      padding: EdgeInsets.all(AppDimens.padding),
-                      child:  Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // Position Slider with Timestamp
-                          EditorPositionSlider(),
-                          // Audio Control Button Row
-                          EditorControlButtonGroup(),
-                          SizedBox(height: 32),
-                          // Set Start / End Buttons
-                          EditorClipButtonGroup(),
-                          SizedBox(height: 16),
-                          // Done Button - add to Database
-                          EditorClipSaveButton(),
+                      );
+                    } else if (value == ImportPageState.aborted) {
+                      return AlertDialog(
+                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
+                        content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
+                          )
                         ],
-                      ),
-                    );
-                  }
-                },
+                      );
+                    } else if (value == ImportPageState.converting) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 20),
+                            const Text("IMPORT_CONVERTING_1").tr(),
+                            const Text("IMPORT_CONVERTING_2").tr(),
+                          ],
+                        ),
+                      );
+                    } else if (value == ImportPageState.loading) {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    } else {
+                      return const Padding(
+                        padding: EdgeInsets.all(AppDimens.padding),
+                        child:  Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            // Position Slider with Timestamp
+                            EditorPositionSlider(),
+                            // Audio Control Button Row
+                            EditorControlButtonGroup(),
+                            SizedBox(height: 32),
+                            // Set Start / End Buttons
+                            EditorClipButtonGroup(),
+                            SizedBox(height: 16),
+                            // Done Button - add to Database
+                            EditorClipSaveButton(),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -139,11 +144,14 @@ class _ImportPageState extends State<ImportPage> {
   }
 
   Future<void> importFile() async {
+    if (_importing) return;
+    _importing = true;
+
     final audioState = Provider.of<AudioState>(context, listen: false);
     final workflow = context.read<ImportWorkflowService>();
 
     const allowedExtensions = [
-      'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus'
+      'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus', 'xmp4'
     ];
 
     final importResult = await FilePicker.platform.pickFiles(
@@ -170,20 +178,32 @@ class _ImportPageState extends State<ImportPage> {
     final fileName = fileNameList.join();
     final fileExtension = pickedFile.extension?.toLowerCase();
 
-    // Convert unsupported formats to WAV on all platforms
-    if (!['mp3', 'wav', 'flac'].contains(fileExtension)) {
+    // Determine target format based on user's import format setting
+    final sourceExt = '.${fileExtension ?? ''}';
+    final targetExt = targetExtForImport(sourceExt, savedMiscSettingsValue.importFormat);
+
+    if (targetExt != null) {
       importPageState.value = ImportPageState.converting;
       try {
-        filePath = await workflow.convertToWav(
-          fileNameWithoutExt: fileName,
-          sourcePath: filePath,
-        );
+        if (targetExt == '.m4a') {
+          filePath = await workflow.convertToM4a(
+            fileNameWithoutExt: fileName,
+            sourcePath: filePath,
+          );
+        } else {
+          filePath = await workflow.convertToWav(
+            fileNameWithoutExt: fileName,
+            sourcePath: filePath,
+          );
+        }
       } catch (e) {
         debugPrint("Error converting audio file: $e");
         importPageState.value = ImportPageState.error;
         return;
       }
     }
+
+    if (!mounted) return;
 
     try {
       final duration = await workflow.loadAudioFile(

@@ -1,8 +1,8 @@
 import 'package:eq_trainer/features/result/widget/result_item_tile.dart';
 import 'package:eq_trainer/features/result/widget/result_summary_tile.dart';
+import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
-import 'package:eq_trainer/shared/widget/max_width_center_box.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class ResultPage extends StatelessWidget {
@@ -14,17 +14,22 @@ class ResultPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text("RESULT_APPBAR_TITLE").tr(),
       ),
-      body: MaxWidthCenterBox(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                itemCount: SessionStore.resultFrequencyLabelList.length,
-                itemBuilder: (context, index) => ResultItemTile(index: index),
-              ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: AppDimens.maxWidgetWidth),
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: SessionStore.resultFrequencyLabelList.length,
+                    itemBuilder: (context, index) => ResultItemTile(index: index),
+                  ),
+                ),
+                const ResultSummaryTile(),
+              ],
             ),
-            const ResultSummaryTile(),
-          ],
+          ),
         ),
       ),
     );

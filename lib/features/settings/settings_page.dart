@@ -1,3 +1,4 @@
+import 'package:eq_trainer/features/settings/audio_settings_page.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -6,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 import 'package:eq_trainer/features/settings/widget/freq_tooltip_card.dart';
-import 'package:eq_trainer/features/settings/widget/dev_backend_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -21,7 +21,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(5, 0, 5, 5),
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       children: [
         // Language Drop Down Menu
         SettingsCard(
@@ -65,26 +65,24 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             )
         ),
+        // Misc Settings
+        const FrequencyTooltipCard(),
         const Divider(
           indent: 8,
           endIndent: 8,
         ),
-        // Misc Settings
-        const FrequencyTooltipCard(),
-        // Developer Settings
+        // Audio Settings
         GestureDetector(
           child: SettingsCard(
             icon: Icons.build,
-            title: "DEV_SETTING_CARD_BACKEND_TITLE".tr(),
+            title: "SETTING_CARD_AUDIO_SETTING_TITLE".tr(),
             trailing: const Icon(Icons.keyboard_arrow_right),
           ),
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DevBackendPage()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AudioSettingsPage())
+            );
           },
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: Center(child: const Text("DEV_SETTING_CARD_BACKEND_DESC").tr()),
         ),
         const Divider(
           indent: 8,

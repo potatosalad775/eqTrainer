@@ -8,7 +8,7 @@ part of 'audio_clip.dart';
 
 class AudioClipAdapter extends TypeAdapter<AudioClip> {
   @override
-  final int typeId = 0;
+  final typeId = 0;
 
   @override
   AudioClip read(BinaryReader reader) {
@@ -19,7 +19,7 @@ class AudioClipAdapter extends TypeAdapter<AudioClip> {
     return AudioClip(
       fields[0] as String,
       fields[1] as String,
-      fields[2] as double,
+      (fields[2] as num).toDouble(),
       fields[3] as bool,
     );
   }

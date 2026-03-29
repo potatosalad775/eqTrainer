@@ -1,3 +1,4 @@
+import 'package:eq_trainer/features/session/widgets/session_eq_button_row.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -15,63 +16,22 @@ class SessionSelector extends StatelessWidget {
   });
   final bool isPortrait;
 
-  Widget _buildOriginalButton(
-    BuildContext context, {
-    required bool pEQState,
-    required SessionController sessionController,
-  }) {
-    final player = context.read<PlayerIsolate>();
-    return Expanded(
-      child: ElevatedButton(
-        onPressed: pEQState ? () { sessionController.setEqEnabled(player, false); } : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: context.colors.primary,
-          foregroundColor: context.colors.onPrimary,
-          minimumSize: const Size(100, 64),
-        ),
-        child: Text("SESSION_BUTTON_ORIGINAL".tr()),
-      ),
-    );
-  }
-
-  Widget _buildEqButton(
-    BuildContext context, {
-    required bool pEQState,
-    required SessionController sessionController,
-  }) {
-    final player = context.read<PlayerIsolate>();
-    return Expanded(
-      child: ElevatedButton(
-        onPressed: !pEQState ? () { sessionController.setEqEnabled(player, true); } : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: context.colors.primary,
-          foregroundColor: context.colors.onPrimary,
-          minimumSize: const Size(100, 64),
-        ),
-        child: Text("SESSION_BUTTON_EQ_FILTERED".tr()),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final player = context.read<PlayerIsolate>();
-    final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
-    final sessionStore = context.read<SessionStore>();
+  void onSubmit(BuildContext context) {
     final sessionController = context.read<SessionController>();
-    final gap = isPortrait ? 16.0 : 20.0;
 
-    void onSubmit() => sessionController.submitAnswer(
-      player: player,
-      sessionStore: sessionStore,
+    sessionController.submitAnswer(
+      player: context.read<PlayerIsolate>(),
+      sessionStore: context.read<SessionStore>(),
       sessionParameter: context.read<SessionParameter>(),
       onResult: (isCorrect, correctIndex) {
         toastification.show(
           type: isCorrect ? ToastificationType.success : ToastificationType.error,
           style: ToastificationStyle.flatColored,
-          description: Text(isCorrect
-              ? "SESSION_SNACKBAR_CORRECT".tr(namedArgs: {'_INDEX': correctIndex.toString()})
-              : "SESSION_SNACKBAR_INCORRECT".tr(namedArgs: {'_INDEX': correctIndex.toString()})),
+          description: Text(isCorrect 
+            ? "SESSION_SNACKBAR_CORRECT" 
+            : "SESSION_SNACKBAR_INCORRECT").tr(
+              namedArgs: {'_INDEX': correctIndex.toString()}
+            ),
           alignment: Alignment.topCenter,
           autoCloseDuration: const Duration(seconds: 3),
           animationDuration: const Duration(milliseconds: 300),
@@ -80,15 +40,17 @@ class SessionSelector extends StatelessWidget {
         );
       },
     );
+  }
 
+  @override
+  Widget build(BuildContext context) {
     if (isPortrait) {
       return Row(
         spacing: 12,
         children: [
-          _buildOriginalButton(context, pEQState: pEQState, sessionController: sessionController),
-          _buildEqButton(context, pEQState: pEQState, sessionController: sessionController),
+          const Expanded(child: SessionEqButtonRow()),
           ElevatedButton(
-            onPressed: onSubmit,
+            onPressed: () => onSubmit(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: context.colors.tertiary,
               foregroundColor: context.colors.onTertiary,
@@ -103,16 +65,10 @@ class SessionSelector extends StatelessWidget {
     } else {
       return Column(
         children: [
-          Row(
-            spacing: 12,
-            children: [
-              _buildOriginalButton(context, pEQState: pEQState, sessionController: sessionController),
-              _buildEqButton(context, pEQState: pEQState, sessionController: sessionController),
-            ],
-          ),
-          SizedBox(height: gap),
+          const SessionEqButtonRow(),
+          const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: onSubmit,
+            onPressed: () => onSubmit(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: context.colors.tertiary,
               foregroundColor: context.colors.onTertiary,

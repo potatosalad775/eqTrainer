@@ -3,6 +3,7 @@ import 'package:audio_decoder/audio_decoder.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 
 class AudioClipService {
@@ -13,26 +14,26 @@ class AudioClipService {
 
   /// Generate Audio Clip from Source File
   /// - sourcePath: Original File Path
-  /// - startSec/endSec: start/end time in seconds (only used when isEdit is true)
-  /// - isEdit: If true, trim the source file to create a clip;
+  /// - startSec/endSec: start/end time in seconds
+  /// - isTrimmed: If true, trim the source file; otherwise copy as-is.
   Future<void> createClip({
     required String sourcePath,
     required double startSec,
     required double endSec,
-    required bool isEdit,
+    required bool isTrimmed,
   }) async {
     // Prepare Paths
     final String fileBase = DateTime.now().microsecondsSinceEpoch.toString();
     final audioClipPath = await _dirs.getClipsPath();
-    String ext = p.extension(sourcePath).toLowerCase();
-    if (ext != '.wav' && ext != '.mp3' && ext != '.flac') {
-      ext = '.wav';
-    }
+    final sourceExt = p.extension(sourcePath).toLowerCase();
+
+    // trimAudio() only outputs .wav or .m4a — pick based on lossless/lossy
+    final String ext = isTrimmed ? trimOutputExt(sourceExt) : sourceExt;
     final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
     // Generate Clip File
     late final double duration;
-    if (isEdit) {
+    if (isTrimmed) {
       final start = Duration(milliseconds: (startSec * 1000).toInt());
       final end = Duration(milliseconds: (endSec * 1000).toInt());
       duration = endSec - startSec;
@@ -51,7 +52,7 @@ class AudioClipService {
       try {
         await File(sourcePath).copy(destPath);
       } catch (e) {
-        throw Exception('File copy failed: $e');
+        throw Exception('Audio copy failed: $e');
       }
     }
 

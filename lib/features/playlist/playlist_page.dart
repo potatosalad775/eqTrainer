@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:eq_trainer/features/playlist/widget/playlist_item_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -48,19 +47,8 @@ class PlaylistPage extends StatelessWidget {
               await repo.updateAt(newIndex, oldItem);
             },
             footer: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14 + 70),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text("PLAYLIST_FOOTER").tr(),
-                  if (Platform.isWindows || Platform.isLinux)
-                    const SizedBox(height: 12),
-                  if (Platform.isWindows || Platform.isLinux)
-                    const Text("PLAYLIST_FOOTER_WINLINUX_1").tr(),
-                  if (Platform.isWindows || Platform.isLinux)
-                    const Text("PLAYLIST_FOOTER_WINLINUX_2").tr(),
-                ],
-              ),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 84),
+              child: Center(child: const Text("PLAYLIST_FOOTER").tr()),
             ),
             padding: const EdgeInsets.fromLTRB(13, 4, 13, 0),
             proxyDecorator: _tempProxyDecorator,
