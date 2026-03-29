@@ -15,7 +15,7 @@ eqTrainer is an open-source training application for 'Critical Listening', built
       src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/refs/heads/main/get-it-on-github.png"
 />][RELEASE]
 
-<div align="left">
+</div>
 
 ## Features
 
@@ -34,7 +34,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 [<img alt="screenshot_3" width="285" src="./.github/screenshot/Screenshot_3.png"/>](./.github/screenshot/Screenshot_3.png)
 [<img alt="screenshot_4" width="123" src="./.github/screenshot/Screenshot_4.png"/>](./.github/screenshot/Screenshot_4.png)
 
-<div align="left">
+</div>
 
 ## Supported Platforms
     
@@ -48,6 +48,15 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 
 [SIDELOADLY]: https://sideloadly.io/
 [ALTSTORE]: https://altstore.io/
+
+> [!IMPORTANT]
+> Please note that `GStreamer` is required on Linux for format conversion. While most distros should already have it preinstalled, you can manually install it if needed.
+> ```bash
+> sudo apt install \
+> libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+> gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+> ```
+
 
 ## Download
       
