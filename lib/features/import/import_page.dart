@@ -28,6 +28,7 @@ class _ImportPageState extends State<ImportPage> {
       ValueNotifier<ImportPageState>(ImportPageState.loading);
   final clipDivProvider = ImportAudioData();
   final importPlayer = ImportPlayer();
+  bool _importing = false;
 
   @override
   void initState() {
@@ -141,6 +142,9 @@ class _ImportPageState extends State<ImportPage> {
   }
 
   Future<void> importFile() async {
+    if (_importing) return;
+    _importing = true;
+
     final audioState = Provider.of<AudioState>(context, listen: false);
     final workflow = context.read<ImportWorkflowService>();
 
@@ -192,15 +196,18 @@ class _ImportPageState extends State<ImportPage> {
         }
       } catch (e) {
         debugPrint("Error converting audio file: $e");
-        // Fall through with original file if conversion fails
+        importPageState.value = ImportPageState.error;
+        return;
       }
     }
+
+    if (!mounted) return;
 
     try {
       final duration = await workflow.loadAudioFile(
         audioState: audioState,
         importPlayer: importPlayer,
-        filePath: filePath!,
+        filePath: filePath,
       );
       clipDivProvider.clipEndTime = duration;
       importPageState.value = ImportPageState.ready;

@@ -42,7 +42,7 @@ class PeakingEQNode extends AudioFilterNode {
       }
       _scratchBuffer!.setRange(0, len, samples);
       filter.process(buffer, buffer);
-      samples.setAll(0, _scratchBuffer!);
+      samples.setRange(0, len, _scratchBuffer!);
     } else {
       filter.process(buffer, buffer);
     }

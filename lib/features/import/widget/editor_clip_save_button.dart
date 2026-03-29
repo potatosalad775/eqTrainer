@@ -6,8 +6,15 @@ import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class EditorClipSaveButton extends StatelessWidget {
+class EditorClipSaveButton extends StatefulWidget {
   const EditorClipSaveButton({super.key});
+
+  @override
+  State<EditorClipSaveButton> createState() => _EditorClipSaveButtonState();
+}
+
+class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
+  bool _isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -15,19 +22,24 @@ class EditorClipSaveButton extends StatelessWidget {
     final clipTimeData = context.read<ImportAudioData>();
 
     return ElevatedButton(
-      onPressed: () async {
-        await player.pause();
-        if (!context.mounted) return;
-        final clipService = context.read<AudioClipService>();
-        await clipService.createClip(
-          sourcePath: player.filePath,
-          startSec: clipTimeData.clipStartTime.seconds,
-          endSec: clipTimeData.clipEndTime.seconds,
-          isTrimmed: player.fetchDuration != clipTimeData.clipEndTime,
-        );
-        if (!context.mounted) return;
-        Navigator.pop(context);
-      },
+      onPressed: _isProcessing
+        ? null
+        : () async {
+            setState(() {
+              _isProcessing = true;
+            });
+            await player.pause();
+            if (!context.mounted) return;
+            final clipService = context.read<AudioClipService>();
+            await clipService.createClip(
+              sourcePath: player.filePath,
+              startSec: clipTimeData.clipStartTime.seconds,
+              endSec: clipTimeData.clipEndTime.seconds,
+              isTrimmed: player.fetchDuration != clipTimeData.clipEndTime,
+            );
+            if (!context.mounted) return;
+            Navigator.pop(context);
+          },
       style: ElevatedButton.styleFrom(
         backgroundColor: context.colors.primary,
         foregroundColor: context.colors.onPrimary,
