@@ -46,7 +46,7 @@ packages:
     description:
       path: "."
       ref: custom
-      resolved-ref: fafa9648fa2ba706623b8d3d6dc7ed388f4c4121
+      resolved-ref: "8725e6e88ba02e0e69dc352be27b5136e0a0903a"
       url: "https://github.com/potatosalad775/audio_decoder.git"
     source: git
     version: "0.7.4"
@@ -159,7 +159,7 @@ packages:
     description:
       path: "."
       ref: custom
-      resolved-ref: "9d76bb476dec945b8d7e6e1c796f8a112210772d"
+      resolved-ref: "7236e2cd125550c1db8672ea50425d4903f2acfd"
       url: "https://github.com/potatosalad775/coast_audio.git"
     source: git
     version: "1.0.0"

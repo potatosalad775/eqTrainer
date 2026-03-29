@@ -14,13 +14,15 @@ class DeviceDropdown extends StatefulWidget {
 
 class _DeviceDropdownState extends State<DeviceDropdown> {
   List<AudioDeviceInfo> _devices = [];
+  AudioDeviceContext? _deviceContext;
 
   void _refreshDeviceList() {
     final audioState = Provider.of<AudioState>(context, listen: false);
     try {
-      final deviceContext = AudioDeviceContext(backends: [audioState.backend]);
-      _devices = deviceContext.getDevices(AudioDeviceType.playback);
+      _deviceContext ??= AudioDeviceContext(backends: [audioState.backend]);
+      _devices = _deviceContext!.getDevices(AudioDeviceType.playback);
     } catch (_) {
+      _deviceContext = null;
       // Keep existing list if enumeration fails.
     }
   }

@@ -637,12 +637,33 @@ class AudioPlayer {
       return;
     }
 
-    try {
-      _playbackNode.device.start();
-    } catch (e) {
-      debugPrint("Error while starting device : $e");
-      throw Exception('DeviceInitException : $e');
+    // On Android/AAudio, device.start() can throw MaException even when the
+    // underlying AAudio stream actually started asynchronously.  This leaves
+    // the stream in STARTED state while miniaudio thinks it failed, so every
+    // subsequent start attempt returns AAUDIO_ERROR_INVALID_STATE (-895).
+    //
+    // Strategy: on failure, stop() to reset the stream back to a clean state,
+    // then retry.
+    const maxAttempts = 3;
+    bool started = false;
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        _playbackNode.device.start();
+        started = true;
+        break;
+      } catch (e) {
+        debugPrint(
+            "Error while starting device (attempt $attempt/$maxAttempts): $e");
+        if (attempt < maxAttempts) {
+          // Reset the device so AAudio moves back to Stopped before retrying.
+          try {
+            _playbackNode.device.stop();
+          } catch (_) {}
+          sleep(const Duration(milliseconds: 50));
+        }
+      }
     }
+    if (!started) return;
 
     // Calculate device buffer capacity in frames using the current decoder output format
     final int capacityFrames =

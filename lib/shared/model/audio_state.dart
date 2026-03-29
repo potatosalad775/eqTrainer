@@ -17,6 +17,11 @@ final class AudioState extends ChangeNotifier {
 
   Timer? _pollTimer;
 
+  /// Cached context for device enumeration — reused across polls to avoid
+  /// creating multiple miniaudio contexts on the same backend, which can
+  /// interfere with an active playback device (especially on AAudio/Android).
+  AudioDeviceContext? _pollContext;
+
   AudioState copyWith({
     AudioDeviceBackend? backend,
     AudioDeviceInfo? outputDevice,
@@ -35,8 +40,8 @@ final class AudioState extends ChangeNotifier {
   /// - If no explicit selection was made, follow the OS default device.
   void refreshDevices() {
     try {
-      final deviceContext = AudioDeviceContext(backends: [backend]);
-      final devices = deviceContext.getDevices(AudioDeviceType.playback);
+      _pollContext ??= AudioDeviceContext(backends: [backend]);
+      final devices = _pollContext!.getDevices(AudioDeviceType.playback);
 
       if (userSelectedDevice && outputDevice != null) {
         final stillExists = devices.any((d) => d.name == outputDevice!.name);
@@ -68,6 +73,7 @@ final class AudioState extends ChangeNotifier {
   void stopDevicePolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
+    _pollContext = null;
   }
 
   @override
