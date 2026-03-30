@@ -17,7 +17,7 @@ class SessionParameter extends ChangeNotifier {
   }
   int get gain => _gain;
   set gain(int value) {
-    _gain = value;
+    _gain = value.clamp(1, 15);
     notifyListeners();
   }
   double get qFactor => _qFactor;

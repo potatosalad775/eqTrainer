@@ -6,7 +6,7 @@ class PeakingEQNode extends AudioFilterNode {
     required this.format,
     required this.filter,
     this.fadeSamples = 128,
-  });
+  }) : _desiredFrequency = filter.frequency;
 
   final AudioFormat format;
   final PeakingEQFilter filter;
@@ -25,6 +25,9 @@ class PeakingEQNode extends AudioFilterNode {
   /// During bypass the filter runs at 0 dB; this value is restored on un-bypass.
   double _desiredGainDb = 0;
 
+  /// The frequency the caller wants. During bypass, deferred until un-bypass.
+  double _desiredFrequency;
+
   /// Fade position: 0.0 = fully dry (bypassed), 1.0 = fully wet (active).
   double _wet = 0.0;
 
@@ -36,8 +39,8 @@ class PeakingEQNode extends AudioFilterNode {
       // Run filter at 0 dB during bypass → clean IIR state.
       filter.update(gainDb: 0);
     } else {
-      // Restore active gain before the fade starts.
-      filter.update(gainDb: _desiredGainDb);
+      // Restore active gain and frequency before the fade starts.
+      filter.update(gainDb: _desiredGainDb, frequency: _desiredFrequency);
     }
   }
 
@@ -47,6 +50,15 @@ class PeakingEQNode extends AudioFilterNode {
     _desiredGainDb = gainDb;
     if (!_bypassed) {
       filter.update(gainDb: gainDb);
+    }
+  }
+
+  /// Update the desired frequency. During bypass the update is deferred
+  /// and applied atomically with gain when bypass is turned off.
+  void setFrequency(double frequency) {
+    _desiredFrequency = frequency;
+    if (!_bypassed) {
+      filter.update(frequency: frequency);
     }
   }
 
@@ -81,6 +93,7 @@ class PeakingEQNode extends AudioFilterNode {
       }
     } else {
       filter.process(buffer, buffer);
+      buffer.clamp();
     }
     return AudioReadResult(frameCount: buffer.sizeInFrames, isEnd: isEnd);
   }
@@ -111,6 +124,7 @@ class PeakingEQNode extends AudioFilterNode {
     try {
       // buffer = dry (untouched), scratch = wet.
       filter.process(buffer, scratch);
+      scratch.clamp(); // Prevent EQ-boosted samples from overflowing during fade.
 
       final step = 1.0 / fadeSamples;
       final dir = _bypassed ? -step : step;
@@ -150,6 +164,7 @@ class PeakingEQNode extends AudioFilterNode {
                 0, buffer.sizeInBytes, scratch.asUint8ListViewBytes());
           }
       }
+      buffer.clamp(); // Safety clamp after fade envelope application.
     } finally {
       _scratchFrames!.unlock();
     }

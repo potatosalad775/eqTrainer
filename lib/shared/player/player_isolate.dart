@@ -713,9 +713,14 @@ class AudioPlayer {
             (deviceTargetFill - availableRead).clamp(0, deviceCapacity);
 
         while (availableWrite >= buffer.sizeInFrames) {
-          final result = _playbackNode.outputBus.read(buffer);
-          if (result.isEnd) {
-            return false; // end of stream
+          try {
+            final result = _playbackNode.outputBus.read(buffer);
+            if (result.isEnd) {
+              return false; // end of stream
+            }
+          } catch (e) {
+            debugPrint('[AudioPlayer] Error in playback chain: $e');
+            return false; // stop playback gracefully
           }
           availableWrite -= buffer.sizeInFrames;
         }
@@ -786,7 +791,7 @@ class AudioPlayer {
   }
 
   void setEQFreq(double value) {
-    _peakingEQNode.filter.update(frequency: value);
+    _peakingEQNode.setFrequency(value);
   }
 
   bool getEqState() {
