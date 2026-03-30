@@ -53,7 +53,7 @@ class MiscSettingsAdapter extends TypeAdapter<MiscSettings> {
     return MiscSettings(
       fields[0] == null ? false : fields[0] as bool,
       fields[1] == null ? 1 : (fields[1] as num).toInt(),
-      fields[2] == null ? false : fields[2] as bool,
+      fields[2] == null ? true : fields[2] as bool,
     );
   }
 

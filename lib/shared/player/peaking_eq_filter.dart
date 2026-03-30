@@ -26,6 +26,7 @@ class PeakingEQFilter {
     _pConfig.ref = config;
 
     _interop.bindings.ma_peak2_init(_pConfig, nullptr, _pFilter).throwMaResultIfNeeded();
+    _updateLatency();
 
     _interop.onInitialized();
   }

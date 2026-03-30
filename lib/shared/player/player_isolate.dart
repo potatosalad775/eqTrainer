@@ -133,7 +133,7 @@ class _PlayerMessage {
     required this.backend,
     required this.outputDeviceId,
     required this.path,
-    this.volumeCompensation = false,
+    this.volumeCompensation = true,
   });
   final AudioDeviceBackend backend;
   final AudioDeviceId? outputDeviceId;
@@ -163,7 +163,7 @@ class PlayerIsolate extends ChangeNotifier {
     required AudioDeviceBackend backend,
     required AudioDeviceId? outputDeviceId,
     required String? path,
-    bool volumeCompensation = false,
+    bool volumeCompensation = true,
   }) async {
     await _isolate.launch(
       initialMessage: _PlayerMessage(
@@ -454,9 +454,10 @@ class AudioPlayer {
     // Chunk size for adaptive feeding (tunable: 2048~8192)
     this.chunkFrames = 4096,
     AudioDeviceId? initialDeviceId,
-    bool volumeCompensation = false,
+    bool volumeCompensation = true,
   })  : _volumeCompensation = volumeCompensation,
         _decoderNode = DecoderNode(decoder: decoder),
+        _volumeNode = VolumeNode(volume: 1.0),
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
             filter: PeakingEQFilter(
@@ -477,10 +478,9 @@ class AudioPlayer {
     _ringSourceNode =
         _RingBufferSourceNode(ring: _ringBuffer, format: decoder.outputFormat);
 
-    _ringSourceNode.outputBus.connect(_peakingEQNode.inputBus);
+    _ringSourceNode.outputBus.connect(_volumeNode.inputBus);
+    _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
     _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
-    // EQ filter stays in the chain at all times (no bypass toggle).
-    // Gain is set to 0 dB (transparent) until a session round begins.
     // Underrun/xrun logging
     _playbackNode.device.notification.listen((notification) {
       debugPrint(
@@ -497,7 +497,7 @@ class AudioPlayer {
     required AudioDeviceBackend backend,
     required AudioInputDataSource dataSource,
     AudioDeviceId? deviceId,
-    bool volumeCompensation = false,
+    bool volumeCompensation = true,
   }) {
     // Find the decoder by trying to decode the audio data with different decoders.
     // Order: WAV (pure Dart) → AAC/M4A (FDK-AAC) → miniaudio fallback (MP3, FLAC, etc.)
@@ -551,6 +551,8 @@ class AudioPlayer {
   final bool _volumeCompensation;
 
   final DecoderNode _decoderNode;
+
+  final VolumeNode _volumeNode;
 
   final PeakingEQNode _peakingEQNode;
 
@@ -772,15 +774,15 @@ class AudioPlayer {
   void setEQGain(double value) {
     if (_volumeCompensation) {
       // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
-      // Attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
-      // Applied at the device level so VolumeNode stays at 1.0 (fast-path skip).
-      _playbackNode.device.volume = pow(10, -value.abs() / 20.0).toDouble();
+      // Pre-attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
+      // Applied before the EQ filter to prevent internal clipping.
+      _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
     } else {
-      _playbackNode.device.volume = 0.9;
+      _volumeNode.volume = 1.0;
     }
-    // Always keep the filter configured with the active gain so it is ready
-    // when the user toggles EQ on (bypass off).
-    _peakingEQNode.filter.update(gainDb: value);
+    // Update desired gain. During bypass the filter stays at 0 dB;
+    // the gain is deferred and applied when EQ is enabled.
+    _peakingEQNode.setGain(value);
   }
 
   void setEQFreq(double value) {

@@ -21,6 +21,10 @@ class PeakingEQNode extends AudioFilterNode {
 
   bool _bypassed = true;
 
+  /// The gain the caller wants applied when the filter is active.
+  /// During bypass the filter runs at 0 dB; this value is restored on un-bypass.
+  double _desiredGainDb = 0;
+
   /// Fade position: 0.0 = fully dry (bypassed), 1.0 = fully wet (active).
   double _wet = 0.0;
 
@@ -28,6 +32,22 @@ class PeakingEQNode extends AudioFilterNode {
   set bypassed(bool value) {
     if (value == _bypassed) return;
     _bypassed = value;
+    if (_bypassed) {
+      // Run filter at 0 dB during bypass → clean IIR state.
+      filter.update(gainDb: 0);
+    } else {
+      // Restore active gain before the fade starts.
+      filter.update(gainDb: _desiredGainDb);
+    }
+  }
+
+  /// Update the desired gain. During bypass the filter stays at 0 dB;
+  /// the gain is deferred and applied when bypass is turned off.
+  void setGain(double gainDb) {
+    _desiredGainDb = gainDb;
+    if (!_bypassed) {
+      filter.update(gainDb: gainDb);
+    }
   }
 
   @override
