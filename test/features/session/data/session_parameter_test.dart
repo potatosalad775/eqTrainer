@@ -65,9 +65,26 @@ void main() {
         expect(param.gain, equals(12));
       });
 
-      test('stores negative gain values', () {
+      test('clamps negative values to minimum of 1', () {
         param.gain = -6;
-        expect(param.gain, equals(-6));
+        expect(param.gain, equals(1));
+      });
+
+      test('clamps zero to minimum of 1', () {
+        param.gain = 0;
+        expect(param.gain, equals(1));
+      });
+
+      test('clamps values above 15 to maximum of 15', () {
+        param.gain = 20;
+        expect(param.gain, equals(15));
+      });
+
+      test('accepts boundary values', () {
+        param.gain = 1;
+        expect(param.gain, equals(1));
+        param.gain = 15;
+        expect(param.gain, equals(15));
       });
     });
 
