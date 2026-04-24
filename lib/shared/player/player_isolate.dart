@@ -461,7 +461,8 @@ class AudioPlayer {
         _peakingEQNode = PeakingEQNode(
             format: decoder.outputFormat,
             filter: PeakingEQFilter(
-                format: decoder.outputFormat, gainDb: 6, q: 1, frequency: 300)),
+                format: decoder.outputFormat, gainDb: 0, q: 1, frequency: 300)),
+        _clampNode = _ClampNode(format: decoder.outputFormat),
         _playbackNode = PlaybackNode(
           device: context.createPlaybackDevice(
             format: decoder.outputFormat,
@@ -480,7 +481,8 @@ class AudioPlayer {
 
     _ringSourceNode.outputBus.connect(_volumeNode.inputBus);
     _volumeNode.outputBus.connect(_peakingEQNode.inputBus);
-    _peakingEQNode.outputBus.connect(_playbackNode.inputBus);
+    _peakingEQNode.outputBus.connect(_clampNode.inputBus);
+    _clampNode.outputBus.connect(_playbackNode.inputBus);
     // Underrun/xrun logging
     _playbackNode.device.notification.listen((notification) {
       debugPrint(
@@ -555,6 +557,8 @@ class AudioPlayer {
   final VolumeNode _volumeNode;
 
   final PeakingEQNode _peakingEQNode;
+
+  final _ClampNode _clampNode;
 
   final PlaybackNode _playbackNode;
 
@@ -778,15 +782,15 @@ class AudioPlayer {
 
   void setEQGain(double value) {
     if (_volumeCompensation) {
-      // Compensate volume so a boost and a cut of equal magnitude sound equally loud.
       // Pre-attenuate by the absolute gain: volume = 10^(-|gainDb| / 20).
-      // Applied before the EQ filter to prevent internal clipping.
+      // Applied before the EQ filter to prevent internal clipping, and held
+      // throughout the session (not only when EQ is active) so the dry and
+      // wet signals have matched perceived loudness — otherwise the user
+      // could identify the boosted round by loudness alone.
       _volumeNode.volume = pow(10, -value.abs() / 20.0).toDouble();
     } else {
       _volumeNode.volume = 1.0;
     }
-    // Update desired gain. During bypass the filter stays at 0 dB;
-    // the gain is deferred and applied when EQ is enabled.
     _peakingEQNode.setGain(value);
   }
 
@@ -826,5 +830,27 @@ class _RingBufferSourceNode extends DataSourceNode {
     final frames = ring.read(buffer, advance: true);
     final isEnd = decodeFinished && frames == 0 && ring.length == 0;
     return AudioReadResult(frameCount: frames, isEnd: isEnd);
+  }
+}
+
+/// Final-stage safety clamp. The PeakingEQ stage already clamps its output,
+/// so under normal operation this is a no-op pass. Its job is to keep the
+/// invariant "nothing out-of-range ever reaches the device" enforced even if
+/// a future node is inserted between the EQ and playback.
+class _ClampNode extends AudioFilterNode {
+  _ClampNode({required this.format});
+
+  final AudioFormat format;
+
+  @override
+  late final inputBus = AudioInputBus(node: this, formatResolver: (_) => format);
+
+  @override
+  late final outputBus = AudioOutputBus(node: this, formatResolver: (_) => format);
+
+  @override
+  AudioReadResult process(AudioBuffer buffer, bool isEnd) {
+    buffer.clamp();
+    return AudioReadResult(frameCount: buffer.sizeInFrames, isEnd: isEnd);
   }
 }
