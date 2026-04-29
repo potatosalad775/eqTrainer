@@ -66,10 +66,10 @@ class PlaylistItemTile extends StatelessWidget {
                 unawaited(showModalBottomSheet(
                   isDismissible: false,
                   enableDrag: false,
-                  useSafeArea: true,
                   context: context,
-                  isScrollControlled: true,
-                  builder: (context) => PlaylistControlView(filePath: filePath),
+                  builder: (context) => SafeArea(
+                    child: PlaylistControlView(filePath: filePath)
+                  ),
                 ));
               },
               icon: const Icon(Icons.play_arrow),
