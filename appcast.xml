@@ -4,6 +4,18 @@
         <title>eqTrainer - Appcast</title>
 
         <item>
+            <title>v2.4.1</title>
+            <link>https://github.com/potatosalad775/eqTrainer</link>
+            <description>
+                <p>You can now choose audio import format. AAC and WAV formats are recommended as they provide superior playback performance with rapid EQ filter transitions.</p>
+                <p>Added an option to toggle the volume compensation feature.</p>
+                <p>Improved audio player performance and UI consistency.</p>
+            </description>
+            <pubDate>Thu, 30 Apr 2026 08:37:33 +0900</pubDate>
+            <enclosure url="https://github.com/potatosalad775/eqTrainer/releases/tag/v2.4.1" sparkle:version="2.4.1" />
+        </item>
+
+        <item>
             <title>v2.3.0</title>
             <link>https://github.com/potatosalad775/eqTrainer</link>
             <description>
