@@ -97,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: build-windows
-          path: build/windows/x64/runner/*
+          path: build/windows/x64/runner/Release/*
 
   build-macos:
     runs-on: macos-latest
