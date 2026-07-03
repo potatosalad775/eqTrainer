@@ -41,10 +41,7 @@ class PlaylistPage extends StatelessWidget {
               if (oldIndex < newIndex) {
                 newIndex -= 1;
               }
-              final oldItem = clips[oldIndex];
-              final newItem = clips[newIndex];
-              await repo.updateAt(oldIndex, newItem);
-              await repo.updateAt(newIndex, oldItem);
+              await repo.reorder(oldIndex, newIndex);
             },
             footer: Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 84),
