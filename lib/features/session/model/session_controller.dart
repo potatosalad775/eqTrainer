@@ -138,12 +138,18 @@ class SessionController {
     await player.setEQGain(_answerGain);
   }
 
-  Future<SessionSubmitResult> submitAnswer({
+  Future<SessionSubmitResult?> submitAnswer({
     required PlayerIsolate player,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     void Function(bool isCorrect, int correctIndex)? onResult,
   }) async {
+    // Re-entrancy guard: only a round that is currently `ready` can be
+    // submitted. A double-tap within one frame (before InteractionLock's
+    // rebuild absorbs the second tap) would otherwise score the same round
+    // twice and move the session point by ±2.
+    if (sessionStore.sessionState != SessionState.ready) return null;
+
     // Mark loading
     sessionStore.setSessionState(SessionState.loading);
 
