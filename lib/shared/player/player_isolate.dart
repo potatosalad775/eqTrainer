@@ -739,6 +739,7 @@ class AudioPlayer {
           try {
             final result = _playbackNode.outputBus.read(buffer);
             if (result.isEnd) {
+              _handleEndOfStream();
               return false; // end of stream
             }
           } catch (e) {
@@ -785,6 +786,18 @@ class AudioPlayer {
 
   void pause() {
     _playbackNode.device.stop();
+  }
+
+  /// Called when the playback chain reports end-of-stream. Stops the device
+  /// and rewinds to the start so the player leaves a consistent state: without
+  /// this the device stays "started" (isPlaying == true) while nothing feeds
+  /// it, so play() early-returns and the UI shows a playing-but-silent clip
+  /// that only pause→play recovers. Rewinding also lets the play button replay
+  /// the clip from the beginning.
+  void _handleEndOfStream() {
+    _playbackNode.device.stop();
+    // Resets the decoder cursor to 0 and clears the device + ring buffers.
+    position = AudioTime.zero;
   }
 
   // Track EQ enabled state for the current round.
