@@ -3,6 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
+import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 class MockPlayerIsolate extends Mock implements PlayerIsolate {}
@@ -25,10 +26,12 @@ void main() {
             enableEQ: any(named: 'enableEQ'),
             frequency: any(named: 'frequency'),
             gainDb: any(named: 'gainDb'),
+            q: any(named: 'q'),
           )).thenAnswer((_) async {});
       when(() => mockPlayer.setEQ(any())).thenAnswer((_) async {});
       when(() => mockPlayer.setEQFreq(any())).thenAnswer((_) async {});
       when(() => mockPlayer.setEQGain(any())).thenAnswer((_) async {});
+      when(() => mockPlayer.setEQQ(any())).thenAnswer((_) async {});
 
       // Populate frequency/graph data so initSession() has a valid list to pick from
       await sessionStore.initFrequency(sessionParameter: sessionParameter);
@@ -39,6 +42,10 @@ void main() {
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
       );
+
+      // submitAnswer only proceeds from a ready session (re-entrancy guard),
+      // which launchSession sets in production. Establish that precondition.
+      sessionStore.setSessionState(SessionState.ready);
     });
 
     tearDown(() {
@@ -60,7 +67,7 @@ void main() {
           sessionParameter: sessionParameter,
         );
 
-        expect(result.isCorrect, isTrue);
+        expect(result!.isCorrect, isTrue);
         expect(result.correctIndex, equals(expectedIndex));
       });
 
@@ -75,7 +82,7 @@ void main() {
           sessionParameter: sessionParameter,
         );
 
-        expect(result.isCorrect, isFalse);
+        expect(result!.isCorrect, isFalse);
         expect(result.correctIndex, equals(answerIndex + 1));
       });
 
