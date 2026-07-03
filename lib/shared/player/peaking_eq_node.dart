@@ -28,6 +28,9 @@ class PeakingEQNode extends AudioFilterNode {
   /// The frequency the caller wants. During bypass, deferred until un-bypass.
   double _desiredFrequency;
 
+  /// The Q (bandwidth) the caller wants. During bypass, deferred until un-bypass.
+  late double _desiredQ = filter.q;
+
   /// Fade position: 0.0 = fully dry (bypassed), 1.0 = fully wet (active).
   double _wet = 0.0;
 
@@ -39,8 +42,8 @@ class PeakingEQNode extends AudioFilterNode {
       // Run filter at 0 dB during bypass → clean IIR state.
       filter.update(gainDb: 0);
     } else {
-      // Restore active gain and frequency before the fade starts.
-      filter.update(gainDb: _desiredGainDb, frequency: _desiredFrequency);
+      // Restore active gain, frequency and Q before the fade starts.
+      filter.update(gainDb: _desiredGainDb, frequency: _desiredFrequency, q: _desiredQ);
     }
   }
 
@@ -59,6 +62,15 @@ class PeakingEQNode extends AudioFilterNode {
     _desiredFrequency = frequency;
     if (!_bypassed) {
       filter.update(frequency: frequency);
+    }
+  }
+
+  /// Update the desired Q (bandwidth). During bypass the update is deferred
+  /// and applied when bypass is turned off.
+  void setQ(double q) {
+    _desiredQ = q;
+    if (!_bypassed) {
+      filter.update(q: q);
     }
   }
 

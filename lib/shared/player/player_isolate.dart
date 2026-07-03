@@ -67,6 +67,13 @@ class PlayerHostRequestSetEQFreq extends PlayerHostRequest {
   final double frequency;
 }
 
+class PlayerHostRequestSetEQQ extends PlayerHostRequest {
+  const PlayerHostRequestSetEQQ({
+    required this.q,
+  });
+  final double q;
+}
+
 class PlayerHostRequestGetEqState extends PlayerHostRequest {
   const PlayerHostRequestGetEqState();
 }
@@ -80,10 +87,12 @@ class PlayerHostRequestSetEQParams extends PlayerHostRequest {
     required this.enableEQ,
     required this.frequency,
     required this.gainDb,
+    required this.q,
   });
   final bool enableEQ;
   final double frequency;
   final double gainDb;
+  final double q;
 }
 
 class PlayerAllStateResponse {
@@ -273,15 +282,21 @@ class PlayerIsolate extends ChangeNotifier {
     return _isolate.request(PlayerHostRequestSetEQFreq(frequency: frequency));
   }
 
+  Future<void> setEQQ(double q) {
+    return _isolate.request(PlayerHostRequestSetEQQ(q: q));
+  }
+
   Future<void> setEQParams({
     required bool enableEQ,
     required double frequency,
     required double gainDb,
+    required double q,
   }) async {
     await _isolate.request(PlayerHostRequestSetEQParams(
       enableEQ: enableEQ,
       frequency: frequency,
       gainDb: gainDb,
+      q: q,
     ));
     _lastEQState = enableEQ;
     notifyListeners();
@@ -423,6 +438,9 @@ class PlayerIsolate extends ChangeNotifier {
           case PlayerHostRequestSetEQFreq():
             player.setEQFreq(request.frequency);
             break;
+          case PlayerHostRequestSetEQQ():
+            player.setEQQ(request.q);
+            break;
           case PlayerHostRequestGetEqState():
             return player.getEqState();
           case PlayerHostRequestGetAllState():
@@ -433,6 +451,7 @@ class PlayerIsolate extends ChangeNotifier {
               eqEnabled: player.getEqState(),
             );
           case PlayerHostRequestSetEQParams():
+            player.setEQQ(request.q);
             player.setEQFreq(request.frequency);
             player.setEQGain(request.gainDb);
             player.setEQ(request.enableEQ);
@@ -796,6 +815,10 @@ class AudioPlayer {
 
   void setEQFreq(double value) {
     _peakingEQNode.setFrequency(value);
+  }
+
+  void setEQQ(double value) {
+    _peakingEQNode.setQ(value);
   }
 
   bool getEqState() {

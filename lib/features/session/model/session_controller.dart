@@ -28,6 +28,7 @@ class SessionController {
   late int _answerFreqIndex;
   late double _answerCenterFreq;
   late double _answerGain;
+  double _answerQ = 1;
 
   // Expose read-only for debugging/tests if needed
   int get answerGraphIndex => _answerGraphIndex;
@@ -118,16 +119,21 @@ class SessionController {
       _answerGain = sessionParameter.gain.toDouble();
     }
 
-    // Disable EQ and set new freq/gain in a single isolate round-trip.
+    // Capture the configured Q for this round so a track switch can re-apply it.
+    _answerQ = sessionParameter.qFactor;
+
+    // Disable EQ and set new freq/gain/Q in a single isolate round-trip.
     await player.setEQParams(
       enableEQ: false,
       frequency: _answerCenterFreq,
       gainDb: _answerGain,
+      q: _answerQ,
     );
   }
 
   /// Re-applies the current answer's EQ parameters to the player (e.g. after track switch).
   Future<void> updatePlayerState(PlayerIsolate player) async {
+    await player.setEQQ(_answerQ);
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);
   }
