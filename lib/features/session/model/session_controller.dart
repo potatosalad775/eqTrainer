@@ -47,7 +47,14 @@ class SessionController {
     required PlaylistService playlistService,
   }) async {
     try {
+      // Move to the loading/init state synchronously, before any await, so a
+      // relaunch of the app-scoped SessionStore does not render the previous
+      // session's ready UI (stale graphs, live buttons wired to a not-yet-
+      // launched player) during the async launch window.
+      sessionStore.setSessionState(SessionState.init);
+
       // Reset Session
+      _prevAnswerGraphIndex = -1;
       sessionStore.resetPickerValue();
       sessionStore.resetResult();
 
