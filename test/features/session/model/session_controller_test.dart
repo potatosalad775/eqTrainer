@@ -26,7 +26,6 @@ void main() {
             enableEQ: any(named: 'enableEQ'),
             frequency: any(named: 'frequency'),
             gainDb: any(named: 'gainDb'),
-            q: any(named: 'q'),
           )).thenAnswer((_) async {});
       when(() => mockPlayer.setEQ(any())).thenAnswer((_) async {});
       when(() => mockPlayer.setEQFreq(any())).thenAnswer((_) async {});

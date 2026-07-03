@@ -87,12 +87,10 @@ class PlayerHostRequestSetEQParams extends PlayerHostRequest {
     required this.enableEQ,
     required this.frequency,
     required this.gainDb,
-    required this.q,
   });
   final bool enableEQ;
   final double frequency;
   final double gainDb;
-  final double q;
 }
 
 class PlayerAllStateResponse {
@@ -290,13 +288,11 @@ class PlayerIsolate extends ChangeNotifier {
     required bool enableEQ,
     required double frequency,
     required double gainDb,
-    required double q,
   }) async {
     await _isolate.request(PlayerHostRequestSetEQParams(
       enableEQ: enableEQ,
       frequency: frequency,
       gainDb: gainDb,
-      q: q,
     ));
     _lastEQState = enableEQ;
     notifyListeners();
@@ -451,7 +447,6 @@ class PlayerIsolate extends ChangeNotifier {
               eqEnabled: player.getEqState(),
             );
           case PlayerHostRequestSetEQParams():
-            player.setEQQ(request.q);
             player.setEQFreq(request.frequency);
             player.setEQGain(request.gainDb);
             player.setEQ(request.enableEQ);

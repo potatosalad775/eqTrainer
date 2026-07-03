@@ -28,7 +28,11 @@ class SessionController {
   late int _answerFreqIndex;
   late double _answerCenterFreq;
   late double _answerGain;
-  double _answerQ = 1;
+
+  // EQ bandwidth is fixed for the whole session (set from config at launch),
+  // not part of a round's answer. Kept so it can be re-applied to a fresh
+  // player after a track switch.
+  double _qFactor = 1;
 
   // Expose read-only for debugging/tests if needed
   int get answerGraphIndex => _answerGraphIndex;
@@ -62,6 +66,10 @@ class SessionController {
       final paths = await playlistService.listEnabledClipPaths();
       sessionStore.setPlaylistPaths(paths);
 
+      // Q is fixed for the whole session; capture it once so a track switch
+      // can re-apply it to the fresh player.
+      _qFactor = sessionParameter.qFactor;
+
       // If List of Audio clips for Session is Not Empty
       if (sessionStore.playlistPaths.isNotEmpty) {
         // Open First AudioClip
@@ -71,6 +79,8 @@ class SessionController {
           path: sessionStore.playlistPaths[0],
           volumeCompensation: savedMiscSettingsValue.volumeCompensation,
         );
+        // Apply the session's EQ bandwidth once on the fresh player.
+        await player.setEQQ(_qFactor);
       } else {
         // ... else notify the playlist is empty.
         sessionStore.setSessionState(SessionState.playlistEmpty);
@@ -126,21 +136,19 @@ class SessionController {
       _answerGain = sessionParameter.gain.toDouble();
     }
 
-    // Capture the configured Q for this round so a track switch can re-apply it.
-    _answerQ = sessionParameter.qFactor;
-
-    // Disable EQ and set new freq/gain/Q in a single isolate round-trip.
+    // Disable EQ and set new freq/gain in a single isolate round-trip.
+    // (Q is session-constant and applied at launch, not per round.)
     await player.setEQParams(
       enableEQ: false,
       frequency: _answerCenterFreq,
       gainDb: _answerGain,
-      q: _answerQ,
     );
   }
 
-  /// Re-applies the current answer's EQ parameters to the player (e.g. after track switch).
+  /// Re-applies the current answer's EQ parameters to the player (e.g. after
+  /// a track switch, which launches a fresh player at the default Q).
   Future<void> updatePlayerState(PlayerIsolate player) async {
-    await player.setEQQ(_answerQ);
+    await player.setEQQ(_qFactor);
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);
   }
