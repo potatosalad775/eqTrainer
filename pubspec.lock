@@ -45,7 +45,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: custom
+      ref: d2f6752e3301475ec6a76d5cc79eb128bfe063e2
       resolved-ref: d2f6752e3301475ec6a76d5cc79eb128bfe063e2
       url: "https://github.com/potatosalad775/audio_decoder.git"
     source: git
@@ -158,7 +158,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: custom
+      ref: "2166f8414d2a489bc3e11bad2603629cf69e5067"
       resolved-ref: "2166f8414d2a489bc3e11bad2603629cf69e5067"
       url: "https://github.com/potatosalad775/coast_audio.git"
     source: git
@@ -634,10 +634,10 @@ packages:
     dependency: transitive
     description:
       name: meta
-      sha256: "23f08335362185a5ea2ad3a4e597f1375e78bce8a040df5c600c8d3552ef2394"
+      sha256: "1741988757a65eb6b36abe716829688cf01910bbf91c34354ff7ec1c3de2b349"
       url: "https://pub.dev"
     source: hosted
-    version: "1.17.0"
+    version: "1.18.0"
   mime:
     dependency: transitive
     description:
@@ -983,7 +983,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
+      ref: "36bd4f13b22a3ca07dd7fd1abe997d9f312292ea"
       resolved-ref: "36bd4f13b22a3ca07dd7fd1abe997d9f312292ea"
       url: "https://github.com/ravitejaavv/store_checker.git"
     source: git
@@ -1032,10 +1032,10 @@ packages:
     dependency: transitive
     description:
       name: test_api
-      sha256: "8161c84903fd860b26bfdefb7963b3f0b68fee7adea0f59ef805ecca346f0c7a"
+      sha256: "949a932224383300f01be9221c39180316445ecb8e7547f70a41a35bf421fb9e"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.10"
+    version: "0.7.11"
   toastification:
     dependency: "direct main"
     description:
@@ -1216,7 +1216,7 @@ packages:
     dependency: "direct main"
     description:
       path: "plugins/window_size"
-      ref: HEAD
+      ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601
       resolved-ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601
       url: "https://github.com/google/flutter-desktop-embedding"
     source: git
