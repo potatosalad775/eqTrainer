@@ -6,9 +6,11 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 
 **eqTrainer** is a cross-platform Flutter application for ear-training / critical-listening practice. Users listen to audio processed through a parametric EQ, then identify which frequency band was boosted or cut.
 
-- **Version:** 2.3.0+250917
+- **Version:** 2.4.1+260424
 - **Framework:** Flutter (stable, 3.35.3+), Dart ≥ 3.0.0
-- **Supported platforms:** Android 7+, iOS 14+, Windows (Vista+), macOS 11+, Linux
+- **Supported platforms:** Android 7+, iOS 14+, Windows 10+, macOS 11+, Linux
+
+> **Active audit backlog:** see [TASKS.md](TASKS.md) for the tracked list of known bugs, tech debt, and new-feature proposals (IDs like `H1`, `M4`, `NM2`). Reference those IDs in commits.
 
 ---
 
@@ -18,7 +20,6 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 eqTrainer/
 ├── lib/
 │   ├── main.dart              # App bootstrap, provider wiring, Hive init
-│   ├── theme_data.dart        # Material 3 theme helpers & ReactiveElementData
 │   ├── features/              # Feature-first UI modules
 │   │   ├── config/            # Session parameter configuration page
 │   │   ├── import/            # Audio file import workflow
@@ -32,6 +33,7 @@ eqTrainer/
 │       ├── player/            # Audio engine: PlayerIsolate, EQ filters
 │       ├── repository/        # IAudioClipRepository + Hive implementation
 │       ├── service/           # Business logic services
+│       ├── themes/            # AppColors, AppTheme (ThemeProvider), AppDimens
 │       └── widget/            # Reusable UI widgets
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
@@ -83,8 +85,9 @@ Each feature is a self-contained module with:
 | `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `SettingData` (Hive settings) |
 | `player/` | `PlayerIsolate` (audio engine in a Dart isolate), `PeakingEqNode`, `PeakingEqFilter` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
-| `service/` | `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService` |
-| `widget/` | `DeviceDropdown`, `InteractionLock`, `MaxWidthCenterBox` |
+| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper` |
+| `themes/` | `AppColors`, `AppTheme` (`ThemeProvider`), `AppDimens` |
+| `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
 ---
 
@@ -143,9 +146,10 @@ SessionController.submitAnswer()
 ### Theming
 
 - Material Design 3, seed color `0xFF375778` (slate blue)
-- Dark/light modes via `easy_dynamic_theme`
+- Dark/light modes via `ThemeProvider` (ChangeNotifier) in `lib/shared/themes/app_theme.dart`
+  - Note: theme choice is **not persisted** yet — resets to system each launch (TASKS.md M14)
 - Custom font: `PretendardVariable` (supports Korean)
-- Responsive breakpoints managed by `ReactiveElementData` in `theme_data.dart`
+- Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`
 
 ---
@@ -194,13 +198,13 @@ Uses `flutter_lints` (^6.0.0) with Material3 recommendations and `custom_lint`.
 
 ### Testing
 
-The project has `flutter_test` configured but no tests are currently written. When adding tests, place them in `test/` mirroring the `lib/` structure.
+The project has `flutter_test` + `mocktail` configured but no tests are currently written (TASKS.md TD1). When adding tests, place them in `test/` mirroring the `lib/` structure. Start with the pure session math (`FrequencyCalculator`, threshold logic, answer mapping).
 
 ---
 
 ## CI/CD
 
-`.github/workflows/build.yml` builds all 5 platforms on every push:
+`.github/workflows/build.yml` builds all 5 platforms **only on `release: published` + manual dispatch** — there is no push/PR trigger and no `flutter analyze`/test gate (TASKS.md CI1):
 
 | Platform | Artifact |
 |---|---|
@@ -238,12 +242,15 @@ The project has `flutter_test` configured but no tests are currently written. Wh
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Local persistence |
 | `coast_audio` (git fork) | Cross-platform audio engine |
-| `ffmpeg_kit_flutter_new_audio` | Audio file processing |
+| `audio_decoder` (git fork) | Audio file decode / trim / conversion (native method channels) |
 | `easy_localization` | i18n |
-| `easy_dynamic_theme` | Dark/light mode |
 | `fl_chart` | EQ frequency graph visualization |
 | `toastification` | In-session answer feedback toasts |
-| `upgrader` | In-app update prompts |
+| `upgrader` + `store_checker` | In-app update prompts / install-source detection |
+| `file_picker` | Audio file import |
+| `device_info_plus` + `version` | OS-version gating for the appcast updater |
 | `equatable` | Value equality for Equatable models |
 
-`coast_audio`, `numberpicker`, `store_checker`, and `window_size` are sourced directly from Git (see `pubspec.yaml`).
+`coast_audio`, `audio_decoder`, `store_checker`, and `window_size` are sourced directly from Git (see `pubspec.yaml`).
+
+> **Dependency risk:** the git deps track *mutable* branches (`ref: custom` / `ref: master`, or no ref) rather than pinned commit SHAs, so audio-engine bits can change silently on re-resolve. Tracked as TASKS.md H11. Audio import/trim/convert now goes through `audio_decoder` (native method channels) — there is **no CLI ffmpeg** in the codebase despite older docs.

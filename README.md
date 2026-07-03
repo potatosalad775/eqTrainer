@@ -40,7 +40,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
     
 | Platform | Minimum Version | Note                                                                                              |
 |----------|-----------------|---------------------------------------------------------------------------------------------------|
-| Windows  | Vista           | Works with WASAPI                                                                                                       |
+| Windows  | 10+             | Works with WASAPI <br/> <sub>*For devices older than Windows 10, please use [v2.3.0][VERSION_2.3.0]*</sub>                             |
 | MacOS    | 11 Big Sur      | Supports Intel & Apple Silicon as Universal App                                                                         |
 | Linux    | -               | Works with ALSA, Jack, PulseAudio <br/> <sub>*GStreamer 1.0+ required for audio format conversion.*</sub>               |
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                                     |
@@ -48,6 +48,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 
 [SIDELOADLY]: https://sideloadly.io/
 [ALTSTORE]: https://altstore.io/
+[VERSION_2.3.0]: https://github.com/potatosalad775/eqTrainer/releases#release-v2.3.0
 
 > [!IMPORTANT]
 > Please note that `GStreamer` is required on Linux for format conversion. While most distros should already have it preinstalled, you can manually install it if needed.
