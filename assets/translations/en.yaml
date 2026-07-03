@@ -110,6 +110,7 @@
   "IMPORT_EDITOR_ALERT_BUTTON": "Okay",
   ### Button - Done Editing
   "IMPORT_EDITOR_BUTTON_DONE": "Done",
+  "IMPORT_EDITOR_SAVE_ERROR": "Failed to save the audio clip. Please try again.",
 
   # Setting Page
   ## Setting Card - Theme

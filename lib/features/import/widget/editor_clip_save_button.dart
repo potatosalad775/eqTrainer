@@ -32,17 +32,30 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
             await player.pause();
             if (!context.mounted) return;
             final clipService = context.read<AudioClipService>();
+            final messenger = ScaffoldMessenger.of(context);
             // A clip counts as trimmed if either edge was moved off the full
             // extent. The previous check compared only the end time, so a
             // start-only trim was silently discarded and the whole file copied.
             final isTrimmed = clipTimeData.clipStartTime != AudioTime.zero ||
                 clipTimeData.clipEndTime != player.fetchDuration;
-            await clipService.createClip(
-              sourcePath: player.filePath,
-              startSec: clipTimeData.clipStartTime.seconds,
-              endSec: clipTimeData.clipEndTime.seconds,
-              isTrimmed: isTrimmed,
-            );
+            try {
+              await clipService.createClip(
+                sourcePath: player.filePath,
+                startSec: clipTimeData.clipStartTime.seconds,
+                endSec: clipTimeData.clipEndTime.seconds,
+                isTrimmed: isTrimmed,
+              );
+            } catch (_) {
+              // On failure, surface the error and re-enable the button instead
+              // of leaving it permanently disabled with no feedback.
+              if (mounted) {
+                setState(() => _isProcessing = false);
+                messenger.showSnackBar(
+                  SnackBar(content: const Text("IMPORT_EDITOR_SAVE_ERROR").tr()),
+                );
+              }
+              return;
+            }
             if (!context.mounted) return;
             Navigator.pop(context);
           },

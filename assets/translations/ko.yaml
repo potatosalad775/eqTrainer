@@ -110,6 +110,7 @@
   "IMPORT_EDITOR_ALERT_BUTTON": "확인",
   ### Button - Done Editing
   "IMPORT_EDITOR_BUTTON_DONE": "완료",
+  "IMPORT_EDITOR_SAVE_ERROR": "오디오 클립을 저장하지 못했습니다. 다시 시도해 주세요.",
 
   # Setting Page
   ## Setting Card - Theme
