@@ -174,6 +174,12 @@ class SessionStore extends ChangeNotifier {
       // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
       resetPickerValue();
 
+      // Notify listeners so widgets that depend on the graph data (e.g. the
+      // picker's max value) rebuild — resetPickerValue() alone early-returns
+      // without notifying when the picker was already at 1, which would leave
+      // the picker range stale after a threshold-driven band count change.
+      notifyListeners();
+
       graphStateNotifier.value = GraphState.ready;
     } catch (_) {
       graphStateNotifier.value = GraphState.error;
