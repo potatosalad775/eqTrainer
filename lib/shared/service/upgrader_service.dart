@@ -7,10 +7,20 @@ import 'package:version/version.dart';
 
 class UpgraderService {
   final appcastURL = "https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/appcast.xml";
-  var installationSource = (Platform.isAndroid) ? StoreChecker.getSource : Source.IS_INSTALLED_FROM_OTHER_SOURCE;
+
+  Future<Source> _getInstallationSource() async {
+    if (!Platform.isAndroid) return Source.IS_INSTALLED_FROM_OTHER_SOURCE;
+    // StoreChecker.getSource is an async getter — it must be awaited. The old
+    // code stored the unresolved Future in a field and compared it to a Source
+    // enum, which was never equal, so Play Store installs always fell through
+    // to the direct-APK appcast flow.
+    return StoreChecker.getSource;
+  }
 
   Future<Upgrader> getInstance() async {
-    final osVersion = await getOsVersion(UpgraderOS());await Upgrader.clearSavedSettings();
+    final osVersion = await getOsVersion(UpgraderOS());
+    await Upgrader.clearSavedSettings();
+    final installationSource = await _getInstallationSource();
     return Upgrader(
       messages: CustomUpgraderMessages(),
       storeController: UpgraderStoreController(
