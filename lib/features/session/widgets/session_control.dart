@@ -9,9 +9,20 @@ import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 
-class SessionControl extends StatelessWidget {
+class SessionControl extends StatefulWidget {
 
   const SessionControl({super.key});
+
+  @override
+  State<SessionControl> createState() => _SessionControlState();
+}
+
+class _SessionControlState extends State<SessionControl> {
+  // Guards previous/next while a track switch (pause -> shutdown -> launch ->
+  // play) is in flight. Without it, rapid taps interleave concurrent
+  // shutdown/launch calls and the playlist index can advance before the
+  // previous relaunch even finishes.
+  bool _switching = false;
 
   Future<void> _relaunchWith(
     BuildContext context,
@@ -52,7 +63,7 @@ class SessionControl extends StatelessWidget {
     required AudioDeviceId? outputDeviceId,
   }) async {
     final player = context.read<PlayerIsolate>();
-    
+
     // If player position > 3 seconds, reset to 0 instead of going to previous
     if (player.fetchPosition > const AudioTime(3)) {
       await player.seek(AudioTime.zero);
@@ -67,6 +78,16 @@ class SessionControl extends StatelessWidget {
     }
   }
 
+  Future<void> _guardedSwitch(Future<void> Function() action) async {
+    if (_switching) return;
+    setState(() => _switching = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _switching = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final (backend, outputDeviceId) = context.select<AudioState, (AudioDeviceBackend, AudioDeviceId?)>(
@@ -77,9 +98,10 @@ class SessionControl extends StatelessWidget {
 
     return PlayerControlButtons(
       isPlaying: playerState.isPlaying,
-      onPrevious: () async {
-        await _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId);
-      },
+      onPrevious: _switching
+          ? null
+          : () => _guardedSwitch(
+              () => _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId)),
       onPlayPause: () {
         if (playerState.isPlaying) {
           player.pause();
@@ -99,9 +121,10 @@ class SessionControl extends StatelessWidget {
         }
       },
       thirdIcon: Icons.skip_next,
-      onThird: () async {
-        await _playerNext(context, backend: backend, outputDeviceId: outputDeviceId);
-      },
+      onThird: _switching
+          ? null
+          : () => _guardedSwitch(
+              () => _playerNext(context, backend: backend, outputDeviceId: outputDeviceId)),
     );
   }
 }
