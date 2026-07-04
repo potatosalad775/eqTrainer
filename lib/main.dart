@@ -116,7 +116,12 @@ class AppState extends State<App> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    // Device polling itself is already desktop-only (see
+    // AudioState.startDevicePolling) because creating a parallel
+    // AudioDeviceContext can interfere with an active AAudio playback device
+    // on Android. This resume-triggered refresh needs the same gate.
+    if (state == AppLifecycleState.resumed &&
+        (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
       _audioState.refreshDevices();
     }
   }

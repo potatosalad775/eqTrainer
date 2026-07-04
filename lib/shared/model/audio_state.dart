@@ -73,6 +73,12 @@ final class AudioState extends ChangeNotifier {
   void stopDevicePolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
+    final ctx = _pollContext;
+    if (ctx != null) {
+      // Release the native context instead of just dropping the reference —
+      // otherwise it leaks for the lifetime of the process.
+      AudioResourceManager.dispose(ctx.resourceId);
+    }
     _pollContext = null;
   }
 
