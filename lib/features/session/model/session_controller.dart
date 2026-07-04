@@ -171,50 +171,58 @@ class SessionController {
     // Mark loading
     sessionStore.setSessionState(SessionState.loading);
 
-    // Capture current round's correct answer index before it changes
-    final int correctIndex = _answerGraphIndex + 1;
-    final bool isCorrect = correctIndex == sessionStore.currentPickerValue;
+    try {
+      // Capture current round's correct answer index before it changes
+      final int correctIndex = _answerGraphIndex + 1;
+      final bool isCorrect = correctIndex == sessionStore.currentPickerValue;
 
-    // Notify caller (e.g. to show a toast) without coupling to widget layer
-    onResult?.call(isCorrect, correctIndex);
+      // Notify caller (e.g. to show a toast) without coupling to widget layer
+      onResult?.call(isCorrect, correctIndex);
 
-    // Apply result to session
-    sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
+      // Apply result to session
+      sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
 
-    // Band threshold adjustments. Use >=/<= rather than == so a point that
-    // already overshot the threshold (see the clamp branches below) still
-    // fires the adjustment instead of requiring an exact match.
-    if (sessionStore.currentSessionPoint >= sessionParameter.threshold) {
-      if (sessionParameter.startingBand < 25) {
-        sessionParameter.startingBand++;
-        sessionStore.resetSessionPoint();
-        sessionStore.resetPickerValue();
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-      } else {
-        // Already at the top band: clamp instead of letting further correct
-        // answers push the point past the threshold, which would otherwise
-        // force clawing back through the whole overshoot before a band
-        // decrease could ever fire again.
-        sessionStore.setCurrentSessionPoint(sessionParameter.threshold);
+      // Band threshold adjustments. Use >=/<= rather than == so a point that
+      // already overshot the threshold (see the clamp branches below) still
+      // fires the adjustment instead of requiring an exact match.
+      if (sessionStore.currentSessionPoint >= sessionParameter.threshold) {
+        if (sessionParameter.startingBand < 25) {
+          sessionParameter.startingBand++;
+          sessionStore.resetSessionPoint();
+          sessionStore.resetPickerValue();
+          await sessionStore.initFrequency(sessionParameter: sessionParameter);
+        } else {
+          // Already at the top band: clamp instead of letting further correct
+          // answers push the point past the threshold, which would otherwise
+          // force clawing back through the whole overshoot before a band
+          // decrease could ever fire again.
+          sessionStore.setCurrentSessionPoint(sessionParameter.threshold);
+        }
+      } else if (sessionStore.currentSessionPoint <= (0 - sessionParameter.threshold)) {
+        if (sessionParameter.startingBand > 2) {
+          sessionParameter.startingBand--;
+          sessionStore.resetSessionPoint();
+          sessionStore.resetPickerValue();
+          await sessionStore.initFrequency(sessionParameter: sessionParameter);
+        } else {
+          sessionStore.setCurrentSessionPoint(0 - sessionParameter.threshold);
+        }
       }
-    } else if (sessionStore.currentSessionPoint <= (0 - sessionParameter.threshold)) {
-      if (sessionParameter.startingBand > 2) {
-        sessionParameter.startingBand--;
-        sessionStore.resetSessionPoint();
-        sessionStore.resetPickerValue();
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-      } else {
-        sessionStore.setCurrentSessionPoint(0 - sessionParameter.threshold);
-      }
+
+      await initSession(
+        player,
+        sessionStore: sessionStore,
+        sessionParameter: sessionParameter,
+      );
+
+      sessionStore.setSessionState(SessionState.ready);
+      return SessionSubmitResult(isCorrect: isCorrect, correctIndex: correctIndex);
+    } catch (e) {
+      // A throw here (e.g. from initFrequency/setEQParams) would otherwise
+      // leave sessionState stuck at `loading`, and InteractionLock would
+      // freeze the session permanently.
+      sessionStore.setSessionState(SessionState.error);
+      return null;
     }
-
-    await initSession(
-      player,
-      sessionStore: sessionStore,
-      sessionParameter: sessionParameter,
-    );
-
-    sessionStore.setSessionState(SessionState.ready);
-    return SessionSubmitResult(isCorrect: isCorrect, correctIndex: correctIndex);
   }
 }
