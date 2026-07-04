@@ -71,7 +71,9 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
           AudioDeviceBackend.alsa => Platform.isLinux,
           AudioDeviceBackend.pulseAudio => Platform.isLinux,
           AudioDeviceBackend.jack => Platform.isLinux,
-          AudioDeviceBackend.dummy => true,
+          // Not on by default: a real backend failing should surface as an
+          // error, not silently fall back to a context that plays silence.
+          AudioDeviceBackend.dummy => false,
         };
       }
     } else {
@@ -84,7 +86,9 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
           AudioDeviceBackend.alsa => backendList.contains("alsa"),
           AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
           AudioDeviceBackend.jack => backendList.contains("jack"),
-          AudioDeviceBackend.dummy => true,
+          // Was hardcoded true regardless of the saved list, so unchecking
+          // Dummy and saving didn't stick — it came back checked next visit.
+          AudioDeviceBackend.dummy => backendList.contains("dummy"),
         };
       }
     }
