@@ -38,13 +38,15 @@ class PeakingEQNode extends AudioFilterNode {
   set bypassed(bool value) {
     if (value == _bypassed) return;
     _bypassed = value;
-    if (_bypassed) {
-      // Run filter at 0 dB during bypass → clean IIR state.
-      filter.update(gainDb: 0);
-    } else {
+    if (!_bypassed) {
       // Restore active gain, frequency and Q before the fade starts.
       filter.update(gainDb: _desiredGainDb, frequency: _desiredFrequency, q: _desiredQ);
     }
+    // When bypassing, the filter is deliberately left at its current active
+    // params (not snapped to 0 dB here) so the fade-out's wet half in
+    // _processFade still carries the real boosted signal instead of an
+    // instant full-level discontinuity. It's reset to 0 dB for a clean IIR
+    // state only once the fade actually reaches silence.
   }
 
   /// Update the desired gain. During bypass the filter stays at 0 dB;
@@ -177,6 +179,12 @@ class PeakingEQNode extends AudioFilterNode {
           }
       }
       buffer.clamp(); // Safety clamp after fade envelope application.
+
+      // Fade-out just reached silence: snap the filter to 0 dB now for a
+      // clean IIR state, since the wet signal is no longer read.
+      if (_bypassed && _wet <= 0.0) {
+        filter.update(gainDb: 0);
+      }
     } finally {
       _scratchFrames!.unlock();
     }
