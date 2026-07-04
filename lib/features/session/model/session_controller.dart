@@ -114,10 +114,13 @@ class SessionController {
     // Num of Graph
     final int numOfGraph = sessionStore.graphBarDataList.length;
 
-    // Select Random Index of Graph (Correct Answer for Session)
+    // Select Random Index of Graph (Correct Answer for Session).
+    // With only 2 graphs (e.g. peak-only/dip-only at band count 1), forbidding
+    // a repeat forces a strict 1,2,1,2,... alternation the user can solve
+    // without listening. Only forbid repeats when there's a real choice.
     do {
       _answerGraphIndex = _random.nextInt(numOfGraph);
-    } while (_answerGraphIndex == _prevAnswerGraphIndex); // make sure answer is different everytime
+    } while (numOfGraph > 2 && _answerGraphIndex == _prevAnswerGraphIndex);
     _prevAnswerGraphIndex = _answerGraphIndex;
 
     if (sessionParameter.filterType == FilterType.peakDip) {
