@@ -197,6 +197,7 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> play() async {
+    if (!isLaunched) return;
     await _isolate.request(const PlayerHostRequestStart());
     if (_lastState != null) {
       _lastState = PlayerStateResponse(
@@ -206,6 +207,7 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> pause() async {
+    if (!isLaunched) return;
     await _isolate.request(const PlayerHostRequestPause());
     if (_lastState != null) {
       _lastState = PlayerStateResponse(
@@ -215,6 +217,7 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<PlayerPositionResponse?> seek(AudioTime position) async {
+    if (!isLaunched) return null;
     _lastPosition = position;
     notifyListeners();
 
@@ -241,10 +244,12 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> setVolume(double volume) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetVolume(volume: volume));
   }
 
   Future<void> setEQ(bool enableEQ) async {
+    if (!isLaunched) return;
     if (_lastEQState == enableEQ) return; // Skip redundant
 
     _lastEQState = enableEQ;
@@ -281,14 +286,17 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> setEQGain(double gainDb) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetEQGain(gainDb: gainDb));
   }
 
   Future<void> setEQFreq(double frequency) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetEQFreq(frequency: frequency));
   }
 
   Future<void> setEQQ(double q) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetEQQ(q: q));
   }
 
@@ -297,6 +305,7 @@ class PlayerIsolate extends ChangeNotifier {
     required double frequency,
     required double gainDb,
   }) async {
+    if (!isLaunched) return;
     // Wait for any in-flight manual toggle to finish, then drop whatever it
     // queued. A round transition's EQ-enable state must win over a stale
     // toggle tap: without this, the two requests can reach the isolate out
@@ -322,22 +331,27 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<PlayerStateResponse?> getState() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetState());
   }
 
   Future<AudioTime?> getPosition() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetPosition());
   }
 
   Future<AudioTime?> getDuration() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetDuration());
   }
 
   Future<bool?> getEqState() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetEqState());
   }
 
   Future<PlayerAllStateResponse?> getAllState() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetAllState());
   }
 
