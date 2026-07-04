@@ -178,17 +178,31 @@ class SessionController {
     // Apply result to session
     sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
 
-    // Band threshold adjustments
-    if (sessionStore.currentSessionPoint == sessionParameter.threshold && sessionParameter.startingBand < 25) {
-      sessionParameter.startingBand++;
-      sessionStore.resetSessionPoint();
-      sessionStore.resetPickerValue();
-      await sessionStore.initFrequency(sessionParameter: sessionParameter);
-    } else if (sessionStore.currentSessionPoint == (0 - sessionParameter.threshold) && sessionParameter.startingBand > 2) {
-      sessionParameter.startingBand--;
-      sessionStore.resetSessionPoint();
-      sessionStore.resetPickerValue();
-      await sessionStore.initFrequency(sessionParameter: sessionParameter);
+    // Band threshold adjustments. Use >=/<= rather than == so a point that
+    // already overshot the threshold (see the clamp branches below) still
+    // fires the adjustment instead of requiring an exact match.
+    if (sessionStore.currentSessionPoint >= sessionParameter.threshold) {
+      if (sessionParameter.startingBand < 25) {
+        sessionParameter.startingBand++;
+        sessionStore.resetSessionPoint();
+        sessionStore.resetPickerValue();
+        await sessionStore.initFrequency(sessionParameter: sessionParameter);
+      } else {
+        // Already at the top band: clamp instead of letting further correct
+        // answers push the point past the threshold, which would otherwise
+        // force clawing back through the whole overshoot before a band
+        // decrease could ever fire again.
+        sessionStore.setCurrentSessionPoint(sessionParameter.threshold);
+      }
+    } else if (sessionStore.currentSessionPoint <= (0 - sessionParameter.threshold)) {
+      if (sessionParameter.startingBand > 2) {
+        sessionParameter.startingBand--;
+        sessionStore.resetSessionPoint();
+        sessionStore.resetPickerValue();
+        await sessionStore.initFrequency(sessionParameter: sessionParameter);
+      } else {
+        sessionStore.setCurrentSessionPoint(0 - sessionParameter.threshold);
+      }
     }
 
     await initSession(
