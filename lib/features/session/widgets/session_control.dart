@@ -31,6 +31,11 @@ class _SessionControlState extends State<SessionControl> {
     required AudioDeviceId? outputDeviceId,
   }) async {
     final player = context.read<PlayerIsolate>();
+    // Capture the pre-switch EQ state: the new isolate always launches with
+    // EQ bypassed, and updatePlayerState needs to know whether to re-enable
+    // it so a manually-toggled "Filtered" view doesn't silently become
+    // "Original" on the fresh player.
+    final wasEqEnabled = player.fetchEQState;
     await player.pause();
     await player.shutdown();
     await player.launch(
@@ -39,7 +44,9 @@ class _SessionControlState extends State<SessionControl> {
       path: path,
       volumeCompensation: savedMiscSettingsValue.volumeCompensation,
     );
-    if (context.mounted) await context.read<SessionController>().updatePlayerState(player);
+    if (context.mounted) {
+      await context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
+    }
     await player.play();
   }
 

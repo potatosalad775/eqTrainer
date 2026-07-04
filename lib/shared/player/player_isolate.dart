@@ -173,6 +173,10 @@ class PlayerIsolate extends ChangeNotifier {
     required String? path,
     bool volumeCompensation = true,
   }) async {
+    // A fresh isolate always starts with EQ bypassed; reset the cached state
+    // to match so a later setEQ() call re-applying the pre-switch enabled
+    // state isn't skipped as "redundant" against a stale cached value.
+    _lastEQState = false;
     await _isolate.launch(
       initialMessage: _PlayerMessage(
         backend: backend,

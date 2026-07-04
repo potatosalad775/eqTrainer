@@ -149,11 +149,15 @@ class SessionController {
   }
 
   /// Re-applies the current answer's EQ parameters to the player (e.g. after
-  /// a track switch, which launches a fresh player at the default Q).
-  Future<void> updatePlayerState(PlayerIsolate player) async {
+  /// a track switch, which launches a fresh player at the default Q and with
+  /// EQ bypassed). [eqEnabled] should be the enabled state from before the
+  /// switch, so a manually-toggled "Filtered" view doesn't silently revert to
+  /// "Original" on the new player.
+  Future<void> updatePlayerState(PlayerIsolate player, {required bool eqEnabled}) async {
     await player.setEQQ(_qFactor);
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);
+    await player.setEQ(eqEnabled);
   }
 
   Future<SessionSubmitResult?> submitAnswer({
