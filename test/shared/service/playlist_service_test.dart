@@ -135,12 +135,17 @@ void main() {
     group('watchEnabledClipPaths', () {
       test('emits only enabled clip paths that exist for each repository event', () async {
         final a = await addClip(AudioClip('a.flac', 'A', 10.0, true));
-        final b = await addClip(AudioClip('b.flac', 'B', 20.0, false));
+        // Two distinct instances (not one mutated in place) — the list
+        // literal below is evaluated eagerly, before either stream event is
+        // consumed, so mutating a shared instance would make both emissions
+        // observe the same (final) isEnabled value.
+        final bDisabled = await addClip(AudioClip('b.flac', 'B', 20.0, false));
+        final bEnabled = await addClip(AudioClip('b.flac', 'B', 20.0, true));
 
         when(() => mockRepo.watchClips())
             .thenAnswer((_) => Stream.fromIterable([
-                  [a, b],
-                  [a, b..isEnabled = true],
+                  [a, bDisabled],
+                  [a, bEnabled],
                 ]));
 
         final results = await service.watchEnabledClipPaths().toList();
