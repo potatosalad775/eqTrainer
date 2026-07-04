@@ -50,7 +50,11 @@ Future<void> main() async {
 
   // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
   final miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
-  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, ImportFormat.allM4a, false);
+  // volumeCompensation defaults to true, matching the Hive field's own
+  // defaultValue (setting_data.dart) — otherwise a fresh install and an
+  // upgraded install disagree on the default and get opposite answer-leak
+  // protection from loudness cues.
+  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, ImportFormat.allM4a, true);
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
