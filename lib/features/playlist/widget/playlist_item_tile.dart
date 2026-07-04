@@ -50,7 +50,7 @@ class PlaylistItemTile extends StatelessWidget {
           index: index,
           child: IconButton(
             onPressed: () async {
-              await repo.toggleEnabledAt(index);
+              await repo.toggleEnabledByKey(currentClip.key);
             },
             icon: Icon(currentClip.isEnabled
                 ? Icons.radio_button_checked
@@ -84,7 +84,7 @@ class PlaylistItemTile extends StatelessWidget {
                     builder: (context) => const PlaylistDeleteDialog(),
                   );
                   if (confirmDelete == true) {
-                    await clipService.deleteClip(currentClip, index);
+                    await clipService.deleteClip(currentClip);
                   }
                 }
               },

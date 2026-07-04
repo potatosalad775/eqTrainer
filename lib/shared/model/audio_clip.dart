@@ -3,7 +3,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 part 'audio_clip.g.dart';
 
 @HiveType(typeId: 0)
-class AudioClip {
+class AudioClip extends HiveObject {
   @HiveField(0)
   String fileName;    // Actual File name
   @HiveField(1)
