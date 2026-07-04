@@ -19,7 +19,6 @@ class UpgraderService {
 
   Future<Upgrader> getInstance() async {
     final osVersion = await getOsVersion(UpgraderOS());
-    await Upgrader.clearSavedSettings();
     final installationSource = await _getInstallationSource();
     return Upgrader(
       messages: CustomUpgraderMessages(),
