@@ -161,6 +161,7 @@ class PlayerIsolate extends ChangeNotifier {
   bool _eqToggleInFlight = false;
   bool? _pendingEQValue;
   DateTime _eqToggleLastEnd = DateTime(0);
+  bool _eqParamsInFlight = false;
 
   bool _seekInFlight = false;
   AudioTime? _pendingSeekPosition;
@@ -249,6 +250,13 @@ class PlayerIsolate extends ChangeNotifier {
     _lastEQState = enableEQ;
     notifyListeners(); // Optimistic: UI disables button immediately
 
+    // Wait for any in-flight round-transition params update to finish so
+    // this toggle can't race ahead of it and reach the isolate out of order
+    // (see setEQParams).
+    while (_eqParamsInFlight) {
+      await Future<void>.delayed(Duration.zero);
+    }
+
     if (_eqToggleInFlight) {
       _pendingEQValue = enableEQ; // Coalesce: remember latest
       return;
@@ -289,11 +297,26 @@ class PlayerIsolate extends ChangeNotifier {
     required double frequency,
     required double gainDb,
   }) async {
-    await _isolate.request(PlayerHostRequestSetEQParams(
-      enableEQ: enableEQ,
-      frequency: frequency,
-      gainDb: gainDb,
-    ));
+    // Wait for any in-flight manual toggle to finish, then drop whatever it
+    // queued. A round transition's EQ-enable state must win over a stale
+    // toggle tap: without this, the two requests can reach the isolate out
+    // of order and leave the new round's answer band audibly enabled at
+    // round start.
+    while (_eqToggleInFlight) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    _pendingEQValue = null;
+
+    _eqParamsInFlight = true;
+    try {
+      await _isolate.request(PlayerHostRequestSetEQParams(
+        enableEQ: enableEQ,
+        frequency: frequency,
+        gainDb: gainDb,
+      ));
+    } finally {
+      _eqParamsInFlight = false;
+    }
     _lastEQState = enableEQ;
     notifyListeners();
   }
