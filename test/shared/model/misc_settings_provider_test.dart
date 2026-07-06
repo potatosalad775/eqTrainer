@@ -14,7 +14,9 @@ void main() {
   setUp(() async {
     tmpDir = await Directory.systemTemp.createTemp('misc_settings_test_');
     Hive.init(tmpDir.path);
-    Hive.registerAdapter(MiscSettingsAdapter());
+    if (!Hive.isAdapterRegistered(MiscSettingsAdapter().typeId)) {
+      Hive.registerAdapter(MiscSettingsAdapter());
+    }
     await Hive.openBox<MiscSettings>(miscSettingsBoxName);
   });
 

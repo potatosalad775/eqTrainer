@@ -47,7 +47,7 @@ void main() {
     clipsDir = await Directory.systemTemp.createTemp('eqt_clips_');
 
     Hive.init(hiveDir.path);
-    if (!Hive.isAdapterRegistered(0)) {
+    if (!Hive.isAdapterRegistered(AudioClipAdapter().typeId)) {
       Hive.registerAdapter(AudioClipAdapter());
     }
 

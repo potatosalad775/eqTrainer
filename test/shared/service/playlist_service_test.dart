@@ -38,7 +38,7 @@ void main() {
       // (Box.values) attach one.
       tmpHive = await Directory.systemTemp.createTemp('pls_hive_');
       Hive.init(tmpHive.path);
-      if (!Hive.isAdapterRegistered(0)) {
+      if (!Hive.isAdapterRegistered(AudioClipAdapter().typeId)) {
         Hive.registerAdapter(AudioClipAdapter());
       }
       box = await Hive.openBox<AudioClip>('pls_test_box');
