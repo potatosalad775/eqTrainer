@@ -49,7 +49,13 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required PlaylistService playlistService,
+    // Checked before each write to the (app-scoped) SessionStore after an
+    // await, so exiting the session page mid-launch doesn't leave a stray
+    // ready/error/playlistEmpty state written into a store that outlives
+    // this page. Callers that don't care can omit it.
+    bool Function()? shouldContinue,
   }) async {
+    bool active() => shouldContinue == null || shouldContinue();
     try {
       // Move to the loading/init state synchronously, before any await, so a
       // relaunch of the app-scoped SessionStore does not render the previous
@@ -64,6 +70,7 @@ class SessionController {
 
       // Load enabled audio clip absolute paths
       final paths = await playlistService.listEnabledClipPaths();
+      if (!active()) return;
       sessionStore.setPlaylistPaths(paths);
 
       // Q is fixed for the whole session; capture it once so a track switch
@@ -81,14 +88,16 @@ class SessionController {
         );
         // Apply the session's EQ bandwidth once on the fresh player.
         await player.setEQQ(_qFactor);
+        if (!active()) return;
       } else {
         // ... else notify the playlist is empty.
-        sessionStore.setSessionState(SessionState.playlistEmpty);
+        if (active()) sessionStore.setSessionState(SessionState.playlistEmpty);
         return;
       }
 
       // Calculate Frequencies required for Session and Graph UI
       await sessionStore.initFrequency(sessionParameter: sessionParameter);
+      if (!active()) return;
 
       // Start initialize Session (first round)
       await initSession(
@@ -96,11 +105,12 @@ class SessionController {
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
       );
+      if (!active()) return;
 
       // Notify the Session is Ready
       sessionStore.setSessionState(SessionState.ready);
     } catch (e) {
-      sessionStore.setSessionState(SessionState.error);
+      if (active()) sessionStore.setSessionState(SessionState.error);
       throw Exception(e.toString());
     }
   }
