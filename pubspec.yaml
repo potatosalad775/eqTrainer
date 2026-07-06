@@ -93,7 +93,7 @@ flutter_launcher_icons:
     icon_size: 256
   remove_alpha_ios: true
   image_path: "assets/icon/icon.png"
-  min_sdk_android: 26
+  min_sdk_android: 24
 
 msix_config:
   display_name: eqTrainer
