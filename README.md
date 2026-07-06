@@ -70,6 +70,19 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 
 Please refer to [FAQ Wiki Page](https://github.com/potatosalad775/eqTrainer/wiki/FAQ).
 
+> [!WARNING]
+> **macOS: "Apple could not verify... / check with the developer" on first launch**
+>
+> The macOS build isn't notarized yet (no paid Apple Developer account), so
+> Gatekeeper blocks it on a fresh download. Removing the quarantine flag
+> (`xattr -d com.apple.quarantine`) doesn't reliably fix this on recent macOS
+> versions. Instead:
+> 1. Try to open `eq_trainer.app` (it'll be blocked) — or right-click it and choose **Open**.
+> 2. Go to **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the eqTrainer message.
+> 3. Confirm in the dialog that appears (may require your password / Touch ID).
+>
+> This only needs to be done once per download.
+
 ## Contributing
 
 ### Localization
