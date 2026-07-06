@@ -89,6 +89,7 @@ class SessionStore extends ChangeNotifier {
     _resultCorrect = 0;
     _correctAnswerPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
     _resultIncorrect = 0;
+    notifyListeners();
   }
 
   // Consolidated submission update to minimize intermediate rebuilds
