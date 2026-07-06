@@ -37,18 +37,33 @@ class _SessionControlState extends State<SessionControl> {
     // "Original" on the fresh player.
     final wasEqEnabled = player.fetchEQState;
     final volumeCompensation = context.read<MiscSettingsProvider>().volumeCompensation;
-    await player.pause();
-    await player.shutdown();
-    await player.launch(
-      backend: backend,
-      outputDeviceId: outputDeviceId,
-      path: path,
-      volumeCompensation: volumeCompensation,
-    );
-    if (context.mounted) {
-      await context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
+    try {
+      await player.pause();
+      await player.shutdown();
+      await player.launch(
+        backend: backend,
+        outputDeviceId: outputDeviceId,
+        path: path,
+        volumeCompensation: volumeCompensation,
+      );
+      if (context.mounted) {
+        await context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
+      }
+      if (context.mounted) {
+        await player.play();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        await showPlayerErrorDialog(context,
+          action: () {
+            player.shutdown();
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
+          },
+          error: e,
+        );
+      }
     }
-    await player.play();
   }
 
   Future<void> _playerNext(
@@ -110,24 +125,26 @@ class _SessionControlState extends State<SessionControl> {
           ? null
           : () => _guardedSwitch(
               () => _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId)),
-      onPlayPause: () {
-        if (playerState.isPlaying) {
-          player.pause();
-        } else {
-          player.play().onError((e, _) {
-            if (context.mounted) {
-              showPlayerErrorDialog(context,
-                action: () {
-                  player.shutdown();
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-                },
-                error: e,
-              );
-            }
-          });
-        }
-      },
+      onPlayPause: _switching
+          ? null
+          : () {
+              if (playerState.isPlaying) {
+                player.pause();
+              } else {
+                player.play().onError((e, _) {
+                  if (context.mounted) {
+                    showPlayerErrorDialog(context,
+                      action: () {
+                        player.shutdown();
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      error: e,
+                    );
+                  }
+                });
+              }
+            },
       thirdIcon: Icons.skip_next,
       onThird: _switching
           ? null
