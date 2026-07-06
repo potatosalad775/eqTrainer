@@ -204,6 +204,10 @@ class SessionController {
           sessionParameter.startingBand++;
           sessionStore.resetSessionPoint();
           sessionStore.resetPickerValue();
+          // The graph layout is about to change size/meaning; a stale index
+          // from the old layout must not suppress a legitimate repeat (or,
+          // in principle, sit outside the new range) in the next round.
+          _prevAnswerGraphIndex = -1;
           await sessionStore.initFrequency(sessionParameter: sessionParameter);
         } else {
           // Already at the top band: clamp instead of letting further correct
@@ -217,6 +221,7 @@ class SessionController {
           sessionParameter.startingBand--;
           sessionStore.resetSessionPoint();
           sessionStore.resetPickerValue();
+          _prevAnswerGraphIndex = -1;
           await sessionStore.initFrequency(sessionParameter: sessionParameter);
         } else {
           sessionStore.setCurrentSessionPoint(0 - sessionParameter.threshold);
