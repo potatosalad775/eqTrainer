@@ -72,14 +72,16 @@ class _SessionPageState extends State<SessionPage> {
               "SESSION_APPBAR_TITLE".tr()
             ),
             actions: [
-              Consumer<SessionStore>(
-                builder: (_, store, __) {
+              Selector<SessionStore, (int, int)>(
+                selector: (_, store) => (store.resultCorrect, store.resultIncorrect),
+                builder: (_, counts, __) {
+                  final (correct, incorrect) = counts;
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(Icons.check),
                       Text(
-                        store.resultCorrect.toString(),
+                        correct.toString(),
                         style: const TextStyle(
                           fontSize: 20,
                         ),
@@ -87,7 +89,7 @@ class _SessionPageState extends State<SessionPage> {
                       const SizedBox(width: 10),
                       const Icon(Icons.clear),
                       Text(
-                        store.resultIncorrect.toString(),
+                        incorrect.toString(),
                         style: const TextStyle(
                           fontSize: 20,
                         ),
