@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
@@ -49,6 +48,7 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required PlaylistService playlistService,
+    required bool volumeCompensation,
     // Checked before each write to the (app-scoped) SessionStore after an
     // await, so exiting the session page mid-launch doesn't leave a stray
     // ready/error/playlistEmpty state written into a store that outlives
@@ -84,7 +84,7 @@ class SessionController {
           backend: audioState.backend,
           outputDeviceId: audioState.outputDevice?.id,
           path: sessionStore.playlistPaths[0],
-          volumeCompensation: savedMiscSettingsValue.volumeCompensation,
+          volumeCompensation: volumeCompensation,
         );
         // Apply the session's EQ bandwidth once on the fresh player.
         await player.setEQQ(_qFactor);

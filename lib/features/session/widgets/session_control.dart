@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/error.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
@@ -36,13 +36,14 @@ class _SessionControlState extends State<SessionControl> {
     // it so a manually-toggled "Filtered" view doesn't silently become
     // "Original" on the fresh player.
     final wasEqEnabled = player.fetchEQState;
+    final volumeCompensation = context.read<MiscSettingsProvider>().volumeCompensation;
     await player.pause();
     await player.shutdown();
     await player.launch(
       backend: backend,
       outputDeviceId: outputDeviceId,
       path: path,
-      volumeCompensation: savedMiscSettingsValue.volumeCompensation,
+      volumeCompensation: volumeCompensation,
     );
     if (context.mounted) {
       await context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);

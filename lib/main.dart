@@ -14,9 +14,9 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
@@ -71,13 +71,8 @@ Future<void> main() async {
   backendList = backendBox.get(backendKey)?.backendList ?? [];
   await backendBox.close();
 
-  // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
-  final miscSettingsBox = await _openBoxSafely<MiscSettings>(miscSettingsBoxName);
-  // volumeCompensation defaults to true, matching the Hive field's own
-  // defaultValue (setting_data.dart) — otherwise a fresh install and an
-  // upgraded install disagree on the default and get opposite answer-leak
-  // protection from loudness cues.
-  savedMiscSettingsValue = miscSettingsBox.get(miscSettingsKey) ?? MiscSettings(false, ImportFormat.allM4a, true);
+  // Load Miscellaneous Settings (kept open — MiscSettingsProvider accesses it at runtime)
+  await _openBoxSafely<MiscSettings>(miscSettingsBoxName);
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
@@ -186,7 +181,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider<MiscSettingsProvider>(create: (_) => MiscSettingsProvider()),
 
         // UI-level
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
@@ -226,7 +221,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
         title: 'eq_trainer',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: context.watch<ThemeProvider>().themeMode,
+        themeMode: context.watch<MiscSettingsProvider>().themeMode,
         localizationsDelegates: context.localizationDelegates,
         supportedLocales: context.supportedLocales,
         locale: context.locale,
@@ -257,12 +252,9 @@ class AppState extends State<App> with WidgetsBindingObserver {
 
 const String backendBoxName = "backendBox";
 const String backendKey = "backendKey";
-const String miscSettingsBoxName = "miscSettingsBox";
-const String miscSettingsKey = "miscSettingsKey";
 const String audioClipBoxName = "audioClipBox";
 
 late Directory appSupportDir;
 
 //AndroidAudioBackend? androidAudioBackend;
 late List<String> backendList;
-late final MiscSettings savedMiscSettingsValue;

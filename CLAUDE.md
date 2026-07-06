@@ -29,11 +29,11 @@ eqTrainer/
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
 │   └── shared/                # Cross-feature code
-│       ├── model/             # Data models: AudioClip, AudioState, SettingData
+│       ├── model/             # Data models: AudioClip, AudioState, SettingData, MiscSettingsProvider
 │       ├── player/            # Audio engine: PlayerIsolate, EQ filters
 │       ├── repository/        # IAudioClipRepository + Hive implementation
 │       ├── service/           # Business logic services
-│       ├── themes/            # AppColors, AppTheme (ThemeProvider), AppDimens
+│       ├── themes/            # AppColors, AppTheme, AppDimens
 │       └── widget/            # Reusable UI widgets
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
@@ -58,6 +58,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | Provider | Type | Purpose |
 |---|---|---|
 | `NavBarProvider` | ChangeNotifier | Bottom nav state |
+| `MiscSettingsProvider` | ChangeNotifier | Hive-backed misc settings: theme mode, frequency tooltip, import format, volume compensation |
 | `AudioState` | ChangeNotifier | Audio backend & output device selection |
 | `AppDirectories` | Provider | App support directory paths |
 | `AudioClipRepository` | Provider | Hive-backed clip storage |
@@ -82,11 +83,11 @@ Each feature is a self-contained module with:
 
 | Sub-directory | Content |
 |---|---|
-| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `SettingData` (Hive settings) |
+| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `SettingData` (Hive settings), `MiscSettingsProvider` (ChangeNotifier over `SettingData`) |
 | `player/` | `PlayerIsolate` (audio engine in a Dart isolate), `PeakingEqNode`, `PeakingEqFilter` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
 | `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper` |
-| `themes/` | `AppColors`, `AppTheme` (`ThemeProvider`), `AppDimens` |
+| `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
 | `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
 ---
@@ -146,8 +147,7 @@ SessionController.submitAnswer()
 ### Theming
 
 - Material Design 3, seed color `0xFF375778` (slate blue)
-- Dark/light modes via `ThemeProvider` (ChangeNotifier) in `lib/shared/themes/app_theme.dart`
-  - Note: theme choice is **not persisted** yet — resets to system each launch (TASKS.md M14)
+- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to the `miscSettingsBox` Hive box (TASKS.md M14)
 - Custom font: `PretendardVariable` (supports Korean)
 - Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`

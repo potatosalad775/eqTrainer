@@ -14,7 +14,7 @@ import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:path/path.dart' as p;
 
 class ImportPage extends StatefulWidget {
@@ -201,7 +201,8 @@ class _ImportPageState extends State<ImportPage> {
 
     // Determine target format based on user's import format setting
     final sourceExt = '.${fileExtension ?? ''}';
-    final targetExt = targetExtForImport(sourceExt, savedMiscSettingsValue.importFormat);
+    final importFormat = context.read<MiscSettingsProvider>().importFormat;
+    final targetExt = targetExtForImport(sourceExt, importFormat);
 
     if (targetExt != null) {
       importPageState.value = ImportPageState.converting;

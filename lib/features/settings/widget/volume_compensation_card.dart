@@ -1,33 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/shared/model/setting_data.dart';
+import 'package:provider/provider.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
-import 'package:hive_ce/hive.dart';
 
-class VolumeCompensationCard extends StatefulWidget {
+class VolumeCompensationCard extends StatelessWidget {
   const VolumeCompensationCard({super.key});
 
   @override
-  State<VolumeCompensationCard> createState() => _VolumeCompensationCardState();
-}
-
-class _VolumeCompensationCardState extends State<VolumeCompensationCard> {
-  @override
   Widget build(BuildContext context) {
+    final volumeCompensation = context.watch<MiscSettingsProvider>().volumeCompensation;
     return SettingsCard(
       icon: Icons.volume_up,
       title: "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE".tr(),
       trailing: Switch(
-        value: savedMiscSettingsValue.volumeCompensation,
+        value: volumeCompensation,
         onChanged: (bool value) {
-          setState(() {
-            savedMiscSettingsValue.volumeCompensation = value;
-            Hive.box<MiscSettings>(miscSettingsBoxName).put(
-              miscSettingsKey,
-              savedMiscSettingsValue.copyWith(inputVolumeCompensation: value),
-            );
-          });
+          context.read<MiscSettingsProvider>().setVolumeCompensation(value);
         },
       ),
     );

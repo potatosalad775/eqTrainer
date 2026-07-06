@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/result/result_page.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
@@ -39,6 +40,7 @@ class _SessionPageState extends State<SessionPage> {
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final playlistService = Provider.of<PlaylistService>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
+    final volumeCompensation = Provider.of<MiscSettingsProvider>(context, listen: false).volumeCompensation;
 
     try {
       await sessionController.launchSession(
@@ -47,6 +49,7 @@ class _SessionPageState extends State<SessionPage> {
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
         playlistService: playlistService,
+        volumeCompensation: volumeCompensation,
         shouldContinue: () => mounted,
       );
     } catch (_) {
