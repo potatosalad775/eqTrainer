@@ -176,7 +176,13 @@ class PlayerIsolate extends ChangeNotifier {
     // A fresh isolate always starts with EQ bypassed; reset the cached state
     // to match so a later setEQ() call re-applying the pre-switch enabled
     // state isn't skipped as "redundant" against a stale cached value.
+    // Also clear position/duration/player-state caches so widgets don't
+    // briefly render the previous clip's values before the first poll lands.
     _lastEQState = false;
+    _lastState = null;
+    _lastPosition = null;
+    _lastDuration = null;
+    notifyListeners();
     await _isolate.launch(
       initialMessage: _PlayerMessage(
         backend: backend,
