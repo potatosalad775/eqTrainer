@@ -89,6 +89,7 @@ class SessionStore extends ChangeNotifier {
     _resultCorrect = 0;
     _correctAnswerPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
     _resultIncorrect = 0;
+    notifyListeners();
   }
 
   // Consolidated submission update to minimize intermediate rebuilds
@@ -173,6 +174,12 @@ class SessionStore extends ChangeNotifier {
 
       // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
       resetPickerValue();
+
+      // Notify listeners so widgets that depend on the graph data (e.g. the
+      // picker's max value) rebuild — resetPickerValue() alone early-returns
+      // without notifying when the picker was already at 1, which would leave
+      // the picker range stale after a threshold-driven band count change.
+      notifyListeners();
 
       graphStateNotifier.value = GraphState.ready;
     } catch (_) {

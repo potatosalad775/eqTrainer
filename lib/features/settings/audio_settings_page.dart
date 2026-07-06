@@ -3,22 +3,19 @@ import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dar
 import 'package:eq_trainer/features/settings/audio_backend_page.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 import 'package:eq_trainer/features/settings/widget/volume_compensation_card.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class AudioSettingsPage extends StatefulWidget {
+class AudioSettingsPage extends StatelessWidget {
   const AudioSettingsPage({super.key});
 
   @override
-  State<AudioSettingsPage> createState() => _AudioSettingsPageState();
-}
-
-class _AudioSettingsPageState extends State<AudioSettingsPage> {
-  @override
   Widget build(BuildContext context) {
+    final importFormat = context.watch<MiscSettingsProvider>().importFormat;
     return Scaffold(
       appBar: AppBar(
         title: Text("AUDIO_SETTING_APPBAR_TITLE".tr()),
@@ -29,12 +26,12 @@ class _AudioSettingsPageState extends State<AudioSettingsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
             children: [
-              AudioImportFormatCard(onChanged: () => setState(() {})),
+              const AudioImportFormatCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                 child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC".tr()),
               ),
-              if (savedMiscSettingsValue.importFormat == ImportFormat.keepOriginal)
+              if (importFormat == ImportFormat.keepOriginal)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                   child: Text("AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN".tr(), style: TextStyle(color: context.colors.error)),

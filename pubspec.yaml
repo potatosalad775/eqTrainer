@@ -39,7 +39,7 @@ dependencies:
   hive_ce: ^2.13.1
   hive_ce_flutter: ^2.3.2
   path_provider: ^2.0.15
-  path: any
+  path: ^1.9.0
   fl_chart: ^1.0.0
   easy_localization: ^3.0.2
   easy_localization_loader: ^2.0.1
@@ -49,22 +49,25 @@ dependencies:
   equatable: ^2.0.5
   device_info_plus: ^12.1.0
   version: ^3.0.2
+  # Git deps are pinned to exact commit SHAs (not mutable branches) so builds
+  # are reproducible and the audio engine can't change silently on re-resolve.
   store_checker:
     git:
       url: https://github.com/ravitejaavv/store_checker.git
-      ref: master
+      ref: 36bd4f13b22a3ca07dd7fd1abe997d9f312292ea # was: master
   window_size:
     git:
       url: https://github.com/google/flutter-desktop-embedding
       path: plugins/window_size
+      ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601 # was: HEAD
   coast_audio:
     git:
       url: https://github.com/potatosalad775/coast_audio.git
-      ref: custom
-  audio_decoder: 
+      ref: 2166f8414d2a489bc3e11bad2603629cf69e5067 # was: custom
+  audio_decoder:
     git:
       url: https://github.com/potatosalad775/audio_decoder.git
-      ref: custom
+      ref: d2f6752e3301475ec6a76d5cc79eb128bfe063e2 # was: custom
 
 dev_dependencies:
   flutter_test:
@@ -90,7 +93,7 @@ flutter_launcher_icons:
     icon_size: 256
   remove_alpha_ios: true
   image_path: "assets/icon/icon.png"
-  min_sdk_android: 26
+  min_sdk_android: 24
 
 msix_config:
   display_name: eqTrainer

@@ -37,10 +37,10 @@ class InteractionLock extends StatelessWidget {
               ),
             ),
           ],
-          const Positioned.fill(
+          Positioned.fill(
             child: IgnorePointer(
               ignoring: true,
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: progress ?? const CircularProgressIndicator()),
             ),
           ),
         ]

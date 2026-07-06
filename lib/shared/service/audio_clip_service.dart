@@ -67,4 +67,22 @@ class AudioClipService {
 
     await _repository.addClip(clip);
   }
+
+  /// Delete a clip's backing audio file and its DB record.
+  ///
+  /// The file is removed best-effort first (an orphaned file is a smaller
+  /// problem than a record that outlives its file), then the record is
+  /// removed by its Hive key (stable even if the box changed while a
+  /// confirmation dialog was open). Without the file removal this left the
+  /// file on disk forever, leaking storage on every deletion.
+  Future<void> deleteClip(AudioClip clip) async {
+    final clipsPath = await _dirs.getClipsPath();
+    final file = File(p.join(clipsPath, clip.fileName));
+    try {
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Ignore: still remove the record so the entry doesn't dangle.
+    }
+    await _repository.deleteByKey(clip.key);
+  }
 }

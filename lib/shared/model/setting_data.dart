@@ -23,21 +23,29 @@ class MiscSettings {
   @HiveField(2, defaultValue: true)
   bool volumeCompensation;
 
+  // ThemeMode.values index (system=0, light=1, dark=2). Persisted so the
+  // user's choice survives restart instead of resetting to system every launch.
+  @HiveField(3, defaultValue: 0)
+  int themeMode;
+
   MiscSettings(
     this.frequencyToolTip,
     this.importFormat,
-    this.volumeCompensation,
-  );
+    this.volumeCompensation, {
+    this.themeMode = 0,
+  });
 
   MiscSettings copyWith({
     bool? inputFrequencyToolTip,
     int? inputImportFormat,
     bool? inputVolumeCompensation,
+    int? inputThemeMode,
   }) {
     return MiscSettings(
       inputFrequencyToolTip ?? frequencyToolTip,
       inputImportFormat ?? importFormat,
       inputVolumeCompensation ?? volumeCompensation,
+      themeMode: inputThemeMode ?? themeMode,
     );
   }
 }

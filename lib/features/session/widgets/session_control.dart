@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:coast_audio/coast_audio.dart';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/error.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 
-class SessionControl extends StatelessWidget {
+class SessionControl extends StatefulWidget {
 
   const SessionControl({super.key});
+
+  @override
+  State<SessionControl> createState() => _SessionControlState();
+}
+
+class _SessionControlState extends State<SessionControl> {
+  // Guards previous/next while a track switch (pause -> shutdown -> launch ->
+  // play) is in flight. Without it, rapid taps interleave concurrent
+  // shutdown/launch calls and the playlist index can advance before the
+  // previous relaunch even finishes.
+  bool _switching = false;
 
   Future<void> _relaunchWith(
     BuildContext context,
@@ -20,16 +31,39 @@ class SessionControl extends StatelessWidget {
     required AudioDeviceId? outputDeviceId,
   }) async {
     final player = context.read<PlayerIsolate>();
-    await player.pause();
-    await player.shutdown();
-    await player.launch(
-      backend: backend,
-      outputDeviceId: outputDeviceId,
-      path: path,
-      volumeCompensation: savedMiscSettingsValue.volumeCompensation,
-    );
-    if (context.mounted) await context.read<SessionController>().updatePlayerState(player);
-    await player.play();
+    // Capture the pre-switch EQ state: the new isolate always launches with
+    // EQ bypassed, and updatePlayerState needs to know whether to re-enable
+    // it so a manually-toggled "Filtered" view doesn't silently become
+    // "Original" on the fresh player.
+    final wasEqEnabled = player.fetchEQState;
+    final volumeCompensation = context.read<MiscSettingsProvider>().volumeCompensation;
+    try {
+      await player.pause();
+      await player.shutdown();
+      await player.launch(
+        backend: backend,
+        outputDeviceId: outputDeviceId,
+        path: path,
+        volumeCompensation: volumeCompensation,
+      );
+      if (context.mounted) {
+        await context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
+      }
+      if (context.mounted) {
+        await player.play();
+      }
+    } catch (e) {
+      if (context.mounted) {
+        await showPlayerErrorDialog(context,
+          action: () {
+            player.shutdown();
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
+          },
+          error: e,
+        );
+      }
+    }
   }
 
   Future<void> _playerNext(
@@ -52,7 +86,7 @@ class SessionControl extends StatelessWidget {
     required AudioDeviceId? outputDeviceId,
   }) async {
     final player = context.read<PlayerIsolate>();
-    
+
     // If player position > 3 seconds, reset to 0 instead of going to previous
     if (player.fetchPosition > const AudioTime(3)) {
       await player.seek(AudioTime.zero);
@@ -67,6 +101,16 @@ class SessionControl extends StatelessWidget {
     }
   }
 
+  Future<void> _guardedSwitch(Future<void> Function() action) async {
+    if (_switching) return;
+    setState(() => _switching = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _switching = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final (backend, outputDeviceId) = context.select<AudioState, (AudioDeviceBackend, AudioDeviceId?)>(
@@ -77,31 +121,35 @@ class SessionControl extends StatelessWidget {
 
     return PlayerControlButtons(
       isPlaying: playerState.isPlaying,
-      onPrevious: () async {
-        await _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId);
-      },
-      onPlayPause: () {
-        if (playerState.isPlaying) {
-          player.pause();
-        } else {
-          player.play().onError((e, _) {
-            if (context.mounted) {
-              showPlayerErrorDialog(context,
-                action: () {
-                  player.shutdown();
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-                },
-                error: e,
-              );
-            }
-          });
-        }
-      },
+      onPrevious: _switching
+          ? null
+          : () => _guardedSwitch(
+              () => _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId)),
+      onPlayPause: _switching
+          ? null
+          : () {
+              if (playerState.isPlaying) {
+                player.pause();
+              } else {
+                player.play().onError((e, _) {
+                  if (context.mounted) {
+                    showPlayerErrorDialog(context,
+                      action: () {
+                        player.shutdown();
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      error: e,
+                    );
+                  }
+                });
+              }
+            },
       thirdIcon: Icons.skip_next,
-      onThird: () async {
-        await _playerNext(context, backend: backend, outputDeviceId: outputDeviceId);
-      },
+      onThird: _switching
+          ? null
+          : () => _guardedSwitch(
+              () => _playerNext(context, backend: backend, outputDeviceId: outputDeviceId)),
     );
   }
 }

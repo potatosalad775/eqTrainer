@@ -15,10 +15,10 @@ class PlayerControlButtons extends StatelessWidget {
   });
 
   final bool isPlaying;
-  final VoidCallback onPrevious;
-  final VoidCallback onPlayPause;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onPlayPause;
   final IconData thirdIcon;
-  final VoidCallback onThird;
+  final VoidCallback? onThird;
 
   @override
   Widget build(BuildContext context) {

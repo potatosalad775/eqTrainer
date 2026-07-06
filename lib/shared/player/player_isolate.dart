@@ -67,6 +67,13 @@ class PlayerHostRequestSetEQFreq extends PlayerHostRequest {
   final double frequency;
 }
 
+class PlayerHostRequestSetEQQ extends PlayerHostRequest {
+  const PlayerHostRequestSetEQQ({
+    required this.q,
+  });
+  final double q;
+}
+
 class PlayerHostRequestGetEqState extends PlayerHostRequest {
   const PlayerHostRequestGetEqState();
 }
@@ -154,10 +161,12 @@ class PlayerIsolate extends ChangeNotifier {
   bool _eqToggleInFlight = false;
   bool? _pendingEQValue;
   DateTime _eqToggleLastEnd = DateTime(0);
+  bool _eqParamsInFlight = false;
 
   bool _seekInFlight = false;
   AudioTime? _pendingSeekPosition;
   DateTime _seekLastEnd = DateTime(0);
+  int _seekVersion = 0;
 
   Future<void> launch({
     required AudioDeviceBackend backend,
@@ -165,6 +174,16 @@ class PlayerIsolate extends ChangeNotifier {
     required String? path,
     bool volumeCompensation = true,
   }) async {
+    // A fresh isolate always starts with EQ bypassed; reset the cached state
+    // to match so a later setEQ() call re-applying the pre-switch enabled
+    // state isn't skipped as "redundant" against a stale cached value.
+    // Also clear position/duration/player-state caches so widgets don't
+    // briefly render the previous clip's values before the first poll lands.
+    _lastEQState = false;
+    _lastState = null;
+    _lastPosition = null;
+    _lastDuration = null;
+    notifyListeners();
     await _isolate.launch(
       initialMessage: _PlayerMessage(
         backend: backend,
@@ -189,6 +208,7 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> play() async {
+    if (!isLaunched) return;
     await _isolate.request(const PlayerHostRequestStart());
     if (_lastState != null) {
       _lastState = PlayerStateResponse(
@@ -198,6 +218,7 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> pause() async {
+    if (!isLaunched) return;
     await _isolate.request(const PlayerHostRequestPause());
     if (_lastState != null) {
       _lastState = PlayerStateResponse(
@@ -207,6 +228,8 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<PlayerPositionResponse?> seek(AudioTime position) async {
+    if (!isLaunched) return null;
+    _seekVersion++;
     _lastPosition = position;
     notifyListeners();
 
@@ -233,14 +256,23 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> setVolume(double volume) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetVolume(volume: volume));
   }
 
   Future<void> setEQ(bool enableEQ) async {
+    if (!isLaunched) return;
     if (_lastEQState == enableEQ) return; // Skip redundant
 
     _lastEQState = enableEQ;
     notifyListeners(); // Optimistic: UI disables button immediately
+
+    // Wait for any in-flight round-transition params update to finish so
+    // this toggle can't race ahead of it and reach the isolate out of order
+    // (see setEQParams).
+    while (_eqParamsInFlight) {
+      await Future<void>.delayed(Duration.zero);
+    }
 
     if (_eqToggleInFlight) {
       _pendingEQValue = enableEQ; // Coalesce: remember latest
@@ -266,11 +298,18 @@ class PlayerIsolate extends ChangeNotifier {
   }
 
   Future<void> setEQGain(double gainDb) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetEQGain(gainDb: gainDb));
   }
 
   Future<void> setEQFreq(double frequency) {
+    if (!isLaunched) return Future.value();
     return _isolate.request(PlayerHostRequestSetEQFreq(frequency: frequency));
+  }
+
+  Future<void> setEQQ(double q) {
+    if (!isLaunched) return Future.value();
+    return _isolate.request(PlayerHostRequestSetEQQ(q: q));
   }
 
   Future<void> setEQParams({
@@ -278,32 +317,53 @@ class PlayerIsolate extends ChangeNotifier {
     required double frequency,
     required double gainDb,
   }) async {
-    await _isolate.request(PlayerHostRequestSetEQParams(
-      enableEQ: enableEQ,
-      frequency: frequency,
-      gainDb: gainDb,
-    ));
+    if (!isLaunched) return;
+    // Wait for any in-flight manual toggle to finish, then drop whatever it
+    // queued. A round transition's EQ-enable state must win over a stale
+    // toggle tap: without this, the two requests can reach the isolate out
+    // of order and leave the new round's answer band audibly enabled at
+    // round start.
+    while (_eqToggleInFlight) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    _pendingEQValue = null;
+
+    _eqParamsInFlight = true;
+    try {
+      await _isolate.request(PlayerHostRequestSetEQParams(
+        enableEQ: enableEQ,
+        frequency: frequency,
+        gainDb: gainDb,
+      ));
+    } finally {
+      _eqParamsInFlight = false;
+    }
     _lastEQState = enableEQ;
     notifyListeners();
   }
 
   Future<PlayerStateResponse?> getState() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetState());
   }
 
   Future<AudioTime?> getPosition() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetPosition());
   }
 
   Future<AudioTime?> getDuration() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetDuration());
   }
 
   Future<bool?> getEqState() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetEqState());
   }
 
   Future<PlayerAllStateResponse?> getAllState() {
+    if (!isLaunched) return Future.value(null);
     return _isolate.request(const PlayerHostRequestGetAllState());
   }
 
@@ -333,6 +393,7 @@ class PlayerIsolate extends ChangeNotifier {
     if (DateTime.now().difference(_eqToggleLastEnd).inMilliseconds < 200) return;
     if (DateTime.now().difference(_seekLastEnd).inMilliseconds < 100) return;
     _isUpdating = true;
+    final versionBeforeFetch = _seekVersion;
     try {
       final all = await getAllState();
       if (all == null) return;
@@ -343,7 +404,11 @@ class PlayerIsolate extends ChangeNotifier {
         _lastState = all.playerState;
         shouldNotify = true;
       }
-      if (all.position != _lastPosition) {
+      // If a seek started while this getAllState() call was in flight, the
+      // fetched position predates it — applying it would jump the slider back
+      // before the seek's own result corrects it. Drop it; the next poll
+      // (after _seekLastEnd's cooldown) will fetch the settled position.
+      if (all.position != _lastPosition && versionBeforeFetch == _seekVersion) {
         _lastPosition = all.position;
         shouldNotify = true;
       }
@@ -422,6 +487,9 @@ class PlayerIsolate extends ChangeNotifier {
             break;
           case PlayerHostRequestSetEQFreq():
             player.setEQFreq(request.frequency);
+            break;
+          case PlayerHostRequestSetEQQ():
+            player.setEQQ(request.q);
             break;
           case PlayerHostRequestGetEqState():
             return player.getEqState();
@@ -575,6 +643,14 @@ class AudioPlayer {
   // Cached total device buffer capacity in frames
   int? _deviceBufferCapacityFrames;
 
+  // Retained so pause() can stop them explicitly rather than relying on the
+  // clocks' own `device.isStarted` check, which races a rapid pause->play:
+  // by the time a stale clock's tick fires, the device may already be
+  // restarted (isStarted == true again), so it never self-terminates and
+  // runs alongside the new clock doing duplicate feeder work.
+  AudioClock? _playbackClock;
+  AudioClock? _decodeClock;
+
   // Simple underrun counter
   int _underrunCount = 0;
 
@@ -614,8 +690,21 @@ class AudioPlayer {
   }
 
   AudioTime get duration {
-    return AudioTime.fromFrames(_decoderNode.decoder.lengthInFrames!,
+    return AudioTime.fromFrames(_safeLengthInFrames(),
         format: _decoderNode.decoder.outputFormat);
+  }
+
+  // decoder.lengthInFrames is nullable by interface (and, per miniaudio docs,
+  // MA_NOT_IMPLEMENTED/unknown-length streams can make the getter itself
+  // throw for some backends) even though the WAV/AAC/miniaudio decoders this
+  // app actually uses always resolve a concrete length today. Guard both
+  // cases so an unexpected decoder/stream can't kill the audio isolate.
+  int _safeLengthInFrames() {
+    try {
+      return _decoderNode.decoder.lengthInFrames ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   // Get the current playback state
@@ -629,7 +718,7 @@ class AudioPlayer {
   PlayerPositionResponse getPosition() {
     return PlayerPositionResponse(
       position: position,
-      duration: AudioTime.fromFrames(_decoderNode.decoder.lengthInFrames!,
+      duration: AudioTime.fromFrames(_safeLengthInFrames(),
           format: _decoderNode.decoder.outputFormat),
     );
   }
@@ -704,7 +793,8 @@ class AudioPlayer {
     final ringHighWater = (_ringBuffer.capacity * 0.9).floor();
 
     // Short tick (10ms) and adaptive while-fill based on available write frames
-    AudioIntervalClock(const AudioTime(0.01)).runWithBuffer(
+    _playbackClock = AudioIntervalClock(const AudioTime(0.01));
+    _playbackClock!.runWithBuffer(
       frames: _chunkBuffer!,
       onTick: (_, buffer) {
         if (!_playbackNode.device.isStarted) {
@@ -720,6 +810,7 @@ class AudioPlayer {
           try {
             final result = _playbackNode.outputBus.read(buffer);
             if (result.isEnd) {
+              _handleEndOfStream();
               return false; // end of stream
             }
           } catch (e) {
@@ -735,7 +826,8 @@ class AudioPlayer {
     );
 
     // Background decode pump: keep ring buffer filled ahead while device is running
-    AudioIntervalClock(const AudioTime(0.01)).runWithBuffer(
+    _decodeClock = AudioIntervalClock(const AudioTime(0.01));
+    _decodeClock!.runWithBuffer(
       frames: _decodeChunkBuffer!,
       onTick: (_, buffer) {
         if (!_playbackNode.device.isStarted) {
@@ -766,6 +858,22 @@ class AudioPlayer {
 
   void pause() {
     _playbackNode.device.stop();
+    // Stop the feeder clocks explicitly (see field docs) instead of letting
+    // them notice via device.isStarted on their next tick.
+    _playbackClock?.stop();
+    _decodeClock?.stop();
+  }
+
+  /// Called when the playback chain reports end-of-stream. Stops the device
+  /// and rewinds to the start so the player leaves a consistent state: without
+  /// this the device stays "started" (isPlaying == true) while nothing feeds
+  /// it, so play() early-returns and the UI shows a playing-but-silent clip
+  /// that only pause→play recovers. Rewinding also lets the play button replay
+  /// the clip from the beginning.
+  void _handleEndOfStream() {
+    _playbackNode.device.stop();
+    // Resets the decoder cursor to 0 and clears the device + ring buffers.
+    position = AudioTime.zero;
   }
 
   // Track EQ enabled state for the current round.
@@ -796,6 +904,10 @@ class AudioPlayer {
 
   void setEQFreq(double value) {
     _peakingEQNode.setFrequency(value);
+  }
+
+  void setEQQ(double value) {
+    _peakingEQNode.setQ(value);
   }
 
   bool getEqState() {

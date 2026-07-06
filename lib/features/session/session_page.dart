@@ -5,6 +5,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/result/result_page.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
@@ -39,14 +40,24 @@ class _SessionPageState extends State<SessionPage> {
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
     final playlistService = Provider.of<PlaylistService>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
+    final volumeCompensation = Provider.of<MiscSettingsProvider>(context, listen: false).volumeCompensation;
 
-    await sessionController.launchSession(
-      player,
-      audioState: audioState,
-      sessionStore: sessionStore,
-      sessionParameter: sessionParameter,
-      playlistService: playlistService,
-    );
+    try {
+      await sessionController.launchSession(
+        player,
+        audioState: audioState,
+        sessionStore: sessionStore,
+        sessionParameter: sessionParameter,
+        playlistService: playlistService,
+        volumeCompensation: volumeCompensation,
+        shouldContinue: () => mounted,
+      );
+    } catch (_) {
+      // sessionStore.sessionState already reflects the failure (set inside
+      // launchSession); nothing else to surface here, and rethrowing would
+      // otherwise escape as an uncaught async exception since this runs from
+      // a post-frame callback with no caller awaiting it.
+    }
   }
 
   @override
@@ -64,14 +75,16 @@ class _SessionPageState extends State<SessionPage> {
               "SESSION_APPBAR_TITLE".tr()
             ),
             actions: [
-              Consumer<SessionStore>(
-                builder: (_, store, __) {
+              Selector<SessionStore, (int, int)>(
+                selector: (_, store) => (store.resultCorrect, store.resultIncorrect),
+                builder: (_, counts, __) {
+                  final (correct, incorrect) = counts;
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(Icons.check),
                       Text(
-                        store.resultCorrect.toString(),
+                        correct.toString(),
                         style: const TextStyle(
                           fontSize: 20,
                         ),
@@ -79,7 +92,7 @@ class _SessionPageState extends State<SessionPage> {
                       const SizedBox(width: 10),
                       const Icon(Icons.clear),
                       Text(
-                        store.resultIncorrect.toString(),
+                        incorrect.toString(),
                         style: const TextStyle(
                           fontSize: 20,
                         ),

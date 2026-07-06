@@ -34,14 +34,32 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
   }
 
   @override
+  void dispose() {
+    final ctx = _deviceContext;
+    if (ctx != null) {
+      AudioResourceManager.dispose(ctx.resourceId);
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final audioState = context.watch<AudioState>();
 
-    // Ensure device list includes the current output device.
+    // Ensure device list includes the current output device. Match by id,
+    // not name: two DACs can share a display name, and matching by name
+    // could pick the wrong one or leave the dropdown's value unmatched.
     if (audioState.outputDevice != null &&
-        !_devices.any((d) => d.name == audioState.outputDevice!.name)) {
+        !_devices.any((d) => d.id == audioState.outputDevice!.id)) {
       _refreshDeviceList();
     }
+
+    // Only pass a value the dropdown actually has a matching item for.
+    // Otherwise a stale/disconnected selection trips DropdownButton's
+    // "exactly one matching item" assertion and crashes the page.
+    final currentId = audioState.outputDevice?.id;
+    final selectedValue =
+        (currentId != null && _devices.any((d) => d.id == currentId)) ? currentId : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -52,20 +70,20 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
             const SizedBox(width: 16),
             Expanded(
               child: RepaintBoundary(
-                child: DropdownButton<String>(
-                  items: _devices.map((e) => e.name).map((e) =>
-                    DropdownMenuItem<String>(
-                      value: e,
+                child: DropdownButton<AudioDeviceId>(
+                  items: _devices.map((e) =>
+                    DropdownMenuItem<AudioDeviceId>(
+                      value: e.id,
                       child: Text(
-                        e,
+                        e.name,
                         maxLines: 1,
                       ),
                     )).toList(),
                   isExpanded: true,
-                  value: audioState.outputDevice?.name,
-                  onChanged: (deviceName) {
+                  value: selectedValue,
+                  onChanged: (deviceId) {
                     final device = _devices
-                        .where((d) => d.name == deviceName)
+                        .where((d) => d.id == deviceId)
                         .firstOrNull;
                     if (device == null) return;
                     audioState.userSelectedDevice = true;

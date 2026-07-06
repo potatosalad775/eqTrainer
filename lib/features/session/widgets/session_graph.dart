@@ -1,6 +1,6 @@
 import 'package:eq_trainer/features/session/widgets/session_graph_chart.dart';
 import 'package:eq_trainer/features/session/widgets/session_graph_tooltip.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -30,7 +30,7 @@ class SessionGraph extends StatelessWidget {
                         alignment: Alignment.center,
                         children: [
                           const SessionGraphChart(),
-                          if (savedMiscSettingsValue.frequencyToolTip) 
+                          if (context.watch<MiscSettingsProvider>().frequencyToolTip)
                             SessionGraphTooltip(
                               constraints: constraints, 
                               pickerValue: pickerValue

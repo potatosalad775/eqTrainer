@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_isolate.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
@@ -29,6 +28,11 @@ class SessionController {
   late double _answerCenterFreq;
   late double _answerGain;
 
+  // EQ bandwidth is fixed for the whole session (set from config at launch),
+  // not part of a round's answer. Kept so it can be re-applied to a fresh
+  // player after a track switch.
+  double _qFactor = 1;
+
   // Expose read-only for debugging/tests if needed
   int get answerGraphIndex => _answerGraphIndex;
   double get answerCenterFreq => _answerCenterFreq;
@@ -44,15 +48,34 @@ class SessionController {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     required PlaylistService playlistService,
+    required bool volumeCompensation,
+    // Checked before each write to the (app-scoped) SessionStore after an
+    // await, so exiting the session page mid-launch doesn't leave a stray
+    // ready/error/playlistEmpty state written into a store that outlives
+    // this page. Callers that don't care can omit it.
+    bool Function()? shouldContinue,
   }) async {
+    bool active() => shouldContinue == null || shouldContinue();
     try {
+      // Move to the loading/init state synchronously, before any await, so a
+      // relaunch of the app-scoped SessionStore does not render the previous
+      // session's ready UI (stale graphs, live buttons wired to a not-yet-
+      // launched player) during the async launch window.
+      sessionStore.setSessionState(SessionState.init);
+
       // Reset Session
+      _prevAnswerGraphIndex = -1;
       sessionStore.resetPickerValue();
       sessionStore.resetResult();
 
       // Load enabled audio clip absolute paths
       final paths = await playlistService.listEnabledClipPaths();
+      if (!active()) return;
       sessionStore.setPlaylistPaths(paths);
+
+      // Q is fixed for the whole session; capture it once so a track switch
+      // can re-apply it to the fresh player.
+      _qFactor = sessionParameter.qFactor;
 
       // If List of Audio clips for Session is Not Empty
       if (sessionStore.playlistPaths.isNotEmpty) {
@@ -61,16 +84,20 @@ class SessionController {
           backend: audioState.backend,
           outputDeviceId: audioState.outputDevice?.id,
           path: sessionStore.playlistPaths[0],
-          volumeCompensation: savedMiscSettingsValue.volumeCompensation,
+          volumeCompensation: volumeCompensation,
         );
+        // Apply the session's EQ bandwidth once on the fresh player.
+        await player.setEQQ(_qFactor);
+        if (!active()) return;
       } else {
         // ... else notify the playlist is empty.
-        sessionStore.setSessionState(SessionState.playlistEmpty);
+        if (active()) sessionStore.setSessionState(SessionState.playlistEmpty);
         return;
       }
 
       // Calculate Frequencies required for Session and Graph UI
       await sessionStore.initFrequency(sessionParameter: sessionParameter);
+      if (!active()) return;
 
       // Start initialize Session (first round)
       await initSession(
@@ -78,11 +105,12 @@ class SessionController {
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
       );
+      if (!active()) return;
 
       // Notify the Session is Ready
       sessionStore.setSessionState(SessionState.ready);
     } catch (e) {
-      sessionStore.setSessionState(SessionState.error);
+      if (active()) sessionStore.setSessionState(SessionState.error);
       throw Exception(e.toString());
     }
   }
@@ -96,10 +124,13 @@ class SessionController {
     // Num of Graph
     final int numOfGraph = sessionStore.graphBarDataList.length;
 
-    // Select Random Index of Graph (Correct Answer for Session)
+    // Select Random Index of Graph (Correct Answer for Session).
+    // With only 2 graphs (e.g. peak-only/dip-only at band count 1), forbidding
+    // a repeat forces a strict 1,2,1,2,... alternation the user can solve
+    // without listening. Only forbid repeats when there's a real choice.
     do {
       _answerGraphIndex = _random.nextInt(numOfGraph);
-    } while (_answerGraphIndex == _prevAnswerGraphIndex); // make sure answer is different everytime
+    } while (numOfGraph > 2 && _answerGraphIndex == _prevAnswerGraphIndex);
     _prevAnswerGraphIndex = _answerGraphIndex;
 
     if (sessionParameter.filterType == FilterType.peakDip) {
@@ -119,6 +150,7 @@ class SessionController {
     }
 
     // Disable EQ and set new freq/gain in a single isolate round-trip.
+    // (Q is session-constant and applied at launch, not per round.)
     await player.setEQParams(
       enableEQ: false,
       frequency: _answerCenterFreq,
@@ -126,51 +158,90 @@ class SessionController {
     );
   }
 
-  /// Re-applies the current answer's EQ parameters to the player (e.g. after track switch).
-  Future<void> updatePlayerState(PlayerIsolate player) async {
+  /// Re-applies the current answer's EQ parameters to the player (e.g. after
+  /// a track switch, which launches a fresh player at the default Q and with
+  /// EQ bypassed). [eqEnabled] should be the enabled state from before the
+  /// switch, so a manually-toggled "Filtered" view doesn't silently revert to
+  /// "Original" on the new player.
+  Future<void> updatePlayerState(PlayerIsolate player, {required bool eqEnabled}) async {
+    await player.setEQQ(_qFactor);
     await player.setEQFreq(_answerCenterFreq);
     await player.setEQGain(_answerGain);
+    await player.setEQ(eqEnabled);
   }
 
-  Future<SessionSubmitResult> submitAnswer({
+  Future<SessionSubmitResult?> submitAnswer({
     required PlayerIsolate player,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     void Function(bool isCorrect, int correctIndex)? onResult,
   }) async {
+    // Re-entrancy guard: only a round that is currently `ready` can be
+    // submitted. A double-tap within one frame (before InteractionLock's
+    // rebuild absorbs the second tap) would otherwise score the same round
+    // twice and move the session point by ±2.
+    if (sessionStore.sessionState != SessionState.ready) return null;
+
     // Mark loading
     sessionStore.setSessionState(SessionState.loading);
 
-    // Capture current round's correct answer index before it changes
-    final int correctIndex = _answerGraphIndex + 1;
-    final bool isCorrect = correctIndex == sessionStore.currentPickerValue;
+    try {
+      // Capture current round's correct answer index before it changes
+      final int correctIndex = _answerGraphIndex + 1;
+      final bool isCorrect = correctIndex == sessionStore.currentPickerValue;
 
-    // Notify caller (e.g. to show a toast) without coupling to widget layer
-    onResult?.call(isCorrect, correctIndex);
+      // Notify caller (e.g. to show a toast) without coupling to widget layer
+      onResult?.call(isCorrect, correctIndex);
 
-    // Apply result to session
-    sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
+      // Apply result to session
+      sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
 
-    // Band threshold adjustments
-    if (sessionStore.currentSessionPoint == sessionParameter.threshold && sessionParameter.startingBand < 25) {
-      sessionParameter.startingBand++;
-      sessionStore.resetSessionPoint();
-      sessionStore.resetPickerValue();
-      await sessionStore.initFrequency(sessionParameter: sessionParameter);
-    } else if (sessionStore.currentSessionPoint == (0 - sessionParameter.threshold) && sessionParameter.startingBand > 2) {
-      sessionParameter.startingBand--;
-      sessionStore.resetSessionPoint();
-      sessionStore.resetPickerValue();
-      await sessionStore.initFrequency(sessionParameter: sessionParameter);
+      // Band threshold adjustments. Use >=/<= rather than == so a point that
+      // already overshot the threshold (see the clamp branches below) still
+      // fires the adjustment instead of requiring an exact match.
+      if (sessionStore.currentSessionPoint >= sessionParameter.threshold) {
+        if (sessionParameter.startingBand < 25) {
+          sessionParameter.startingBand++;
+          sessionStore.resetSessionPoint();
+          sessionStore.resetPickerValue();
+          // The graph layout is about to change size/meaning; a stale index
+          // from the old layout must not suppress a legitimate repeat (or,
+          // in principle, sit outside the new range) in the next round.
+          _prevAnswerGraphIndex = -1;
+          await sessionStore.initFrequency(sessionParameter: sessionParameter);
+        } else {
+          // Already at the top band: clamp instead of letting further correct
+          // answers push the point past the threshold, which would otherwise
+          // force clawing back through the whole overshoot before a band
+          // decrease could ever fire again.
+          sessionStore.setCurrentSessionPoint(sessionParameter.threshold);
+        }
+      } else if (sessionStore.currentSessionPoint <= (0 - sessionParameter.threshold)) {
+        if (sessionParameter.startingBand > 2) {
+          sessionParameter.startingBand--;
+          sessionStore.resetSessionPoint();
+          sessionStore.resetPickerValue();
+          _prevAnswerGraphIndex = -1;
+          await sessionStore.initFrequency(sessionParameter: sessionParameter);
+        } else {
+          sessionStore.setCurrentSessionPoint(0 - sessionParameter.threshold);
+        }
+      }
+
+      await initSession(
+        player,
+        sessionStore: sessionStore,
+        sessionParameter: sessionParameter,
+      );
+
+      sessionStore.setSessionState(SessionState.ready);
+      return SessionSubmitResult(isCorrect: isCorrect, correctIndex: correctIndex);
+    } catch (e) {
+      // A throw here (e.g. from initFrequency/setEQParams) would otherwise
+      // leave sessionState stuck at `loading`, and InteractionLock would
+      // freeze the session permanently.
+      sessionStore.setSessionState(SessionState.error);
+      return null;
     }
-
-    await initSession(
-      player,
-      sessionStore: sessionStore,
-      sessionParameter: sessionParameter,
-    );
-
-    sessionStore.setSessionState(SessionState.ready);
-    return SessionSubmitResult(isCorrect: isCorrect, correctIndex: correctIndex);
   }
 }

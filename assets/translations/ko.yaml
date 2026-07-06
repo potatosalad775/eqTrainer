@@ -110,6 +110,7 @@
   "IMPORT_EDITOR_ALERT_BUTTON": "확인",
   ### Button - Done Editing
   "IMPORT_EDITOR_BUTTON_DONE": "완료",
+  "IMPORT_EDITOR_SAVE_ERROR": "오디오 클립을 저장하지 못했습니다. 다시 시도해 주세요.",
 
   # Setting Page
   ## Setting Card - Theme
@@ -124,9 +125,6 @@
   "SETTING_CARD_LICENSE_TITLE": "오픈소스 라이선스",
   ## Setting Card - Audio Settings
   "SETTING_CARD_AUDIO_SETTING_TITLE": "오디오 설정",
-  ## Setting Card - Miscellaneous Settings
-  "SETTING_CARD_MISC_SETTING_TITLE": "기타 설정",
-
   ## Misc Setting Card - Frequency Tooltip Toggle
   "MISC_SETTING_CARD_TOOLTIP_TITLE": "그래프 중심 주파수 표시",
 

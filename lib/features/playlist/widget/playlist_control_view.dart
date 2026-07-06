@@ -29,7 +29,20 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
       backend: audioState.backend,
       outputDeviceId: audioState.outputDevice?.id,
       path: widget.filePath,
-    );
+    ).onError((e, _) {
+      // Unhandled before: a missing/unreadable file (e.g. a dangling
+      // playlist record) threw into this unawaited Future with no
+      // user-visible feedback, leaving the preview sheet stuck open.
+      if (mounted) {
+        showPlayerErrorDialog(context,
+          action: () {
+            _player.shutdown();
+            Navigator.of(context).pop();
+          },
+          error: e,
+        );
+      }
+    });
   }
 
   @override

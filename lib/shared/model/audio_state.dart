@@ -73,6 +73,12 @@ final class AudioState extends ChangeNotifier {
   void stopDevicePolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
+    final ctx = _pollContext;
+    if (ctx != null) {
+      // Release the native context instead of just dropping the reference —
+      // otherwise it leaks for the lifetime of the process.
+      AudioResourceManager.dispose(ctx.resourceId);
+    }
     _pollContext = null;
   }
 
@@ -96,7 +102,10 @@ final class AudioState extends ChangeNotifier {
           AudioDeviceBackend.alsa => backendList.contains("alsa"),
           AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
           AudioDeviceBackend.jack => backendList.contains("jack"),
-          AudioDeviceBackend.dummy => true,
+          // Previously hardcoded true regardless of the saved list, so a
+          // real backend failure silently fell back to dummy (plays
+          // silence, reports no error) instead of surfacing the failure.
+          AudioDeviceBackend.dummy => backendList.contains("dummy"),
         };
       }
     } else {
@@ -110,7 +119,10 @@ final class AudioState extends ChangeNotifier {
           AudioDeviceBackend.alsa => Platform.isLinux,
           AudioDeviceBackend.pulseAudio => Platform.isLinux,
           AudioDeviceBackend.jack => Platform.isLinux,
-          AudioDeviceBackend.dummy => true,
+          // Don't auto-fall-back to dummy: a real backend failure should
+          // throw (see the try/catch below) rather than silently succeed
+          // with a context that plays silence.
+          AudioDeviceBackend.dummy => false,
         };
       }
     }

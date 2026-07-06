@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:eq_trainer/features/import/widget/editor_clip_button_group.dart';
 import 'package:eq_trainer/features/import/widget/editor_clip_save_button.dart';
 import 'package:eq_trainer/features/import/widget/editor_control_button_group.dart';
@@ -13,7 +14,8 @@ import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
-import 'package:eq_trainer/main.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
+import 'package:path/path.dart' as p;
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -28,6 +30,10 @@ class _ImportPageState extends State<ImportPage> {
   final clipDivProvider = ImportAudioData();
   final importPlayer = ImportPlayer();
   bool _importing = false;
+  // Path of a temp file created by format conversion (see importFile), if
+  // any. Cleaned up on dispose regardless of whether the import completed or
+  // was aborted, so it doesn't linger in the temp dir forever.
+  String? _tempConvertedPath;
 
   @override
   void initState() {
@@ -39,6 +45,16 @@ class _ImportPageState extends State<ImportPage> {
   void dispose() {
     clipDivProvider.dispose();
     importPlayer.dispose();
+    final tempPath = _tempConvertedPath;
+    if (tempPath != null) {
+      // Best-effort: dispose() can't be awaited, and an orphaned temp file is
+      // a smaller problem than blocking teardown on disk I/O.
+      unawaited(() async {
+        try {
+          await File(tempPath).delete();
+        } catch (_) {}
+      }());
+    }
     super.dispose();
   }
 
@@ -154,10 +170,17 @@ class _ImportPageState extends State<ImportPage> {
       'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus', 'xmp4'
     ];
 
-    final importResult = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: allowedExtensions,
-    );
+    final FilePickerResult? importResult;
+    try {
+      importResult = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: allowedExtensions,
+      );
+    } catch (e) {
+      debugPrint("Error picking file: $e");
+      if (mounted) importPageState.value = ImportPageState.error;
+      return;
+    }
 
     if (!mounted) return;
 
@@ -173,14 +196,13 @@ class _ImportPageState extends State<ImportPage> {
       return;
     }
 
-    final fileNameList = pickedFile.name.split('.');
-    if (fileNameList.length > 1) fileNameList.removeLast();
-    final fileName = fileNameList.join();
+    final fileName = p.basenameWithoutExtension(pickedFile.name);
     final fileExtension = pickedFile.extension?.toLowerCase();
 
     // Determine target format based on user's import format setting
     final sourceExt = '.${fileExtension ?? ''}';
-    final targetExt = targetExtForImport(sourceExt, savedMiscSettingsValue.importFormat);
+    final importFormat = context.read<MiscSettingsProvider>().importFormat;
+    final targetExt = targetExtForImport(sourceExt, importFormat);
 
     if (targetExt != null) {
       importPageState.value = ImportPageState.converting;
@@ -196,6 +218,9 @@ class _ImportPageState extends State<ImportPage> {
             sourcePath: filePath,
           );
         }
+        // Track the converted temp file so it's cleaned up on dispose,
+        // whether the import completes or is aborted.
+        _tempConvertedPath = filePath;
       } catch (e) {
         debugPrint("Error converting audio file: $e");
         importPageState.value = ImportPageState.error;

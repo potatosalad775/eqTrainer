@@ -13,6 +13,9 @@ class SessionPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.read<SessionStore>();
     final currentPickerValue = context.select<SessionStore, int>((s) => s.currentPickerValue);
+    // Watch the graph count so the picker range updates when a threshold-driven
+    // band change recomputes the graphs.
+    final graphCount = context.select<SessionStore, int>((s) => s.graphBarDataList.length);
     final size = MediaQuery.of(context).size;
 
     final selectedStyle = TextStyle(
@@ -32,7 +35,7 @@ class SessionPicker extends StatelessWidget {
             child: CustomNumberPicker(
               value: currentPickerValue,
               minValue: 1,
-              maxValue: store.graphBarDataList.length,
+              maxValue: graphCount,
               axis: Axis.horizontal,
               itemExtent: size.width * 0.2,
               crossAxisExtent: size.height * 0.1,
@@ -45,7 +48,7 @@ class SessionPicker extends StatelessWidget {
             child: CustomNumberPicker(
               value: currentPickerValue,
               minValue: 1,
-              maxValue: store.graphBarDataList.length,
+              maxValue: graphCount,
               axis: Axis.vertical,
               itemExtent: size.height * 0.15,
               crossAxisExtent: size.width * 0.1,

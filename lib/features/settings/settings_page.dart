@@ -1,5 +1,5 @@
 import 'package:eq_trainer/features/settings/audio_settings_page.dart';
-import 'package:eq_trainer/shared/themes/app_theme.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +18,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<MiscSettingsProvider>(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
@@ -94,8 +94,8 @@ class _SettingsPageState extends State<SettingsPage> {
           title: "SETTING_CARD_GITHUB_TITLE".tr(),
           trailing: IconButton(
             icon: const Icon(Icons.launch),
-            onPressed: () {
-              launchURL(URLList.github);
+            onPressed: () async {
+              await launchURL(URLList.github);
             },
           ),
         ),
@@ -107,8 +107,8 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.mail),
-                onPressed: () {
-                  launchURL(URLList.mail);
+                onPressed: () async {
+                  await launchURL(URLList.mail);
                 },
               ),
             ],
@@ -169,10 +169,9 @@ enum URLList {
   });
 }
 
-void launchURL(URLList urlList) {
-  try {
-    launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication);
-  } catch (e) {
-    throw Exception('could not launch url: $e');
+Future<void> launchURL(URLList urlList) async {
+  final launched = await launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication);
+  if (!launched) {
+    throw Exception('could not launch url: ${urlList.url}');
   }
 }

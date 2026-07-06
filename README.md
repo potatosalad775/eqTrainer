@@ -40,7 +40,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
     
 | Platform | Minimum Version | Note                                                                                              |
 |----------|-----------------|---------------------------------------------------------------------------------------------------|
-| Windows  | Vista           | Works with WASAPI                                                                                                       |
+| Windows  | 10+             | Works with WASAPI <br/> <sub>*For devices older than Windows 10, please use [v2.3.0][VERSION_2.3.0]*</sub>                             |
 | MacOS    | 11 Big Sur      | Supports Intel & Apple Silicon as Universal App                                                                         |
 | Linux    | -               | Works with ALSA, Jack, PulseAudio <br/> <sub>*GStreamer 1.0+ required for audio format conversion.*</sub>               |
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                                     |
@@ -48,8 +48,21 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 
 [SIDELOADLY]: https://sideloadly.io/
 [ALTSTORE]: https://altstore.io/
+[VERSION_2.3.0]: https://github.com/potatosalad775/eqTrainer/releases#release-v2.3.0
 
 > [!IMPORTANT]
+> ### macOS
+>
+> The macOS build isn't notarized yet, so Gatekeeper blocks it on a fresh download.
+> Try the following steps to bypass Gatekeeper and run eqTrainer on macOS:
+> 1. Try to open `eq_trainer.app` (it'll be blocked) — or right-click it and choose **Open**.
+> 2. Go to **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway** next to the eqTrainer message.
+> 3. Confirm in the dialog that appears (may require your password / Touch ID).
+>
+> This only needs to be done once per download.
+>
+> ### Linux
+>
 > Please note that `GStreamer` is required on Linux for format conversion. While most distros should already have it preinstalled, you can manually install it if needed.
 > ```bash
 > sudo apt install \

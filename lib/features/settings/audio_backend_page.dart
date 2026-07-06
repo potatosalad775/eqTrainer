@@ -71,7 +71,9 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
           AudioDeviceBackend.alsa => Platform.isLinux,
           AudioDeviceBackend.pulseAudio => Platform.isLinux,
           AudioDeviceBackend.jack => Platform.isLinux,
-          AudioDeviceBackend.dummy => true,
+          // Not on by default: a real backend failing should surface as an
+          // error, not silently fall back to a context that plays silence.
+          AudioDeviceBackend.dummy => false,
         };
       }
     } else {
@@ -84,7 +86,9 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
           AudioDeviceBackend.alsa => backendList.contains("alsa"),
           AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
           AudioDeviceBackend.jack => backendList.contains("jack"),
-          AudioDeviceBackend.dummy => true,
+          // Was hardcoded true regardless of the saved list, so unchecking
+          // Dummy and saving didn't stick — it came back checked next visit.
+          AudioDeviceBackend.dummy => backendList.contains("dummy"),
         };
       }
     }
@@ -151,21 +155,33 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
                 .toList();
             final backendBox = await Hive.openBox<BackendData>(backendBoxName);
             await backendBox.put(backendKey, BackendData(selectedBackendList));
+            // Read everything needed off the probe context, then dispose it
+            // immediately. Keeping it alive leaks a native ma_context and can
+            // interfere with the playback context created later in the audio
+            // isolate — on AAudio/Android multiple contexts on the same backend
+            // cause start-up failures (see AudioState.initialize).
+            final activeBackend = deviceContext.activeBackend;
+            final defaultDevice = deviceContext
+                .getDevices(AudioDeviceType.playback)
+                .where((d) => d.isDefault)
+                .firstOrNull;
+            AudioResourceManager.dispose(deviceContext.resourceId);
+
             if (!context.mounted) return;
             // Notify
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
                   namedArgs: {
-                    "_BACKEND": '\'${_backendName(deviceContext.activeBackend)}\''
+                    "_BACKEND": '\'${_backendName(activeBackend)}\''
                   }
                 ),
               ),
             );
             App.of(context).applyAudioState(
               AudioState(
-                backend: deviceContext.activeBackend,
-                outputDevice: deviceContext.getDevices(AudioDeviceType.playback).where((d) => d.isDefault).firstOrNull,
+                backend: activeBackend,
+                outputDevice: defaultDevice,
               ),
               savedBackendList: selectedBackendList,
             );

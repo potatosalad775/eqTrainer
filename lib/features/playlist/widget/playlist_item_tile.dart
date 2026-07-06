@@ -6,6 +6,7 @@ import 'package:eq_trainer/features/playlist/widget/playlist_delete_dialog.dart'
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
+import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -25,6 +26,7 @@ class PlaylistItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final repo = context.read<IAudioClipRepository>();
     final dirs = context.read<AppDirectories>();
+    final clipService = context.read<AudioClipService>();
 
     return Card(
       elevation: 0,
@@ -48,7 +50,7 @@ class PlaylistItemTile extends StatelessWidget {
           index: index,
           child: IconButton(
             onPressed: () async {
-              await repo.toggleEnabledAt(index);
+              await repo.toggleEnabledByKey(currentClip.key);
             },
             icon: Icon(currentClip.isEnabled
                 ? Icons.radio_button_checked
@@ -82,7 +84,7 @@ class PlaylistItemTile extends StatelessWidget {
                     builder: (context) => const PlaylistDeleteDialog(),
                   );
                   if (confirmDelete == true) {
-                    await repo.deleteAt(index);
+                    await clipService.deleteClip(currentClip);
                   }
                 }
               },
