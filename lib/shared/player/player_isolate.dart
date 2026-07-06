@@ -166,6 +166,7 @@ class PlayerIsolate extends ChangeNotifier {
   bool _seekInFlight = false;
   AudioTime? _pendingSeekPosition;
   DateTime _seekLastEnd = DateTime(0);
+  int _seekVersion = 0;
 
   Future<void> launch({
     required AudioDeviceBackend backend,
@@ -228,6 +229,7 @@ class PlayerIsolate extends ChangeNotifier {
 
   Future<PlayerPositionResponse?> seek(AudioTime position) async {
     if (!isLaunched) return null;
+    _seekVersion++;
     _lastPosition = position;
     notifyListeners();
 
@@ -391,6 +393,7 @@ class PlayerIsolate extends ChangeNotifier {
     if (DateTime.now().difference(_eqToggleLastEnd).inMilliseconds < 200) return;
     if (DateTime.now().difference(_seekLastEnd).inMilliseconds < 100) return;
     _isUpdating = true;
+    final versionBeforeFetch = _seekVersion;
     try {
       final all = await getAllState();
       if (all == null) return;
@@ -401,7 +404,11 @@ class PlayerIsolate extends ChangeNotifier {
         _lastState = all.playerState;
         shouldNotify = true;
       }
-      if (all.position != _lastPosition) {
+      // If a seek started while this getAllState() call was in flight, the
+      // fetched position predates it — applying it would jump the slider back
+      // before the seek's own result corrects it. Drop it; the next poll
+      // (after _seekLastEnd's cooldown) will fetch the settled position.
+      if (all.position != _lastPosition && versionBeforeFetch == _seekVersion) {
         _lastPosition = all.position;
         shouldNotify = true;
       }
