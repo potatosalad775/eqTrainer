@@ -125,9 +125,6 @@
   "SETTING_CARD_LICENSE_TITLE": "Open Source License",
   ## Setting Card - Audio Settings
   "SETTING_CARD_AUDIO_SETTING_TITLE": "Audio Settings",
-  ## Setting Card - Miscellaneous Settings
-  "SETTING_CARD_MISC_SETTING_TITLE": "Miscellaneous Settings",
-  
   ## Misc Setting Card - Frequency Tooltip Toggle
   "MISC_SETTING_CARD_TOOLTIP_TITLE": "Graph Frequency Tooltip",
 
