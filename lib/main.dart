@@ -153,7 +153,12 @@ class AppState extends State<App> with WidgetsBindingObserver {
   void didChangeDependencies() {
     // Detect Device Screen Info
     final deviceScreenData = MediaQueryData.fromView(View.of(context));
-    // Lock Orientation into Portrait if Screen's shortest side is too short
+    // Lock Orientation into Portrait if Screen's shortest side is too short.
+    // Note: the landscape branch below is intentionally inert on iPhone —
+    // ios/Runner/Info.plist's UISupportedInterfaceOrientations only declares
+    // portrait for iPhone (landscape is iPad-only), which is the actual
+    // source of truth iOS enforces; this is a deliberate product choice
+    // (training UI isn't designed for iPhone landscape), not a bug.
     if(deviceScreenData.size.shortestSide < 300) {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
