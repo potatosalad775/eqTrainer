@@ -169,9 +169,12 @@ enum URLList {
   });
 }
 
-void launchURL(URLList urlList) {
+Future<void> launchURL(URLList urlList) async {
   try {
-    launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication);
+    final launched = await launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication);
+    if (!launched) {
+      throw Exception('could not launch url: ${urlList.url}');
+    }
   } catch (e) {
     throw Exception('could not launch url: $e');
   }
