@@ -60,28 +60,28 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` won't fix 
 
 ## LOW
 
-- [ ] **L1** — `launch()` doesn't reset cached UI state (`player_isolate.dart:162-179`); position/duration flash from previous clip, a `setEQ(true)` in that window dropped by redundancy check. → Clear caches at top of `launch()`.
-- [ ] **L2** — Rapid pause→play can duplicate feeder clocks (`player_isolate.dart:707,738`); doubled tick work, accumulates. → Retain clock instances, stop explicitly in `pause()`.
-- [ ] **L3** — Stale in-flight poll can overwrite optimistic seek (`player_isolate.dart:210` vs `337-349`); slider jumps back then corrects. → Sequence/version guard on position updates.
-- [ ] **L4** — `lengthInFrames!` force-unwrap (`player_isolate.dart:617,632`) could kill isolate on unknown-length streams. UNCERTAIN — confirm decoders can return null length for headerless streams.
-- [ ] **L5** — `ma_peak2` supports only f32/s16; 24-bit WAV import would fail launch (`peaking_eq_filter.dart:18-28`, fade code `peaking_eq_node.dart:132-165`). UNCERTAIN — confirm what formats the import pipeline emits.
-- [ ] **L6** — `resetResult()` mutates score without `notifyListeners()` (`session_store.dart:86-92`); appbar shows previous score until next notification. → Add notify.
-- [ ] **L7** — `_prevAnswerGraphIndex` never reset across sessions / after band-count change (`session_controller.dart:27`). → Reset to -1 in `launchSession`.
-- [ ] **L8** — Launch failure rethrows with destroyed stack trace into uncaught async context (`session_controller.dart:84-87`, `session_page.dart:35-50`). → Don't rethrow (state already signals) or catch in `_init`.
-- [ ] **L9** — Exit-during-launch writes `SessionState.error` into global store after page gone (`session_page.dart:29-49`). Masked only by H3's missing reset. → Cancellation flag / ignore results when unmounted.
-- [ ] **L10** — Tooltip parity math applied to non-peakDip modes (`session_graph_tooltip.dart:22-27`); peak-only even picks render centered instead of above peak. → Set top/bottom unconditionally for pure peak/dip.
-- [ ] **L11** — `'xmp4'` in `allowedExtensions` (`import_page.dart:154`) looks like `mp4` typo; mp4 unpickable. UNCERTAIN — confirm with author.
-- [ ] **L12** — `import_page.dart:176-178` `fileNameList.join()` empty separator ("my.song.mp3"→"mysong"), can collide temp names. → `p.basenameWithoutExtension`.
-- [ ] **L13** — `interaction_lock.dart:8,40-45` `progress` param accepted but never used. → `progress ?? const CircularProgressIndicator()`.
-- [ ] **L14** — `settings_page.dart:172-178` try/catch wraps unawaited `launchUrl`; async failure (no handler, common Linux) escapes. → `await` + check bool result.
-- [ ] **L15** — `pubspec.yaml:42` `path: any` unconstrained. → Caret constraint.
-- [ ] **L16** — Deprecated `parametric_eq_node.dart` dead (and internally broken: unassigned `x`, shared channel state). → Delete.
-- [ ] **L17** — 4 unused contrast theme variants (`app_theme.dart:19-23`), only light/dark used. → Delete dead code.
-- [ ] **L18** — Dead translation key `SETTING_CARD_MISC_SETTING_TITLE` (en/ko line 128), referenced nowhere. → Delete or re-wire.
+- [x] **L1** — `launch()` doesn't reset cached UI state (`player_isolate.dart:162-179`); position/duration flash from previous clip, a `setEQ(true)` in that window dropped by redundancy check. → Clear caches at top of `launch()`.
+- [x] **L2** — Rapid pause→play can duplicate feeder clocks (`player_isolate.dart:707,738`); doubled tick work, accumulates. → Retain clock instances, stop explicitly in `pause()`.
+- [x] **L3** — Stale in-flight poll can overwrite optimistic seek (`player_isolate.dart:210` vs `337-349`); slider jumps back then corrects. → Sequence/version guard on position updates.
+- [x] **L4** — `lengthInFrames!` force-unwrap (`player_isolate.dart:617,632`) could kill isolate on unknown-length streams. Confirmed real: the abstract decoder interface is `int?`, and miniaudio's own docs say `MA_NOT_IMPLEMENTED`/unknown length is possible for some backends (the WAV/AAC/miniaudio decoders this app actually selects always resolve a concrete length today, so not currently reachable, but cheap to guard). → Added `_safeLengthInFrames()` (null-coalesce + try/catch) used by both `duration` and `getPosition()`.
+- [ ] **L5** — `ma_peak2` supports only f32/s16; 24-bit WAV import would fail launch (`peaking_eq_filter.dart:18-28`, fade code `peaking_eq_node.dart:132-165`). Confirmed real via investigation: `targetExtForImport` (audio_format_helper.dart) skips conversion for source files already `.wav` in `smart`/`keepOriginal`/`allWav` modes, so a native 24-bit WAV imports as `SampleFormat.int24` untouched (`WavAudioDecoder.lengthInFrames`/format parsing confirms it), and `audio_decoder`'s `AudioInfo` doesn't expose bit depth to gate on cheaply. Deferred: the real fix (normalize non-16-bit WAV on import, or insert a format-conversion node before the EQ stage) touches the live audio graph/native FFI path and can't be verified without a device to actually import a 24-bit WAV and hear the result — too risky to ship blind. → Needs manual verification before implementing.
+- [x] **L6** — `resetResult()` mutates score without `notifyListeners()` (`session_store.dart:86-92`); appbar shows previous score until next notification. → Add notify.
+- [x] **L7** — `_prevAnswerGraphIndex` never reset across sessions / after band-count change (`session_controller.dart:27`). → Reset to -1 in `launchSession` (already fixed) and now also in both mid-session threshold-driven band-change branches in `submitAnswer`.
+- [x] **L8** — Launch failure rethrows with destroyed stack trace into uncaught async context (`session_controller.dart:84-87`, `session_page.dart:35-50`). → `_init()` now wraps `launchSession` in try/catch; `sessionStore.sessionState` already carries the error.
+- [x] **L9** — Exit-during-launch writes `SessionState.error` into global store after page gone (`session_page.dart:29-49`). Masked only by H3's missing reset. → `launchSession` takes an optional `shouldContinue` callback, checked before every post-await store write; `session_page.dart` passes `() => mounted`.
+- [x] **L10** — Tooltip parity math applied to non-peakDip modes (`session_graph_tooltip.dart:22-27`); peak-only even picks render centered instead of above peak. → `top`/`bottom` now set unconditionally for pure peak/dip modes; parity only gates peakDip.
+- [-] **L11** — `'xmp4'` in `allowedExtensions` (`import_page.dart:154`) looks like `mp4` typo; mp4 unpickable. UNCERTAIN — confirm with author: keep it as-is for now.
+- [x] **L12** — `import_page.dart:176-178` `fileNameList.join()` empty separator ("my.song.mp3"→"mysong"), can collide temp names. → `p.basenameWithoutExtension`.
+- [x] **L13** — `interaction_lock.dart:8,40-45` `progress` param accepted but never used. → `progress ?? const CircularProgressIndicator()`.
+- [x] **L14** — `settings_page.dart:172-178` try/catch wraps unawaited `launchUrl`; async failure (no handler, common Linux) escapes. → `await` + check bool result; `launchURL` is now `Future<void>`.
+- [x] **L15** — `pubspec.yaml:42` `path: any` unconstrained. → `^1.9.0` (matches locked version).
+- [x] **L16** — Deprecated `parametric_eq_node.dart` dead (and internally broken: unassigned `x`, shared channel state). → Deleted (no references found; also removed the now-empty `player/deprecated/` dir).
+- [x] **L17** — 4 unused contrast theme variants (`app_theme.dart:19-23`), only light/dark used. → Deleted the theme getters and their backing `ColorScheme` consts in `app_colors.dart` (also unreferenced elsewhere).
+- [x] **L18** — Dead translation key `SETTING_CARD_MISC_SETTING_TITLE` (en/ko line 128), referenced nowhere. → Deleted from both en.yaml and ko.yaml.
 - [ ] **L19** — Historical Hive path move (commit dd1de31) had no migration; very old installs lost data. → One-time box-file move if old-path files exist (low value now).
-- [ ] **L20** — No error handling around `Hive.openBox` (`main.dart:47-57`); corrupt box = startup crash loop. → try/catch with `deleteBoxFromDisk` fallback (settings), backup-then-recreate for `audioClipBox`.
-- [ ] **L21** — `applyAudioState` (`main.dart:205-214`) swaps in new `AudioState` without disposing old `ChangeNotifier`. → `oldState.dispose()` after swap.
-- [ ] **L22** — Appbar score `Consumer<SessionStore>` (`session_page.dart:67-91`) rebuilds on every store notification. → `Selector` on `(resultCorrect, resultIncorrect)`.
+- [x] **L20** — No error handling around `Hive.openBox` (`main.dart:47-57`); corrupt box = startup crash loop. → Added `_openBoxSafely` (try/catch → `deleteBoxFromDisk` → reopen); `audioClipBox` additionally copies the corrupt file aside first.
+- [x] **L21** — `applyAudioState` (`main.dart:205-214`) swaps in new `AudioState` without disposing old `ChangeNotifier`. → `oldState.dispose()` in a post-frame callback after the swap, so `Provider.value` has already detached its listener.
+- [x] **L22** — Appbar score `Consumer<SessionStore>` (`session_page.dart:67-91`) rebuilds on every store notification. → `Selector<SessionStore, (int, int)>` on `(resultCorrect, resultIncorrect)`.
 
 ---
 
@@ -93,7 +93,7 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` won't fix 
 - [ ] **CP4** — macOS entitlements grant unused `network.server`. → Drop.
 - [ ] **CP5** — `min_sdk_android: 26` (icons) vs `minSdkVersion 24`. UNCERTAIN — confirm generated mipmaps; align.
 - [ ] **CI1** — No quality gate: `build.yml` runs only on release-publish, no `flutter analyze`/test anywhere. → Add push/PR job (analyze + tests once written).
-- [ ] **CI2** — Release binaries never attached to the GitHub release (upload-artifact only, ~90-day expiry). → `gh release upload` / `softprops/action-gh-release`.
+- [-] **CI2** — Release binaries never attached to the GitHub release (upload-artifact only, ~90-day expiry). → `gh release upload` / `softprops/action-gh-release`: Skip for now
 - [ ] **CI3** — "Build APK" step builds only appbundle; no APK despite README sideload claim. → Add `flutter build apk` or rename.
 
 ---
@@ -102,18 +102,6 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` won't fix 
 
 - [ ] **TD1 — No tests.** Session math (`FrequencyCalculator`, threshold logic, answer mapping) is pure and trivially testable — where H4/M1/M2 would've been caught. `mocktail` already a dev-dep. → Add `test/` mirroring `lib/`, start with session math.
 - [ ] **TD2 — Settings via global mutable singleton** `savedMiscSettingsValue` + parent-rebuild callbacks; every new setting compounds staleness. → Migrate to ChangeNotifier (enables M14).
-
----
-
-## New training methods (proposals — evaluate, then spec)
-
-Prerequisite worth doing once: **an `Exercise` strategy interface** owning (a) round generation, (b) answer representation + validation, (c) result bucketing — the current flow hardcodes "identify which band changed" across 9 sites (FilterType enum, bare-index answer, NumberPicker-over-graph-count, 7 fixed result bands, difficulty=`startingBand`, config enum, chart constants, EQ-only player protocol, singleton controller).
-
-- [ ] **NM1 — Gain-magnitude estimation** ("boosted by how much?"). ~90% reuse; answer space = gain steps; new state = per-gain-step stats. Cheapest; better difficulty ladder than adding bands.
-- [ ] **NM2 — Q/bandwidth discrimination** ("wide or narrow?"). **Requires H1 first** (Q must reach engine). Small protocol add, moderate UI.
-- [ ] **NM3 — A/B/X matching.** No graph; needs 3-state EQ in player protocol (store 2 param sets) + 2-choice UI. Moderate.
-- [ ] **NM4 — Multi-band identification** (two bands changed, pick both). Reuses graph/picker but answer becomes a set — stresses bare-index model most; do after strategy seam.
-- [ ] **NM5 — Filter-type discrimination** (peaking vs low/high shelf vs cut). Most expensive: new DSP nodes (`ma_loshelf2`/`ma_hishelf2`), protocol, graph curves. Highest training value; last.
 
 ---
 
