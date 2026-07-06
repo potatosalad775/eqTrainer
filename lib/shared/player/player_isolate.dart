@@ -690,8 +690,21 @@ class AudioPlayer {
   }
 
   AudioTime get duration {
-    return AudioTime.fromFrames(_decoderNode.decoder.lengthInFrames!,
+    return AudioTime.fromFrames(_safeLengthInFrames(),
         format: _decoderNode.decoder.outputFormat);
+  }
+
+  // decoder.lengthInFrames is nullable by interface (and, per miniaudio docs,
+  // MA_NOT_IMPLEMENTED/unknown-length streams can make the getter itself
+  // throw for some backends) even though the WAV/AAC/miniaudio decoders this
+  // app actually uses always resolve a concrete length today. Guard both
+  // cases so an unexpected decoder/stream can't kill the audio isolate.
+  int _safeLengthInFrames() {
+    try {
+      return _decoderNode.decoder.lengthInFrames ?? 0;
+    } catch (_) {
+      return 0;
+    }
   }
 
   // Get the current playback state
@@ -705,7 +718,7 @@ class AudioPlayer {
   PlayerPositionResponse getPosition() {
     return PlayerPositionResponse(
       position: position,
-      duration: AudioTime.fromFrames(_decoderNode.decoder.lengthInFrames!,
+      duration: AudioTime.fromFrames(_safeLengthInFrames(),
           format: _decoderNode.decoder.outputFormat),
     );
   }
