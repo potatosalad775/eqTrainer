@@ -235,7 +235,8 @@ class AppState extends State<App> with WidgetsBindingObserver {
   }
 
   void applyAudioState(AudioState newState, {List<String>? savedBackendList}) {
-    _audioState.stopDevicePolling();
+    final oldState = _audioState;
+    oldState.stopDevicePolling();
     if (savedBackendList != null) {
       backendList = savedBackendList;
     }
@@ -243,6 +244,9 @@ class AppState extends State<App> with WidgetsBindingObserver {
       _audioState = newState;
     });
     _audioState.startDevicePolling();
+    // Deferred so Provider<AudioState>.value has rebuilt and detached its
+    // listener from oldState before we dispose it.
+    WidgetsBinding.instance.addPostFrameCallback((_) => oldState.dispose());
   }
 }
 
