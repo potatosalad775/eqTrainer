@@ -94,8 +94,8 @@ class _SettingsPageState extends State<SettingsPage> {
           title: "SETTING_CARD_GITHUB_TITLE".tr(),
           trailing: IconButton(
             icon: const Icon(Icons.launch),
-            onPressed: () {
-              launchURL(URLList.github);
+            onPressed: () async {
+              await launchURL(URLList.github);
             },
           ),
         ),
@@ -107,8 +107,8 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.mail),
-                onPressed: () {
-                  launchURL(URLList.mail);
+                onPressed: () async {
+                  await launchURL(URLList.mail);
                 },
               ),
             ],
@@ -170,12 +170,8 @@ enum URLList {
 }
 
 Future<void> launchURL(URLList urlList) async {
-  try {
-    final launched = await launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication);
-    if (!launched) {
-      throw Exception('could not launch url: ${urlList.url}');
-    }
-  } catch (e) {
-    throw Exception('could not launch url: $e');
+  final launched = await launchUrl(Uri.parse(urlList.url), mode: LaunchMode.externalApplication);
+  if (!launched) {
+    throw Exception('could not launch url: ${urlList.url}');
   }
 }
