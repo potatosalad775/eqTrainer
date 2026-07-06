@@ -19,11 +19,7 @@ class AppTheme {
   }
 
   static final lightTheme = theme(AppColors.lightScheme);
-  static final lightMediumContrastTheme = theme(AppColors.lightMediumContrastScheme);
-  static final lightHighContrastTheme = theme(AppColors.lightHighContrastScheme);
   static final darkTheme = theme(AppColors.darkScheme);
-  static final darkMediumContrastTheme = theme(AppColors.darkMediumContrastScheme);
-  static final darkHighContrastTheme = theme(AppColors.darkHighContrastScheme);
 }
 
 class ThemeProvider extends ChangeNotifier {
