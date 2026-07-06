@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:path/path.dart' as p;
 import 'package:window_size/window_size.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
@@ -25,6 +26,28 @@ import 'package:eq_trainer/shared/service/upgrader_service.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
+
+// Opens a Hive box, recreating it from scratch if it fails to open (e.g. a
+// corrupt file left by a crash mid-write) instead of crash-looping on every
+// launch. For boxes holding data worth trying to recover (audioClipBox), the
+// corrupt file is copied aside first so it isn't silently lost.
+Future<Box<T>> _openBoxSafely<T>(String name, {bool backupOnCorruption = false}) async {
+  try {
+    return await Hive.openBox<T>(name);
+  } catch (e) {
+    debugPrint('[Hive] Box "$name" failed to open ($e); recreating.');
+    if (backupOnCorruption) {
+      final file = File(p.join(appSupportDir.path, '${name.toLowerCase()}.hive'));
+      if (await file.exists()) {
+        try {
+          await file.copy('${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
+        } catch (_) {}
+      }
+    }
+    await Hive.deleteBoxFromDisk(name);
+    return Hive.openBox<T>(name);
+  }
+}
 
 Future<void> main() async {
   // Initialize Packages
@@ -44,12 +67,12 @@ Future<void> main() async {
   Hive.registerAdapter(MiscSettingsAdapter());
 
   // Load Backend Setting value (opened and closed once — not needed after startup)
-  final backendBox = await Hive.openBox<BackendData>(backendBoxName);
+  final backendBox = await _openBoxSafely<BackendData>(backendBoxName);
   backendList = backendBox.get(backendKey)?.backendList ?? [];
   await backendBox.close();
 
   // Load Miscellaneous Settings (kept open — FrequencyTooltipCard accesses it at runtime)
-  final miscSettingsBox = await Hive.openBox<MiscSettings>(miscSettingsBoxName);
+  final miscSettingsBox = await _openBoxSafely<MiscSettings>(miscSettingsBoxName);
   // volumeCompensation defaults to true, matching the Hive field's own
   // defaultValue (setting_data.dart) — otherwise a fresh install and an
   // upgraded install disagree on the default and get opposite answer-leak
@@ -58,7 +81,7 @@ Future<void> main() async {
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
-  await Hive.openBox<AudioClip>(audioClipBoxName);
+  await _openBoxSafely<AudioClip>(audioClipBoxName, backupOnCorruption: true);
 
   // Set Android System UI Style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
