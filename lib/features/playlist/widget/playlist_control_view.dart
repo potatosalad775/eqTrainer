@@ -35,7 +35,10 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
       // user-visible feedback, leaving the preview sheet stuck open.
       if (mounted) {
         showPlayerErrorDialog(context,
-          action: () => Navigator.of(context).pop(),
+          action: () {
+            _player.shutdown();
+            Navigator.of(context).pop();
+          },
           error: e,
         );
       }
