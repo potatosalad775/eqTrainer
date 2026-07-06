@@ -19,12 +19,15 @@ class SessionGraphTooltip extends StatelessWidget {
     final store = context.read<SessionStore>();
     final filterType = context.read<SessionParameter>().filterType;
     
-    final top = filterType == FilterType.peakDip || filterType == FilterType.peak
-        ? (pickerValue % 2 == 1) ? (constraints.maxHeight / 12) - 22 : null
-        : null;
-    final bottom = filterType == FilterType.peakDip || filterType == FilterType.dip
-        ? (pickerValue % 2 == 1) ? null : (constraints.maxHeight / 12)
-        : null;
+    // In peakDip mode, odd picker values are the peak variant and even are
+    // dip (mirrors the answer-gain inversion in SessionController). In pure
+    // peak/dip mode every graph is that one type regardless of parity.
+    final isPeakPick = filterType == FilterType.peak ||
+        (filterType == FilterType.peakDip && pickerValue % 2 == 1);
+    final isDipPick = filterType == FilterType.dip ||
+        (filterType == FilterType.peakDip && pickerValue % 2 == 0);
+    final top = isPeakPick ? (constraints.maxHeight / 12) - 22 : null;
+    final bottom = isDipPick ? (constraints.maxHeight / 12) : null;
     final leftPx = filterType == FilterType.peakDip
         ? store.centerFreqLinearList[(pickerValue - 1) ~/ 2]
         : store.centerFreqLinearList[pickerValue - 1];
