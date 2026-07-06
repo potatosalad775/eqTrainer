@@ -15,6 +15,7 @@ import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/main.dart';
+import 'package:path/path.dart' as p;
 
 class ImportPage extends StatefulWidget {
   const ImportPage({super.key});
@@ -195,9 +196,7 @@ class _ImportPageState extends State<ImportPage> {
       return;
     }
 
-    final fileNameList = pickedFile.name.split('.');
-    if (fileNameList.length > 1) fileNameList.removeLast();
-    final fileName = fileNameList.join();
+    final fileName = p.basenameWithoutExtension(pickedFile.name);
     final fileExtension = pickedFile.extension?.toLowerCase();
 
     // Determine target format based on user's import format setting
