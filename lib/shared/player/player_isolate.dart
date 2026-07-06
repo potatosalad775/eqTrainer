@@ -643,6 +643,14 @@ class AudioPlayer {
   // Cached total device buffer capacity in frames
   int? _deviceBufferCapacityFrames;
 
+  // Retained so pause() can stop them explicitly rather than relying on the
+  // clocks' own `device.isStarted` check, which races a rapid pause->play:
+  // by the time a stale clock's tick fires, the device may already be
+  // restarted (isStarted == true again), so it never self-terminates and
+  // runs alongside the new clock doing duplicate feeder work.
+  AudioClock? _playbackClock;
+  AudioClock? _decodeClock;
+
   // Simple underrun counter
   int _underrunCount = 0;
 
@@ -772,7 +780,8 @@ class AudioPlayer {
     final ringHighWater = (_ringBuffer.capacity * 0.9).floor();
 
     // Short tick (10ms) and adaptive while-fill based on available write frames
-    AudioIntervalClock(const AudioTime(0.01)).runWithBuffer(
+    _playbackClock = AudioIntervalClock(const AudioTime(0.01));
+    _playbackClock!.runWithBuffer(
       frames: _chunkBuffer!,
       onTick: (_, buffer) {
         if (!_playbackNode.device.isStarted) {
@@ -804,7 +813,8 @@ class AudioPlayer {
     );
 
     // Background decode pump: keep ring buffer filled ahead while device is running
-    AudioIntervalClock(const AudioTime(0.01)).runWithBuffer(
+    _decodeClock = AudioIntervalClock(const AudioTime(0.01));
+    _decodeClock!.runWithBuffer(
       frames: _decodeChunkBuffer!,
       onTick: (_, buffer) {
         if (!_playbackNode.device.isStarted) {
@@ -835,6 +845,10 @@ class AudioPlayer {
 
   void pause() {
     _playbackNode.device.stop();
+    // Stop the feeder clocks explicitly (see field docs) instead of letting
+    // them notice via device.isStarted on their next tick.
+    _playbackClock?.stop();
+    _decodeClock?.stop();
   }
 
   /// Called when the playback chain reports end-of-stream. Stops the device
