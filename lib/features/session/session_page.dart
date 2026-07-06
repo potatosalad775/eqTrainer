@@ -40,13 +40,21 @@ class _SessionPageState extends State<SessionPage> {
     final playlistService = Provider.of<PlaylistService>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
 
-    await sessionController.launchSession(
-      player,
-      audioState: audioState,
-      sessionStore: sessionStore,
-      sessionParameter: sessionParameter,
-      playlistService: playlistService,
-    );
+    try {
+      await sessionController.launchSession(
+        player,
+        audioState: audioState,
+        sessionStore: sessionStore,
+        sessionParameter: sessionParameter,
+        playlistService: playlistService,
+        shouldContinue: () => mounted,
+      );
+    } catch (_) {
+      // sessionStore.sessionState already reflects the failure (set inside
+      // launchSession); nothing else to surface here, and rethrowing would
+      // otherwise escape as an uncaught async exception since this runs from
+      // a post-frame callback with no caller awaiting it.
+    }
   }
 
   @override
