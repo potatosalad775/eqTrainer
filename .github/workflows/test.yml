@@ -104,4 +104,4 @@ jobs:
         run: cd macos && pod install
 
       - name: Run integration tests (macOS desktop)
-        run: flutter test integration_test/ --device-id macos --reporter=github
+        run: flutter test integration_test/ --device-id macos --reporter=github --ci
