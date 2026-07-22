@@ -60,7 +60,7 @@ dependencies:
   coast_audio:
     git:
       url: https://github.com/potatosalad775/coast_audio.git
-      ref: 2166f8414d2a489bc3e11bad2603629cf69e5067 # was: custom
+      ref: bde17592f908dde7c066b0554ed44096d57f21bc # was: custom
   audio_decoder:
     git:
       url: https://github.com/potatosalad775/audio_decoder.git
