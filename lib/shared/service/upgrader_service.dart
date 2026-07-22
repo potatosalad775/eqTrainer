@@ -1,20 +1,21 @@
 import 'dart:io';
-import 'package:upgrader/upgrader.dart';
-import 'package:store_checker/store_checker.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:upgrader/upgrader.dart';
 import 'package:version/version.dart';
 
 class UpgraderService {
   final appcastURL = "https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/appcast.xml";
 
-  Future<Source> _getInstallationSource() async {
-    if (!Platform.isAndroid) return Source.IS_INSTALLED_FROM_OTHER_SOURCE;
+  Future<String?> _getInstallationSource() async {
+    if (!Platform.isAndroid) return null;
     // StoreChecker.getSource is an async getter — it must be awaited. The old
     // code stored the unresolved Future in a field and compared it to a Source
     // enum, which was never equal, so Play Store installs always fell through
     // to the direct-APK appcast flow.
-    return StoreChecker.getSource;
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    return packageInfo.installerStore;
   }
 
   Future<Upgrader> getInstance() async {
@@ -24,17 +25,18 @@ class UpgraderService {
       messages: CustomUpgraderMessages(),
       storeController: UpgraderStoreController(
         onAndroid: () {
-          if(installationSource == Source.IS_INSTALLED_FROM_PLAY_STORE) {
+          // If the app was installed from the Play Store, use the Play Store upgrader.
+          if(installationSource == "com.android.vending") {
             return UpgraderPlayStore();
           } else {
-            return UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion);
+            return UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion.toString());
           }
         },
-        onFuchsia: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion),
-        oniOS: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion),
-        onLinux: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion),
-        onMacOS: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion),
-        onWindows: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion),
+        onFuchsia: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion.toString()),
+        oniOS: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion.toString()),
+        onLinux: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion.toString()),
+        onMacOS: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion.toString()),
+        onWindows: () => UpgraderAppcastStore(appcastURL: appcastURL, osVersion: osVersion.toString()),
       ),
     );
   }

@@ -172,7 +172,7 @@ class _ImportPageState extends State<ImportPage> {
 
     final FilePickerResult? importResult;
     try {
-      importResult = await FilePicker.platform.pickFiles(
+      importResult = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
       );

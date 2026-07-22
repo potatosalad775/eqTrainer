@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  file_picker: ^10.2.0
+  file_picker: ^12.0.0-beta.7
   provider: ^6.0.5
   audio_session: ^0.2.2
   font_awesome_flutter: ^11.0.0
@@ -44,17 +44,14 @@ dependencies:
   easy_localization: ^3.0.2
   easy_localization_loader: ^2.0.1
   toastification: ^3.0.3
-  upgrader: ^12.0.0
+  upgrader: ^13.5.0
   audio_video_progress_bar: ^2.0.0
   equatable: ^2.0.5
-  device_info_plus: ^12.1.0
+  device_info_plus: ^13.2.0
+  package_info_plus: ^10.2.1
   version: ^3.0.2
   # Git deps are pinned to exact commit SHAs (not mutable branches) so builds
   # are reproducible and the audio engine can't change silently on re-resolve.
-  store_checker:
-    git:
-      url: https://github.com/ravitejaavv/store_checker.git
-      ref: 36bd4f13b22a3ca07dd7fd1abe997d9f312292ea # was: master
   window_size:
     git:
       url: https://github.com/google/flutter-desktop-embedding
@@ -67,7 +64,7 @@ dependencies:
   audio_decoder:
     git:
       url: https://github.com/potatosalad775/audio_decoder.git
-      ref: d2f6752e3301475ec6a76d5cc79eb128bfe063e2 # was: custom
+      ref: 7b39e1608c1cbcd8e2ebeef05df7c5cea4c4d476 # was: custom
 
 dev_dependencies:
   flutter_test:
