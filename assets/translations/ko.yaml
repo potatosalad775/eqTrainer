@@ -134,11 +134,8 @@
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "오디오 가져오기 형식",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "스마트",
   "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
-    "AAC 및 WAV 포맷은 우수한 재생 성능을 확보할 수 있습니다. '스마트' 모드에서는 eqTrainer가 무손실 및 손실 오디오 파일을 WAV 또는 AAC 형식으로 변환합니다.",
-  "AUDIO_SETTING_IMPORT_FORMAT_M4A": "AAC (손실)",
+    "'스마트' 모드에서는 WAV, MP3, FLAC, OGG 파일을 그대로 두고 나머지 형식만 WAV로 변환합니다. 'WAV'는 모든 파일을 변환하므로 저장 공간을 더 사용하지만 재생을 보장합니다.",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무손실)",
-  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL": "원본 유지",
-  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN": "'원본 유지' 옵션은 MP3/FLAC 파일을 그대로 사용하지만, EQ 처리 성능에 영향을 줄 수 있습니다.",
   ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "게인 볼륨 보정",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":

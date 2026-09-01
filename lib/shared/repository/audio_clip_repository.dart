@@ -14,6 +14,9 @@ abstract class IAudioClipRepository {
   // if the box changes in the meantime, silently acting on the wrong record.
   Future<void> deleteByKey(dynamic key);
   Future<void> toggleEnabledByKey(dynamic key);
+  // Repoint a record at a different backing file, keeping everything else.
+  // Used by ClipFormatMigration when it rewrites a clip to another format.
+  Future<void> updateFileNameByKey(dynamic key, String fileName);
   // Move the clip at [oldIndex] to [newIndex] in a single batched write.
   Future<void> reorder(int oldIndex, int newIndex);
 }
@@ -54,6 +57,14 @@ class AudioClipRepository implements IAudioClipRepository {
     final clip = _box.get(key);
     if (clip == null) return;
     clip.isEnabled = !clip.isEnabled;
+    await _box.put(key, clip);
+  }
+
+  @override
+  Future<void> updateFileNameByKey(dynamic key, String fileName) async {
+    final clip = _box.get(key);
+    if (clip == null) return;
+    clip.fileName = fileName;
     await _box.put(key, clip);
   }
 

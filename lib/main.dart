@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:eq_trainer/shared/service/third_party_licenses.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
@@ -20,6 +21,7 @@ import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/shared/service/upgrader_service.dart';
@@ -91,6 +93,13 @@ Future<void> main() async {
 
   // Prepare Upgrader
   final upgrader = await UpgraderService().getInstance();
+
+  // Convert any pre-SoLoud .m4a clips to WAV. Deliberately not awaited: it is
+  // a no-op scan on every launch but the first one after updating, and
+  // blocking startup behind a full library's worth of native decodes would
+  // hold the app on a blank screen. It commits one clip at a time, so a clip
+  // the user reaches mid-run is either fully converted or untouched.
+  unawaited(ClipFormatMigration(AudioClipRepository(), AppDirectories()).run());
 
   runApp(
     EasyLocalization(

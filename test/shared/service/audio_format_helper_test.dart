@@ -1,6 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
+/// Formats SoLoud decodes natively. Nothing in this set should ever be
+/// converted on import except by an explicit all-WAV request — converting one
+/// costs disk space and, for the lossy ones, a generation of quality, in
+/// exchange for nothing the engine needed.
+const _native = ['.wav', '.mp3', '.flac', '.ogg'];
+
+/// Formats SoLoud cannot decode. Every one of these must be converted in every
+/// mode, or it imports as a clip that will not play. `.m4a` heads the list: it
+/// used to be the *preferred* import target under coast_audio.
+const _foreign = [
+  '.m4a', '.aac', '.mp4', '.wma', '.opus', '.amr', '.webm', '.oga',
+  '.aiff', '.aif', '.alac', '.caf',
+];
+
 void main() {
   // ---------------------------------------------------------------------------
   // targetExtForImport — Smart mode
@@ -8,109 +22,23 @@ void main() {
   group('targetExtForImport (Smart)', () {
     const mode = ImportFormat.smart;
 
-    test('keeps .wav as-is', () {
-      expect(targetExtForImport('.wav', mode), isNull);
-    });
+    for (final ext in _native) {
+      test('keeps natively playable $ext as-is', () {
+        expect(targetExtForImport(ext, mode), isNull);
+      });
+    }
 
-    test('keeps .m4a as-is', () {
-      expect(targetExtForImport('.m4a', mode), isNull);
-    });
-
-    test('converts lossy .mp3 to .m4a', () {
-      expect(targetExtForImport('.mp3', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .ogg to .m4a', () {
-      expect(targetExtForImport('.ogg', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .wma to .m4a', () {
-      expect(targetExtForImport('.wma', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .opus to .m4a', () {
-      expect(targetExtForImport('.opus', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .aac to .m4a', () {
-      expect(targetExtForImport('.aac', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .mp4 to .m4a', () {
-      expect(targetExtForImport('.mp4', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .oga to .m4a', () {
-      expect(targetExtForImport('.oga', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .amr to .m4a', () {
-      expect(targetExtForImport('.amr', mode), equals('.m4a'));
-    });
-
-    test('converts lossy .webm to .m4a', () {
-      expect(targetExtForImport('.webm', mode), equals('.m4a'));
-    });
-
-    test('converts lossless .flac to .wav', () {
-      expect(targetExtForImport('.flac', mode), equals('.wav'));
-    });
-
-    test('converts lossless .aiff to .wav', () {
-      expect(targetExtForImport('.aiff', mode), equals('.wav'));
-    });
-
-    test('converts lossless .aif to .wav', () {
-      expect(targetExtForImport('.aif', mode), equals('.wav'));
-    });
-
-    test('converts lossless .alac to .wav', () {
-      expect(targetExtForImport('.alac', mode), equals('.wav'));
-    });
-
-    test('converts lossless .caf to .wav', () {
-      expect(targetExtForImport('.caf', mode), equals('.wav'));
-    });
+    for (final ext in _foreign) {
+      test('converts $ext to .wav', () {
+        expect(targetExtForImport(ext, mode), equals('.wav'));
+      });
+    }
 
     test('is case-insensitive', () {
-      expect(targetExtForImport('.MP3', mode), equals('.m4a'));
-      expect(targetExtForImport('.FLAC', mode), equals('.wav'));
+      expect(targetExtForImport('.MP3', mode), isNull);
+      expect(targetExtForImport('.FLAC', mode), isNull);
       expect(targetExtForImport('.WAV', mode), isNull);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // targetExtForImport — All M4A mode
-  // ---------------------------------------------------------------------------
-  group('targetExtForImport (All M4A)', () {
-    const mode = ImportFormat.allM4a;
-
-    test('keeps .m4a as-is', () {
-      expect(targetExtForImport('.m4a', mode), isNull);
-    });
-
-    test('converts .wav to .m4a', () {
-      expect(targetExtForImport('.wav', mode), equals('.m4a'));
-    });
-
-    test('converts .mp3 to .m4a', () {
-      expect(targetExtForImport('.mp3', mode), equals('.m4a'));
-    });
-
-    test('converts .flac to .m4a', () {
-      expect(targetExtForImport('.flac', mode), equals('.m4a'));
-    });
-
-    test('converts .aiff to .m4a', () {
-      expect(targetExtForImport('.aiff', mode), equals('.m4a'));
-    });
-
-    test('converts .alac to .m4a', () {
-      expect(targetExtForImport('.alac', mode), equals('.m4a'));
-    });
-
-    test('converts .ogg to .m4a', () {
-      expect(targetExtForImport('.ogg', mode), equals('.m4a'));
+      expect(targetExtForImport('.M4A', mode), equals('.wav'));
     });
   });
 
@@ -124,146 +52,59 @@ void main() {
       expect(targetExtForImport('.wav', mode), isNull);
     });
 
-    test('converts .m4a to .wav', () {
-      expect(targetExtForImport('.m4a', mode), equals('.wav'));
-    });
-
-    test('converts .mp3 to .wav', () {
-      expect(targetExtForImport('.mp3', mode), equals('.wav'));
-    });
-
-    test('converts .flac to .wav', () {
-      expect(targetExtForImport('.flac', mode), equals('.wav'));
-    });
-
-    test('converts .ogg to .wav', () {
-      expect(targetExtForImport('.ogg', mode), equals('.wav'));
-    });
-
-    test('converts .aiff to .wav', () {
-      expect(targetExtForImport('.aiff', mode), equals('.wav'));
-    });
+    for (final ext in ['.m4a', '.mp3', '.flac', '.ogg', '.aiff']) {
+      test('converts $ext to .wav', () {
+        expect(targetExtForImport(ext, mode), equals('.wav'));
+      });
+    }
   });
 
   // ---------------------------------------------------------------------------
-  // targetExtForImport — Keep Original mode
+  // targetExtForImport — retired modes
+  //
+  // allM4a and keepOriginal are gone from the settings UI but still sit in
+  // users' Hive boxes. They must keep importing, and they must not resurrect
+  // m4a: allM4a's whole purpose was to produce the one format the engine
+  // cannot read.
   // ---------------------------------------------------------------------------
-  group('targetExtForImport (Keep Original)', () {
-    const mode = ImportFormat.keepOriginal;
+  group('targetExtForImport (retired modes behave as Smart)', () {
+    for (final mode in [ImportFormat.allM4a, ImportFormat.keepOriginal]) {
+      test('mode $mode matches Smart on every known extension', () {
+        for (final ext in [..._native, ..._foreign]) {
+          expect(
+            targetExtForImport(ext, mode),
+            equals(targetExtForImport(ext, ImportFormat.smart)),
+            reason: '$ext diverged from Smart under mode $mode',
+          );
+        }
+      });
 
-    test('keeps .wav as-is (natively fast)', () {
-      expect(targetExtForImport('.wav', mode), isNull);
-    });
-
-    test('keeps .m4a as-is (natively fast)', () {
-      expect(targetExtForImport('.m4a', mode), isNull);
-    });
-
-    test('keeps .mp3 as-is (natively playable)', () {
-      expect(targetExtForImport('.mp3', mode), isNull);
-    });
-
-    test('keeps .flac as-is (natively playable)', () {
-      expect(targetExtForImport('.flac', mode), isNull);
-    });
-
-    test('converts unsupported lossless .aiff to .wav', () {
-      expect(targetExtForImport('.aiff', mode), equals('.wav'));
-    });
-
-    test('converts unsupported lossless .aif to .wav', () {
-      expect(targetExtForImport('.aif', mode), equals('.wav'));
-    });
-
-    test('converts unsupported lossless .alac to .wav', () {
-      expect(targetExtForImport('.alac', mode), equals('.wav'));
-    });
-
-    test('converts unsupported lossless .caf to .wav', () {
-      expect(targetExtForImport('.caf', mode), equals('.wav'));
-    });
-
-    test('converts unsupported lossy .ogg to .m4a', () {
-      expect(targetExtForImport('.ogg', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .aac to .m4a', () {
-      expect(targetExtForImport('.aac', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .mp4 to .m4a', () {
-      expect(targetExtForImport('.mp4', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .opus to .m4a', () {
-      expect(targetExtForImport('.opus', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .wma to .m4a', () {
-      expect(targetExtForImport('.wma', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .amr to .m4a', () {
-      expect(targetExtForImport('.amr', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .webm to .m4a', () {
-      expect(targetExtForImport('.webm', mode), equals('.m4a'));
-    });
-
-    test('converts unsupported lossy .oga to .m4a', () {
-      expect(targetExtForImport('.oga', mode), equals('.m4a'));
-    });
+      test('mode $mode never targets .m4a', () {
+        for (final ext in [..._native, ..._foreign]) {
+          expect(targetExtForImport(ext, mode), isNot(equals('.m4a')));
+        }
+      });
+    }
   });
 
   // ---------------------------------------------------------------------------
   // trimOutputExt
+  //
+  // AudioDecoder.trimAudio() writes .wav or .m4a. m4a is out on both counts:
+  // the engine cannot read it, and trimming a lossy source into it re-encodes
+  // for nothing.
   // ---------------------------------------------------------------------------
   group('trimOutputExt', () {
-    test('keeps .wav as .wav', () {
-      expect(trimOutputExt('.wav'), equals('.wav'));
-    });
-
-    test('keeps .m4a as .m4a', () {
-      expect(trimOutputExt('.m4a'), equals('.m4a'));
-    });
-
-    test('lossless .flac outputs .wav', () {
-      expect(trimOutputExt('.flac'), equals('.wav'));
-    });
-
-    test('lossless .aiff outputs .wav', () {
-      expect(trimOutputExt('.aiff'), equals('.wav'));
-    });
-
-    test('lossless .alac outputs .wav', () {
-      expect(trimOutputExt('.alac'), equals('.wav'));
-    });
-
-    test('lossless .caf outputs .wav', () {
-      expect(trimOutputExt('.caf'), equals('.wav'));
-    });
-
-    test('lossy .mp3 outputs .m4a', () {
-      expect(trimOutputExt('.mp3'), equals('.m4a'));
-    });
-
-    test('lossy .ogg outputs .m4a', () {
-      expect(trimOutputExt('.ogg'), equals('.m4a'));
-    });
-
-    test('lossy .aac outputs .m4a', () {
-      expect(trimOutputExt('.aac'), equals('.m4a'));
-    });
-
-    test('lossy .wma outputs .m4a', () {
-      expect(trimOutputExt('.wma'), equals('.m4a'));
-    });
+    for (final ext in [..._native, ..._foreign]) {
+      test('$ext trims to .wav', () {
+        expect(trimOutputExt(ext), equals('.wav'));
+      });
+    }
 
     test('is case-insensitive', () {
       expect(trimOutputExt('.WAV'), equals('.wav'));
       expect(trimOutputExt('.FLAC'), equals('.wav'));
-      expect(trimOutputExt('.MP3'), equals('.m4a'));
+      expect(trimOutputExt('.MP3'), equals('.wav'));
     });
   });
 
@@ -273,14 +114,14 @@ void main() {
   group('targetExtForPath', () {
     test('extracts extension from full path', () {
       expect(
-        targetExtForPath('/some/dir/track.mp3', ImportFormat.smart),
-        equals('.m4a'),
+        targetExtForPath('/some/dir/track.m4a', ImportFormat.smart),
+        equals('.wav'),
       );
     });
 
-    test('returns null for already-optimal format', () {
+    test('returns null for a natively playable format', () {
       expect(
-        targetExtForPath('/clips/audio.wav', ImportFormat.smart),
+        targetExtForPath('/clips/audio.mp3', ImportFormat.smart),
         isNull,
       );
     });

@@ -134,11 +134,8 @@
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "Audio Import Format",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "Smart",
   "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
-    "AAC and WAV formats offer superior playback performance. In 'Smart' mode, eqTrainer will convert lossless or lossy audio files into WAV or AAC format.",
-  "AUDIO_SETTING_IMPORT_FORMAT_M4A": "AAC (Lossy)",
+    "In 'Smart' mode, eqTrainer keeps WAV, MP3, FLAC and OGG files as they are and converts every other format to WAV. 'WAV' converts everything, which costs disk space but guarantees playback.",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Lossless)",
-  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL": "Keep Original",
-  "AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN": "'Keep Original' option avoids conversion of MP3/FLAC files, but may cause performance issues with EQ processing.",
   ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "Gain Volume Compensation",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":

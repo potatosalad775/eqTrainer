@@ -207,17 +207,11 @@ class _ImportPageState extends State<ImportPage> {
     if (targetExt != null) {
       importPageState.value = ImportPageState.converting;
       try {
-        if (targetExt == '.m4a') {
-          filePath = await workflow.convertToM4a(
-            fileNameWithoutExt: fileName,
-            sourcePath: filePath,
-          );
-        } else {
-          filePath = await workflow.convertToWav(
-            fileNameWithoutExt: fileName,
-            sourcePath: filePath,
-          );
-        }
+        // WAV is the only conversion target now — see targetExtForImport.
+        filePath = await workflow.convertToWav(
+          fileNameWithoutExt: fileName,
+          sourcePath: filePath,
+        );
         // Track the converted temp file so it's cleaned up on dispose,
         // whether the import completes or is aborted.
         _tempConvertedPath = filePath;

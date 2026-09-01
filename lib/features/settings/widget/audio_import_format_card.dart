@@ -11,29 +11,27 @@ class AudioImportFormatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final importFormat = context.watch<MiscSettingsProvider>().importFormat;
+    // AAC and Keep-Original are retired (see ImportFormat); both now behave as
+    // Smart. Show them as Smart rather than leaving the dropdown with a value
+    // no item matches, which trips its "exactly one matching item" assertion.
+    final selected = importFormat == ImportFormat.allWav
+        ? ImportFormat.allWav
+        : ImportFormat.smart;
     return SettingsCard(
       icon: Icons.audio_file,
       title: "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE".tr(),
       trailing: DropdownButton<int>(
         alignment: Alignment.centerRight,
         isDense: true,
-        value: importFormat,
+        value: selected,
         items: [
           DropdownMenuItem(
             value: ImportFormat.smart,
             child: Text("AUDIO_SETTING_IMPORT_FORMAT_SMART".tr()),
           ),
           DropdownMenuItem(
-            value: ImportFormat.allM4a,
-            child: Text("AUDIO_SETTING_IMPORT_FORMAT_M4A".tr()),
-          ),
-          DropdownMenuItem(
             value: ImportFormat.allWav,
             child: Text("AUDIO_SETTING_IMPORT_FORMAT_WAV".tr()),
-          ),
-          DropdownMenuItem(
-            value: ImportFormat.keepOriginal,
-            child: Text("AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL".tr()),
           ),
         ],
         onChanged: (int? value) {
