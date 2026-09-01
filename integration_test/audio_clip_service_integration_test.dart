@@ -165,13 +165,53 @@ void main() {
 
       final clip = repo.getAllClips().first;
       expect(clip.duration, closeTo(0.5, 0.001));
-      expect(clip.fileName, endsWith('.wav'));
+      // Smart keeps a lossless source lossless, and a trim always re-encodes,
+      // so a WAV source lands in FLAC rather than staying WAV.
+      expect(clip.fileName, endsWith('.flac'));
 
       // The trimmed file must exist and be smaller than the original
       final destFile = File(p.join(clipsDir.path, clip.fileName));
       final sourceFile = File(fixture('sine_440hz_1s.wav'));
       expect(destFile.existsSync(), isTrue);
       expect(destFile.lengthSync(), lessThan(sourceFile.lengthSync()));
+
+      // No temporary WAV may survive the trim.
+      expect(
+        File('${destFile.path}.trim.wav').existsSync(),
+        isFalse,
+        reason: 'the intermediate WAV should have been cleaned up',
+      );
+    });
+
+    testWidgets('an explicit WAV setting trims straight to WAV', (tester) async {
+      await service.createClip(
+        sourcePath: fixture('sine_440hz_1s.wav'),
+        startSec: 0.0,
+        endSec: 0.5,
+        isTrimmed: true,
+        importFormat: ImportFormat.allWav,
+      );
+
+      final clip = repo.getAllClips().first;
+      expect(clip.fileName, endsWith('.wav'));
+      expect(File(p.join(clipsDir.path, clip.fileName)).existsSync(), isTrue);
+    });
+
+    testWidgets('an explicit Opus setting trims a WAV source to Opus',
+        (tester) async {
+      await service.createClip(
+        sourcePath: fixture('sine_440hz_1s.wav'),
+        startSec: 0.0,
+        endSec: 0.5,
+        isTrimmed: true,
+        importFormat: ImportFormat.allOpus,
+      );
+
+      final clip = repo.getAllClips().first;
+      expect(clip.fileName, endsWith('.opus'));
+      final dest = File(p.join(clipsDir.path, clip.fileName));
+      expect(dest.existsSync(), isTrue);
+      expect(dest.lengthSync(), greaterThan(0));
     });
 
     testWidgets('trims from the middle of a WAV file', (tester) async {
