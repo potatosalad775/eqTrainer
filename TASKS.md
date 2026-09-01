@@ -29,60 +29,63 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` won't fix 
 
 ## Phase 1 — flutter_soloud fork (enables everything else)
 
-- [ ] **F1 — Offline encode FFI.** Add a native entry point: float32 PCM buffer +
+- [x] **F1 — Offline encode FFI.** Add a native entry point: float32 PCM buffer +
   sample rate + channels → Ogg Opus / FLAC / WAV file on disk. Thin wrapper over
   the existing `src/mixeroutput/` encoder classes; runs on the worker, not the
   platform thread (encode is CPU-seconds on long files). Dart-side wrapper method
   with a completion Future; progress callback optional.
-- [ ] **F2 — Opus encoder quality knobs.** `opus_output_encoder.cpp` currently
+- [x] **F2 — Opus encoder quality knobs.** `opus_output_encoder.cpp` currently
   runs libopus defaults with no `OPUS_SET_BITRATE`. → Set bitrate (default
   192 kbps stereo, parameterized through F1) + `OPUS_SET_COMPLEXITY(10)` for
   offline encodes.
-- [ ] **F3 — Replace the linear resampler.** `OpusOutputEncoder::resampleTo48k`
+- [x] **F3 — Replace the linear resampler.** `OpusOutputEncoder::resampleTo48k`
   linearly interpolates 44.1→48 kHz → imaging/aliasing in the top octave, on the
   very material users train their ears on. → One windowed-sinc (polyphase)
   resampler in C++, shared by all platforms. Also improves the existing capture
   path. FLAC is unaffected (keeps native rate).
-- [ ] **F4 — Fix `seekOpus`.** Linear rewind-and-decode today
+- [x] **F4 — Fix `seekOpus`.** Linear rewind-and-decode today
   (`mb_ogg.cpp:580`). → Bisection over Ogg pages using granule positions (port
   the approach from the streaming path's `ogg_seek_index.h`), then decode-and-
   discard ~80 ms pre-roll before the target and honor pre-skip — without
   pre-roll the first samples after every seek are garbled. Vorbis needs nothing
   (`ov_pcm_seek` already bisects).
-- [ ] **F5 — Fork tests.** Encoder round-trip tests (PCM → encode → decode →
+- [x] **F5 — Fork tests.** Encoder round-trip tests (PCM → encode → decode →
   compare length/rate/channels; FLAC bit-exact) and seek-accuracy tests for F4,
   in the fork's own test suite.
 
 ## Phase 2 — eqTrainer wiring
 
-- [ ] **F6 — New import-format options in `AudioFormatHelper`.** Options:
+- [x] **F6 — New import-format options in `AudioFormatHelper`.** Options:
   **Smart / FLAC / Opus / WAV** (replacing keep-as-is / all-WAV). Smart: formats
   SoLoud already plays (wav/mp3/flac/ogg/opus) keep as-is — never transcode the
   playable; foreign lossy (m4a/aac/wma) → `.opus`; foreign lossless
   (alac/aiff/caf) → `.flac`. Add `.opus` to `_nativePlayableExts` and to the
   import file-picker filter.
-- [ ] **F7 — Trim output follows source lossiness.** `trimOutputExt` is
+- [x] **F7 — Trim output follows source lossiness.** `trimOutputExt` is
   hardcoded `.wav`. Trims always re-encode, so: lossless source → `.flac`,
   lossy source → `.opus` at the generous default bitrate (limits generation
   loss). Respect the explicit format setting when it's not Smart.
-- [ ] **F8 — Import pipeline through the new encoder.** Foreign formats:
+- [x] **F8 — Import pipeline through the new encoder.** Foreign formats:
   audio_decoder `convertToWavBytes` (existing) → F1 offline encode → clip file.
   Delete the intermediate WAV/temp on completion or abort.
-- [ ] **F9 — Waveform extraction via SoLoud for playable formats.** audio_decoder
-  uses AVFoundation on Apple, which cannot open Ogg containers at all — waveform
-  for `.opus`/`.ogg` imports would break there (latent bug for `.ogg` today).
-  → Route waveform through SoLoud `readSamplesFromMem`/`readSamplesFromFile` for
-  SoLoud-playable formats; audio_decoder only for foreign ones.
-- [ ] **F10 — Settings migration + UI + i18n.** `ImportFormat` Hive values: map
+- [-] **F9 — Waveform extraction via SoLoud for playable formats.** Not
+  applicable as written: eqTrainer has no waveform extraction to move. The
+  import editor uses a position slider and `AudioDecoder.getWaveform()` is
+  never called. The hazard behind it was real one layer down, and was fixed:
+  `PlayerService` kept its own list of natively-playable extensions, still
+  missing `.opus`, so an Opus clip would have fallen through to the
+  `convertToWavBytes` fallback — i.e. into the AVFoundation path that cannot
+  open Ogg. That set is now shared with `audio_format_helper`.
+- [x] **F10 — Settings migration + UI + i18n.** `ImportFormat` Hive values: map
   the old stored ordinals (keep-as-is / allWav) to sane new values (allWav →
   WAV). Regenerate adapters (`dart run build_runner build`). Settings UI for the
   four options; strings in `en.yaml` + `ko.yaml`.
-- [ ] **F11 — Tests.** Unit tests for the Smart mapping table and trim-target
+- [x] **F11 — Tests.** Unit tests for the Smart mapping table and trim-target
   logic in `AudioFormatHelper`. Integration runs on desktop + a phone (CI proves
   nothing here — no audio hardware): Opus clip playback, seek accuracy after F4,
   EQ toggle over an Opus stream (`peaking_eq_audio_integration_test.dart`
   pattern).
-- [ ] **F12 — Return audio_decoder to the hosted package.** The fork's entire
+- [x] **F12 — Return audio_decoder to the hosted package.** The fork's entire
   delta (4 commits: event-driven Android `performM4aConversion`, AAC-encoder
   selection, Linux encoder refactor) serves only the retired m4a-*output* path;
   the decode-to-WAV path is untouched by it. → Replace the git dependency in
@@ -92,7 +95,50 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` won't fix 
 
 ## Phase 3 — library care (optional)
 
-- [ ] **F13 — Offer WAV→FLAC recompress.** Libraries that went through
+- [x] **F13 — Offer WAV→FLAC recompress.** Libraries that went through
   `clip_format_migration.dart` (m4a → WAV) hold large WAV files. → Optional,
   user-triggered recompress to FLAC (lossless-safe, roughly halves size). Never
   auto-transcode user clips to Opus.
+
+---
+
+## Status — all tasks complete (2026-09-01)
+
+Phase 1 landed in the **flutter_soloud fork**, on a local branch
+`feat/offline-encode` off the pinned `c8ead6ed`. **Not pushed yet**, so
+eqTrainer's `pubspec.yaml` carries a temporary `dependency_overrides` path to
+`../flutter_soloud`. Once the fork branch is pushed, replace that override
+with a pinned ref.
+
+Fork commits, in order:
+
+| Commit | Task |
+|---|---|
+| `8439b0ef` | F1 — offline PCM-to-file encode entry point + Dart wrapper |
+| `6660545f` | F2 — Opus bitrate/complexity, plus pre-skip and granulepos fixes |
+| `de83c46c` | F3 — Kaiser-windowed sinc polyphase resampler |
+| `7fedbdce` | F4 — bisected `seekOpus` with 80 ms pre-roll |
+| `208099e7` | F5 — encoder, resampler and seek test suites |
+| `a1c2693e` | FLAC `total_samples`, found by the eqTrainer integration test |
+
+Measured results:
+
+- **F3** — 44.1→48 kHz response went from -3.9 dB at 16 kHz and -6.3 dB at
+  20 kHz (linear interpolation) to -0.000 dB and -0.279 dB. Images went from
+  1.7 dB down to 24.7 dB down.
+- **F4** — seeking to 115 s in a two-minute file went from 71.77 ms to
+  0.45 ms, and is now flat in position rather than linear.
+- **F2** — Opus files now carry a real pre-skip (312) and a correct final
+  granulepos; the tail frame is no longer truncated.
+
+Three bugs were found that the plan had not anticipated: OpusHead advertised a
+pre-skip of 0, granulepos was written before being advanced (truncating ~20 ms
+off every file), and FLAC never declared `total_samples` so every decoder
+reported its duration as unknown.
+
+### Outstanding
+
+- The fork branch needs review and a push; then re-pin `pubspec.yaml`.
+- **Listening check.** F3 and F4 are verified numerically and by test, not by
+  ear. Worth auditioning: a seek into a long Opus clip (no click or garble at
+  the landing point), and top-octave material through a 44.1 kHz import.
