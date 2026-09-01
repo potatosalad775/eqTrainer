@@ -65,6 +65,14 @@ dependencies:
     git:
       url: https://github.com/potatosalad775/audio_decoder.git
       ref: 7b39e1608c1cbcd8e2ebeef05df7c5cea4c4d476 # was: custom
+  # Fork adds the click-free peaking EQ filter (a bandpass-refactored biquad
+  # whose poles don't depend on gain, so the dry/wet fade touches no recursive
+  # coefficient) and an Android backend override, needed because upstream
+  # prefers AAudio on API >= 30 while several DAP devices misbehave on it.
+  flutter_soloud:
+    git:
+      url: https://github.com/potatosalad775/flutter_soloud.git
+      ref: c8ead6edc5e7a3b5ef03f15f643fe7b1deebca7f # was: feat/peaking-eq
 
 dev_dependencies:
   flutter_test:

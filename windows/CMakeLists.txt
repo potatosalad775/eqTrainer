@@ -87,6 +87,17 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
+# Copy the native assets provided by the build.dart from all packages.
+# flutter_soloud has no plugin class and ships nothing through CMake: its whole
+# native engine is built by hook/build.dart as a code asset, so without this
+# rule flutter_soloud_plugin.dll never reaches the bundle and every FFI lookup
+# fails at runtime with "Failed to load dynamic library". The linux/ runner
+# already had this; the windows/ one predates native assets.
+set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
+install(DIRECTORY "${NATIVE_ASSETS_DIR}"
+   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+   COMPONENT Runtime)
+
 # Fully re-copy the assets directory on each build to avoid having stale files
 # from a previous install.
 set(FLUTTER_ASSET_DIR_NAME "flutter_assets")

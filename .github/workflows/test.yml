@@ -24,7 +24,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
       - name: Install dependencies
         run: flutter pub get
@@ -45,7 +45,7 @@ jobs:
   #    - uses: subosito/flutter-action@v2
   #      with:
   #        channel: stable
-  #        flutter-version: 3.44.4
+  #        flutter-version: 3.47.2
   #
   #    - name: Install Linux system dependencies
   #      run: |
@@ -74,10 +74,20 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
       - name: Install dependencies
         run: flutter pub get
+
+      # Warm up the Windows build before the test run. `flutter test
+      # integration_test/` regenerates windows/flutter/ephemeral/ and can race
+      # its own MSVC build, which then fails with C1083 "cannot open source
+      # file" on cpp_client_wrapper/*.cc. Building once up front leaves the
+      # ephemeral tree populated so the test run reuses it instead of
+      # recreating it under the compiler. Cheap: the test run reuses these
+      # artifacts rather than rebuilding them.
+      - name: Warm up Windows build
+        run: flutter build windows --debug
 
       - name: Run integration tests (Windows desktop)
         run: flutter test integration_test/ --device-id windows --reporter=github
@@ -95,7 +105,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
       - name: Install dependencies
         run: flutter pub get
