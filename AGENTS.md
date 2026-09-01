@@ -242,6 +242,10 @@ proves nothing about the environment users are in. Run these on a real machine
 (`flutter test integration_test/ --device-id windows|macos|linux`, or a
 connected phone) before landing player changes.
 
+### Commiting
+
+**Keep commit messages short.** Default to a subject line alone. Add a body only when the why can't be read off the diff, and cap it at one paragraph of two or three lines. Never one paragraph per design decision. Things like alternatives considered, per-decision tradeoffs, secondary fixes, follow-up caveats — belongs in the PR description, and the doc/code comments are where the durable rationale already lives.
+
 ---
 
 ## CI/CD
