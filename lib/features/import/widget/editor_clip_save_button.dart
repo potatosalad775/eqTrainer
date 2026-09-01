@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
+import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,8 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
             });
             player.pause();
             final clipService = context.read<AudioClipService>();
+            final importFormat =
+                context.read<MiscSettingsProvider>().importFormat;
             final messenger = ScaffoldMessenger.of(context);
             // Non-null whenever the editor is reachable — the button only
             // renders after loadAudioFile() succeeded. Handled rather than
@@ -48,6 +51,7 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
                 startSec: clipTimeData.clipStartTime.inMicroseconds / 1e6,
                 endSec: clipTimeData.clipEndTime.inMicroseconds / 1e6,
                 isTrimmed: isTrimmed,
+                importFormat: importFormat,
               );
             } catch (_) {
               // On failure, surface the error and re-enable the button instead

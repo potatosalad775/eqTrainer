@@ -7,6 +7,7 @@ import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
 class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
 
@@ -79,6 +80,7 @@ void main() {
           startSec: 0.0,
           endSec: 5.5,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -104,6 +106,7 @@ void main() {
           startSec: 0.0,
           endSec: 180.0,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -122,6 +125,7 @@ void main() {
           startSec: 0.0,
           endSec: 10.0,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -139,6 +143,7 @@ void main() {
           startSec: 0.0,
           endSec: 3.0,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -155,6 +160,7 @@ void main() {
           startSec: 5.0, // startSec is ignored in the convert-to-wav path
           endSec: 42.7,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -169,6 +175,7 @@ void main() {
             startSec: 0.0,
             endSec: 1.0,
             isTrimmed: false,
+            importFormat: ImportFormat.smart,
           ),
           throwsException,
         );

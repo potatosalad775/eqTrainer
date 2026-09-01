@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 
 void main() {
@@ -82,6 +83,7 @@ void main() {
         startSec: 0.0,
         endSec: 1.0,
         isTrimmed: false,
+        importFormat: ImportFormat.smart,
       );
 
       final clips = repo.getAllClips();
@@ -105,6 +107,7 @@ void main() {
         startSec: 0.0,
         endSec: 3.0,
         isTrimmed: false,
+        importFormat: ImportFormat.smart,
       );
 
       final clip = repo.getAllClips().first;
@@ -119,6 +122,7 @@ void main() {
         startSec: 0.0,
         endSec: 3.0,
         isTrimmed: false,
+        importFormat: ImportFormat.smart,
       );
 
       final clip = repo.getAllClips().first;
@@ -132,12 +136,14 @@ void main() {
         startSec: 0.0,
         endSec: 1.0,
         isTrimmed: false,
+        importFormat: ImportFormat.smart,
       );
       await service.createClip(
         sourcePath: fixture('sine_440hz_3s.mp3'),
         startSec: 0.0,
         endSec: 3.0,
         isTrimmed: false,
+        importFormat: ImportFormat.smart,
       );
 
       expect(repo.getAllClips().length, equals(2));
@@ -154,6 +160,7 @@ void main() {
         startSec: 0.0,
         endSec: 0.5,
         isTrimmed: true,
+        importFormat: ImportFormat.smart,
       );
 
       final clip = repo.getAllClips().first;
@@ -173,6 +180,7 @@ void main() {
         startSec: 0.5,
         endSec: 1.5,
         isTrimmed: true,
+        importFormat: ImportFormat.smart,
       );
 
       final clip = repo.getAllClips().first;

@@ -66,6 +66,13 @@ dependencies:
       url: https://github.com/potatosalad775/flutter_soloud.git
       ref: c8ead6edc5e7a3b5ef03f15f643fe7b1deebca7f # was: feat/peaking-eq
 
+# TEMPORARY: point flutter_soloud at the local clone while the offline-encode
+# work (F1-F5) is unreviewed and unpushed. Replace with a pinned ref on the
+# fork's feat/offline-encode branch before this lands.
+dependency_overrides:
+  flutter_soloud:
+    path: ../flutter_soloud
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
