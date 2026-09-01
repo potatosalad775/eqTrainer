@@ -216,7 +216,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
           ctx.read<IAudioClipRepository>(),
           ctx.read<AppDirectories>(),
         )),
-        Provider<ImportWorkflowService>(create: (_) => const ImportWorkflowService()),
+        Provider<ImportWorkflowService>(create: (_) => ImportWorkflowService()),
 
         // Session parameters and data notifiers
         ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),

@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path/path.dart' as p;
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
 /// Snapshot of the player's transport state, polled for the UI.
 ///
@@ -205,17 +206,24 @@ class PlayerService extends ChangeNotifier {
   /// native audio thread, so a full song costs a file handle rather than the
   /// ~21 MB per stereo minute that fully-decoded float PCM would take in RAM.
   ///
-  /// The fallback exists for one case. SoLoud plays wav/mp3/flac/ogg natively
-  /// and the importer converts everything else to wav
+  /// The fallback exists for one case. SoLoud plays wav/mp3/flac/ogg/opus
+  /// natively and the importer converts everything else
   /// (`audio_format_helper.dart`), but libraries created before that policy
   /// hold `.m4a` clips. Those are converted once at startup by
   /// `ClipFormatMigration`; this catches the ones it could not convert, so a
   /// clip that fails migration still plays instead of failing to load. It
   /// holds the whole file in memory, which is what disk mode exists to avoid —
   /// so it is a fallback, not a supported format.
+  ///
+  /// The fallback must never be reached for an Ogg-family file. It decodes
+  /// through `audio_decoder`, which on Apple platforms is AVFoundation, and
+  /// AVFoundation cannot open an Ogg container at all — so routing `.opus` or
+  /// `.ogg` here would fail outright on macOS and iOS. That is why the
+  /// playable set is shared with the import policy rather than restated: the
+  /// two drifting apart is exactly what breaks.
   Future<AudioSource> _loadSource(String path) async {
     final ext = p.extension(path).toLowerCase();
-    if (_soloudNativeExts.contains(ext)) {
+    if (isNativelyPlayable(ext)) {
       return _soloud.loadFile(path, mode: LoadMode.disk);
     }
     final wav = await AudioDecoder.convertToWavBytes(
@@ -227,9 +235,6 @@ class PlayerService extends ChangeNotifier {
     return _soloud.loadMem(path, wav, mode: LoadMode.disk);
   }
 
-  /// Extensions SoLoud's own decoders handle, i.e. those [_loadSource] can
-  /// hand straight to [LoadMode.disk].
-  static const _soloudNativeExts = {'.wav', '.mp3', '.flac', '.ogg'};
 
   /// Brings up the SoLoud engine on first use and keeps it up afterwards.
   ///
