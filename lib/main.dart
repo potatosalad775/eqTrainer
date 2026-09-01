@@ -68,7 +68,10 @@ Future<void> main() async {
   Hive.registerAdapter(BackendDataAdapter());
   Hive.registerAdapter(MiscSettingsAdapter());
 
-  // Load Backend Setting value (opened and closed once — not needed after startup)
+  // Load Backend Setting value (opened and closed once — not needed after
+  // startup). Still the coast_audio-era list of backend names; the only thing
+  // read out of it now is the Android backend choice — see
+  // androidBackendFromSavedList.
   final backendBox = await _openBoxSafely<BackendData>(backendBoxName);
   backendList = backendBox.get(backendKey)?.backendList ?? [];
   await backendBox.close();
@@ -265,5 +268,4 @@ const String audioClipBoxName = "audioClipBox";
 
 late Directory appSupportDir;
 
-//AndroidAudioBackend? androidAudioBackend;
 late List<String> backendList;

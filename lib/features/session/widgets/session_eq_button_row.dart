@@ -1,6 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,9 +10,9 @@ class SessionEqButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final player = context.read<PlayerIsolate>();
+    final player = context.read<PlayerService>();
     final sessionController = context.read<SessionController>();
-    final pEQState = context.select<PlayerIsolate, bool>((p) => p.fetchEQState);
+    final pEQState = context.select<PlayerService, bool>((p) => p.fetchEQState);
 
     return Row(
       spacing: 12,

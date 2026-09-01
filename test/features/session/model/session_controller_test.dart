@@ -1,36 +1,38 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
-class MockPlayerIsolate extends Mock implements PlayerIsolate {}
+class MockPlayerService extends Mock implements PlayerService {}
 
 void main() {
   group('SessionController', () {
-    late MockPlayerIsolate mockPlayer;
+    late MockPlayerService mockPlayer;
     late SessionStore sessionStore;
     late SessionParameter sessionParameter;
     late SessionController controller;
 
     setUp(() async {
-      mockPlayer = MockPlayerIsolate();
+      mockPlayer = MockPlayerService();
       sessionStore = SessionStore();
       sessionParameter = SessionParameter();
       controller = SessionController();
 
-      // Stub all player calls used by initSession() and submitAnswer()
+      // Stub all player calls used by initSession() and submitAnswer().
+      // setEQParams is the only one that awaits — the rest are plain FFI
+      // writes and return void, so they stub with thenReturn.
       when(() => mockPlayer.setEQParams(
             enableEQ: any(named: 'enableEQ'),
             frequency: any(named: 'frequency'),
             gainDb: any(named: 'gainDb'),
           )).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQ(any())).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQFreq(any())).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQGain(any())).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQQ(any())).thenAnswer((_) async {});
+      when(() => mockPlayer.setEQ(any())).thenReturn(null);
+      when(() => mockPlayer.setEQFreq(any())).thenReturn(null);
+      when(() => mockPlayer.setEQGain(any())).thenReturn(null);
+      when(() => mockPlayer.setEQQ(any())).thenReturn(null);
 
       // Populate frequency/graph data so initSession() has a valid list to pick from
       await sessionStore.initFrequency(sessionParameter: sessionParameter);

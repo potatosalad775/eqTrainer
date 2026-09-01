@@ -27,7 +27,7 @@ eqTrainer/
 │   │   └── main_page.dart     # Root navigation/tab controller
 │   └── shared/                # Cross-feature code
 │       ├── model/             # Data models: AudioClip, AudioState, SettingData, MiscSettingsProvider
-│       ├── player/            # Audio engine: PlayerIsolate, EQ filters
+│       ├── player/            # Audio engine: PlayerService (flutter_soloud)
 │       ├── repository/        # IAudioClipRepository + Hive implementation
 │       ├── service/           # Business logic services
 │       ├── themes/            # AppColors, AppTheme, AppDimens
@@ -81,7 +81,7 @@ Each feature is a self-contained module with:
 | Sub-directory | Content |
 |---|---|
 | `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `SettingData` (Hive settings), `MiscSettingsProvider` (ChangeNotifier over `SettingData`) |
-| `player/` | `PlayerIsolate` (audio engine in a Dart isolate), `PeakingEqNode`, `PeakingEqFilter` |
+| `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
 | `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper` |
 | `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
@@ -98,18 +98,43 @@ Each feature is a self-contained module with:
 - **Private members:** `_camelCase` prefix
 - **Barrel exports:** every module exposes an `index.dart`
 
-### Audio Engine (`PlayerIsolate`)
+### Audio Engine (`PlayerService`)
 
-Audio runs in a **Dart isolate** via `coast_audio`. Communication uses a sealed class hierarchy:
+The whole audio path — decode, mixing and the EQ — runs on the native
+miniaudio callback thread inside `flutter_soloud`. Dart only sends control
+commands over FFI. There is **no Dart in the audio path**, which is the point:
+the previous coast_audio engine ran decode and EQ inside a Dart isolate driven
+by timer clocks, and the stutter that caused is what the migration removed.
 
-```dart
-sealed class PlayerHostRequest { ... }
-class PlayerHostRequestStart extends PlayerHostRequest { ... }
-class PlayerHostRequestSetEQ extends PlayerHostRequest { ... }
-// etc.
-```
+Never call `SoLoud` APIs directly from the UI. Always go through
+`PlayerService` (`launch`, `setEQ`, `setEQFreq`, `setEQGain`, `setEQParams`,
+`seek`, …).
 
-Never call audio APIs directly from the UI. Always go through `PlayerIsolate` methods (`launch`, `setEQ`, `setEQFreq`, `setEQGain`, `seek`, etc.).
+**The signatures mean something.** Only `launch`, `shutdown`, `seek` and
+`setEQParams` return a `Future`; everything else is a synchronous FFI write and
+returns `void`. `setEQParams` is the one that genuinely awaits — see below.
+
+**Never step the band's dry/wet mix into live audio.** The peaking EQ is
+algebraically refactored so that sweeping `wet` moves no recursive coefficient,
+which makes the Original/Filtered toggle click-free by construction. An
+instantaneous swap between the dry and filtered signal is the "noise burst out
+of nowhere" the migration exists to fix. `PlayerService._setWet` picks a fade
+or a step correctly; while nothing is rendering a step is both safe and
+*required*, because SoLoud drives parameter faders from stream time and the
+output device idle-pauses.
+
+**A round transition owns the band while it runs.** `setEQParams` fades `wet`
+out, waits for the engine to report it landed, and only then snaps the new
+frequency/gain. Retuning a still-audible filter is a click. Toggles are dropped
+while the transition is in flight.
+
+The filter is a **global** filter (engine-scoped), not per-voice — so that
+SoLoud's chain stays volume → EQ → clamp, matching the gain compensation's
+assumption. Two consequences: `launch()` must reset the band, because the
+filter outlives any one `PlayerService`; and every track switch must re-apply
+the compensation volume, because a fresh voice starts at 1.0.
+
+Fuller rationale, measurements and landmines: `SOLOUD_MIGRATION.md`.
 
 ### Session Flow
 
@@ -208,6 +233,7 @@ flutter test integration_test/  # integration tests — local only, see below
 | Suite | Needs |
 |---|---|
 | `audio_clip_service_integration_test.dart` | native decode/convert only |
+| `audio_state_integration_test.dart` | a real device list, enumerated *before* the engine starts |
 | `player_service_integration_test.dart` | an output device (engine init) |
 | `peaking_eq_audio_integration_test.dart` | an output device that actually renders — stream time has to advance for fades to land |
 
@@ -247,11 +273,11 @@ ref are cancelled when a newer commit lands.
 | `lib/features/session/model/session_store.dart` | Session UI state (ChangeNotifier) |
 | `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
 | `lib/features/session/model/frequency_calculator.dart` | Pure EQ frequency math |
-| `lib/shared/player/player_isolate.dart` | Audio isolate + request protocol |
-| `lib/shared/player/peaking_eq_filter.dart` | Biquad peaking EQ DSP |
+| `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
+| `lib/shared/service/clip_format_migration.dart` | One-time `.m4a` → WAV conversion of existing libraries |
 | `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
 | `lib/shared/service/playlist_service.dart` | Playlist business logic |
-| `lib/shared/model/audio_state.dart` | Backend/device state |
+| `lib/shared/model/audio_state.dart` | Output device + Android backend state |
 | `assets/translations/en.yaml` | English strings |
 | `assets/translations/ko.yaml` | Korean strings |
 
@@ -263,7 +289,7 @@ ref are cancelled when a newer commit lands.
 |---|---|
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Local persistence |
-| `coast_audio` (git fork) | Cross-platform audio engine |
+| `flutter_soloud` (git fork) | Cross-platform audio engine; the fork adds the peaking EQ filter and an Android backend override |
 | `audio_decoder` (git fork) | Audio file decode / trim / conversion (native method channels) |
 | `easy_localization` | i18n |
 | `fl_chart` | EQ frequency graph visualization |
@@ -273,4 +299,4 @@ ref are cancelled when a newer commit lands.
 | `device_info_plus` + `version` | OS-version gating for the appcast updater |
 | `equatable` | Value equality for Equatable models |
 
-`coast_audio`, `audio_decoder`, `store_checker`, and `window_size` are sourced directly from Git (see `pubspec.yaml`).
+`flutter_soloud`, `audio_decoder`, `store_checker`, and `window_size` are sourced directly from Git (see `pubspec.yaml`).

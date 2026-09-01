@@ -26,10 +26,19 @@ unmaintained.
 
 ## Current state
 
-**Done and verified:** the peaking EQ filter and the Android backend override
-in the fork, and steps 1–3 of "Remaining work" below — eqTrainer now has the
-dependency wired and a SoLoud-backed `PlayerService`, tested on Windows. The
-UI still runs on `PlayerIsolate`/coast_audio; session wiring (step 4) is next.
+**The migration is complete.** All six steps below are done: coast_audio is
+gone from `pubspec.yaml`, from every call site, and from the Android, iOS,
+macOS, Windows and Linux runners (jniLibs, the `CoastAudio` pod and its
+`AppDelegate` symbol keeper, the xcframework entries in `Runner.xcodeproj`, and
+the bundled `.dll`/`.so` install rules). `PlayerIsolate`, `PeakingEqNode` and
+`PeakingEqFilter` are deleted.
+
+Verified on Windows: `flutter analyze` clean, 192 unit tests pass,
+`flutter build windows` links, and all four integration suites pass against
+real audio hardware. **Not yet verified on Android, iOS, macOS or Linux** —
+the runner edits for those are mechanical but unbuilt, and the Android backend
+override in particular has only ever been exercised by an example APK build in
+the fork, never by eqTrainer on a real device. Build each before release.
 
 - Fork: `potatosalad775/flutter_soloud`, at `~/source/repos/flutter_soloud`
 - Branch `main`, based on upstream `e38c5240` (v5.0.0-pre.3)
@@ -222,33 +231,58 @@ correctly configured but never applied, and this suite is what caught the
    over. All the in-flight guards, coalescing and poll cooldowns are gone:
    every control call is now a synchronous FFI write. Covered by 19 checks in
    `integration_test/player_service_integration_test.dart`, run on the Windows
-   desktop device. **Not yet wired into the UI** — `PlayerIsolate` is still in
-   the tree and still what the session page uses.
-4. **Make the synchronous methods synchronous.** `PlayerService` currently
-   mirrors `PlayerIsolate`'s surface so step 4's diff stays small, which means
-   `setEQ`, `setEQGain`, `setEQFreq`, `setEQQ`, `play`, `pause` and
-   `setVolume` all return `Future<void>` purely for signature compatibility —
-   every one is now a synchronous FFI write. That is actively misleading,
-   because `setEQParams` sitting next to them *genuinely* awaits, and that
-   distinction is exactly where the round-transition race lived. Only
-   `launch`, `shutdown`, `seek` and `setEQParams` have any reason to be async.
-   Do this **while wiring the call sites in steps 5-6**, which rewrite them
-   anyway — same work either way, and doing it separately would touch every
-   call site twice. (Session widgets are step 5; import/playlist are step 6,
-   so the change lands across both rather than in one commit.)
-   `session_controller_test.dart` needs its `thenAnswer((_) async {})` stubs
-   changed to `thenReturn(null)` for the ones that become `void`.
-5. **Session wiring** — `session_controller.dart`, `session_store.dart`, the
-   session widgets.
-6. **Import & settings**: `import_player.dart`, the format-policy rework and
-   the one-time m4a library migration (see "Audio formats"), then device/
-   settings UI (including the saved-backend mapping in "Backend selection")
-   and the README. Then delete coast_audio.
+   desktop device. (Now 21 checks, and it *is* the UI's player — see step 5.)
+4. ~~**Make the synchronous methods synchronous.**~~ **DONE.** `setEQ`,
+   `setEQGain`, `setEQFreq`, `setEQQ`, `play`, `pause` and `setVolume` return
+   `void`; only `launch`, `shutdown`, `seek` and `setEQParams` are async, so a
+   call site can see at a glance which one genuinely waits. Done across steps
+   5-6 as planned. `session_controller_test.dart`'s stubs are `thenReturn(null)`.
+5. ~~**Session wiring**~~ **DONE.** `session_controller.dart` (which also lost
+   its `updatePlayerState`/`setEqEnabled` futures), `session_page.dart`,
+   `session_control.dart`, `session_position_slider.dart`,
+   `session_eq_button_row.dart`, `session_selector.dart`.
+   `session_control` no longer calls `shutdown()` before a track switch:
+   `launch()` disposes the old source itself and keeps the device open.
+6. ~~**Import & settings**~~ **DONE.**
+   - `ImportPlayer` is a bare `PlayerService` subclass; its `filePath` is the
+     base class's, set by `launch()`.
+   - `ImportWorkflowService.loadAudioFile` lost its duration poll loop — SoLoud
+     knows a source's length as soon as it is loaded — and `convertToM4a` is
+     gone.
+   - Format policy reworked per "Audio formats", plus one thing that section
+     did not anticipate: **`keepOriginal` and `smart` are now byte-identical**,
+     because mp3 and ogg became native. Two dropdown entries doing the same
+     thing is worse than one, so the settings UI offers only Smart and
+     All-WAV. Both retired constants (`allM4a`, `keepOriginal`) are still
+     recognized as stored values and behave as `smart`; the dropdown displays
+     them as Smart so it can't trip its "exactly one matching item" assertion.
+     The `IMPORT_FORMAT_ORIGINAL_WARN` string and its `.tr()` keys are gone.
+   - One-time m4a migration: `ClipFormatMigration`, fired unawaited from
+     `main()` before `runApp`. Awaiting it would hold a blank screen for a
+     whole library's worth of native decodes; it commits one clip at a time
+     (record repointed *before* the original is deleted, and only after the
+     output verifiably exceeds a WAV header), so a clip the user reaches
+     mid-run is either fully converted or untouched. Idempotent, so it is safe
+     to run on every launch and an interrupted run just resumes. Covered by 8
+     unit tests against a mocked `audio_decoder` channel.
+   - `PlayerService._loadSource` keeps the decode-to-memory fallback for
+     anything non-native, i.e. clips the migration could not convert.
+   - Backend settings page is now an Android-only radio of
+     `auto | AAudio | OpenSL ES`, and the card that opens it is hidden on
+     every other platform. The saved-setting mapping is in `audio_state.dart`
+     and is unit-tested off-device (`androidBackendFromSavedListOnAndroid`) —
+     it is the one piece of this migration that fails *silently* if wrong.
+   - `audio_session` removed from `pubspec.yaml` (it was declared and never
+     referenced). flutter_soloud still does not manage the iOS audio session
+     category; if that turns out to matter on iOS, wire it up deliberately.
+   - README's Linux row updated per the PulseAudio landmine. `AGENTS.md`'s
+     audio-engine section rewritten.
 
-15 files import coast_audio; `flutter analyze` will find them all once the
-dependency goes. While in there: `audio_session ^0.2.2` is declared in
-pubspec.yaml but referenced nowhere in `lib/` — remove it, or wire it up
-deliberately (flutter_soloud does not manage the iOS audio session category).
+Two files turned up in step 5-6 that a `coast_audio` grep missed, because they
+imported `player_isolate.dart` without importing coast_audio itself:
+`editor_control_button_group.dart` and `session_selector.dart`. `flutter
+analyze` found both once the dependency went, which is the reliable way to
+enumerate them.
 
 ### Decisions already taken
 
@@ -303,11 +337,18 @@ Desktop backend selection is harder and optional: Windows defers device init
 with `useContext = false` to avoid blocking the COM message pump, and Linux
 passes a `NULL` context, so neither creates an explicit `ma_context` at all.
 
-**Migrating the saved setting:** existing users' choices live in the
-`backendBox` Hive box as `BackendData(List<String>)` (see `main.dart:70-72`).
-Map once: list contains `"aaudio"` and not `"openSLES"` → `aaudio` (that user
-opted in deliberately); anything else → `opensl`. Desktop lists become dead
-data — delete the box after mapping, or leave it; nothing will read it.
+**Migrating the saved setting:** done, in `androidBackendFromSavedList`
+(`audio_state.dart`), with the mapping the plan called for: list contains
+`"aaudio"` and not `"openSLES"` → `aaudio`; anything else, empty list included
+→ `opensl`; non-Android → `auto`.
+
+The box is *kept* rather than deleted, and the settings page writes back into
+the same `BackendData(List<String>)` shape — a single entry, `['auto']`,
+`['aaudio']` or `['openSLES']`. That avoids a new Hive field (and the codegen
+round-trip) and makes one read/write cycle lossless, which the
+`androidBackendFromSavedListOnAndroid` round-trip test asserts. The `'auto'`
+marker is checked first, before the legacy list heuristic, so a deliberate
+`auto` isn't read back as `opensl`.
 
 ## Audio formats
 
@@ -417,6 +458,21 @@ lands, switch the conversion target and trim output from wav to flac.
   source is loaded paused, nothing is rendering). The old isolate got this for
   free because a fresh isolate really did start bypassed. Caught only by the
   rendered-audio test, not by any parameter-level assertion.
+- **The engine is a singleton, so `_activeDeviceId` is `static`.** Three
+  `PlayerService` instances exist over one SoLoud instance (session page,
+  playlist preview, import editor). Per-instance, a newly built player always
+  reads `null` there and re-runs `changeDevice` on a device that is already
+  open — a needless output restart on entering the import editor or the
+  playlist preview.
+- **`listPlaybackDevices()` really is safe before `init()`, and the app
+  depends on it.** `AudioState.initialize` runs in `AppState.initState`, long
+  before anything plays, and the settings dropdown enumerates on every build.
+  This is what replaced coast_audio's probe-context dance (build an
+  `AudioDeviceContext`, read it, dispose it immediately so it couldn't collide
+  with the playback context on AAudio). Verified on real hardware by
+  `integration_test/audio_state_integration_test.dart`, which is the only
+  suite that deliberately runs with the engine *down* — every other one brings
+  it up in `setUpAll`, so none of them would catch a regression here.
 - Windows/MSVC: `soloud.h` pulls in `windows.h`, so `min`/`max` macros collide
   with `std::` versions. `peaking_eq_filter.cpp` avoids `std::min`/`std::max`
   entirely for this reason; the native test builds with `-DNOMINMAX`.

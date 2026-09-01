@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/result/result_page.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
@@ -19,7 +19,7 @@ class SessionPage extends StatefulWidget {
 }
 
 class _SessionPageState extends State<SessionPage> {
-  final player = PlayerIsolate();
+  final player = PlayerService();
 
   @override
   void initState() {
@@ -62,7 +62,7 @@ class _SessionPageState extends State<SessionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<PlayerIsolate>.value(
+    return ChangeNotifierProvider<PlayerService>.value(
       value: player,
       builder: (context, child) => PopScope(
         canPop: false,

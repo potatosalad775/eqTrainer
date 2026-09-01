@@ -1,22 +1,25 @@
 import 'package:flutter/foundation.dart';
-import 'package:coast_audio/coast_audio.dart';
 
 class ImportAudioData extends ChangeNotifier {
-  AudioTime _clipStartTime = AudioTime.zero;
-  AudioTime _clipEndTime = const AudioTime(double.maxFinite);
+  /// Sentinel for "the whole clip", used until the source's real duration is
+  /// known. Any real audio file is far shorter, so the editor's
+  /// `position < clipEndTime` checks hold before the load completes.
+  static const _unbounded = Duration(days: 3650);
 
-  AudioTime get clipStartTime => _clipStartTime;
-  AudioTime get clipEndTime => _clipEndTime;
+  Duration _clipStartTime = Duration.zero;
+  Duration _clipEndTime = _unbounded;
 
-  set clipStartTime(AudioTime value) {
+  Duration get clipStartTime => _clipStartTime;
+  Duration get clipEndTime => _clipEndTime;
+
+  set clipStartTime(Duration value) {
     _clipStartTime = value;
     notifyListeners();
   }
 
-  set clipEndTime(AudioTime value) {
+  set clipEndTime(Duration value) {
     _clipEndTime = value;
     notifyListeners();
   }
 
 }
-

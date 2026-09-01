@@ -146,8 +146,12 @@
     "오디오가 원활하게 재생되지 않는다면, 오디오 백엔드 API를 변경해 보세요.",
   ## Audio Setting - Backend
   "AUDIO_SETTING_BACKEND_APPBAR": "오디오 백엔드 API 설정",
-  "AUDIO_SETTING_BACKEND_SNACKBAR_ERROR": "선택한 오디오 백엔드를 활성화하는 데 실패했습니다.",
-  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND}가 활성화되었습니다.",
+  "AUDIO_SETTING_BACKEND_AUTO": "자동",
+  "AUDIO_SETTING_BACKEND_AUTO_DESC": "오디오 엔진이 직접 선택합니다. Android 11 이상에서는 AAudio를 우선 사용합니다.",
+  "AUDIO_SETTING_BACKEND_AAUDIO_DESC": "지연 시간이 짧습니다. Android 8 이상. 사용할 수 없는 기기에서는 OpenSL ES로 대체됩니다.",
+  "AUDIO_SETTING_BACKEND_OPENSLES_DESC": "호환성이 가장 높습니다. Android 4.1 이상. 디지털 오디오 플레이어에 권장됩니다.",
+  "AUDIO_SETTING_BACKEND_RESTART_NOTE": "오디오 백엔드는 재생을 시작할 때 결정됩니다. 변경 사항을 적용하려면 eqTrainer를 다시 시작하세요.",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND}가 선택되었습니다.",
 
   # Update Alert
   "UPDATE_ALERT_MESSAGE_BODY": "새로운 버전의 eqTrainer가 발견되었습니다!",

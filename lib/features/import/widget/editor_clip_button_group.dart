@@ -1,4 +1,3 @@
-import 'package:coast_audio/coast_audio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
@@ -11,7 +10,7 @@ class EditorClipButtonGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final playerPosition = context.select<ImportPlayer, AudioTime>((p) => p.fetchPosition);
+    final playerPosition = context.select<ImportPlayer, Duration>((p) => p.fetchPosition);
     final clipTimeData = context.read<ImportAudioData>();
 
     return Row(

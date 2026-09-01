@@ -146,8 +146,12 @@
     "If audio is not playing as expected, Try changing audio backend API.",
   ## Audio Setting - Backend
   "AUDIO_SETTING_BACKEND_APPBAR": "Audio Backend API Settings",
-  "AUDIO_SETTING_BACKEND_SNACKBAR_ERROR": "Failed at activating selected Audio Backends.",
-  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND} Activated.",
+  "AUDIO_SETTING_BACKEND_AUTO": "Automatic",
+  "AUDIO_SETTING_BACKEND_AUTO_DESC": "Let the audio engine choose. Prefers AAudio on Android 11 and later.",
+  "AUDIO_SETTING_BACKEND_AAUDIO_DESC": "Lower latency, Android 8+. Falls back to OpenSL ES where AAudio is unavailable.",
+  "AUDIO_SETTING_BACKEND_OPENSLES_DESC": "Most compatible, Android 4.1+. Recommended for digital audio players.",
+  "AUDIO_SETTING_BACKEND_RESTART_NOTE": "The audio backend is selected when playback starts. Restart eqTrainer for the change to take effect.",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND} Selected.",
 
   # Update Alert
   "UPDATE_ALERT_MESSAGE_BODY": "New version of eqTrainer is Available!",

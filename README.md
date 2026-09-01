@@ -42,7 +42,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 |----------|-----------------|---------------------------------------------------------------------------------------------------|
 | Windows  | 10+             | Works with WASAPI <br/> <sub>*For devices older than Windows 10, please use [v2.3.0][VERSION_2.3.0]*</sub>                             |
 | MacOS    | 12 Monterey     | Supports Intel & Apple Silicon as Universal App                                                                         |
-| Linux    | -               | Works with ALSA, Jack, PulseAudio <br/> <sub>*GStreamer 1.0+ required for audio format conversion.*</sub>               |
+| Linux    | -               | Works with ALSA & JACK <br/> <sub>*PulseAudio / PipeWire systems are supported through their ALSA compatibility layer.*</sub> <br/> <sub>*GStreamer 1.0+ required for audio format conversion.*</sub> |
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                                     |
 | iOS      | 15.0            | Manual Sideload Required. <br/> Use [Sideloadly][SIDELOADLY] or [Altstore][ALTSTORE].             |
 

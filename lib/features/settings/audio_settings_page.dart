@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dart';
 import 'package:eq_trainer/features/settings/audio_backend_page.dart';
@@ -32,24 +33,29 @@ class AudioSettingsPage extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                 child: Text("AUDIO_SETTING_CARD_VOLUME_COMP_DESC".tr()),
               ),
-              const Divider(indent: 6, endIndent: 6, height: 32),
-              // Developer Settings
-              GestureDetector(
-                child: SettingsCard(
-                  icon: Icons.build,
-                  title: "AUDIO_SETTING_CARD_BACKEND_TITLE".tr(),
-                  trailing: const Icon(Icons.keyboard_arrow_right),
+              // Android only: SoLoud picks the backend itself on every other
+              // platform and gives Dart no way to override it (Windows and
+              // Linux never create an explicit miniaudio context at all), so
+              // there would be nothing behind this card to choose.
+              if (Platform.isAndroid) ...[
+                const Divider(indent: 6, endIndent: 6, height: 32),
+                GestureDetector(
+                  child: SettingsCard(
+                    icon: Icons.build,
+                    title: "AUDIO_SETTING_CARD_BACKEND_TITLE".tr(),
+                    trailing: const Icon(Icons.keyboard_arrow_right),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AudioBackendPage())
+                    );
+                  },
                 ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AudioBackendPage())
-                  );
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_CARD_BACKEND_DESC".tr()),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: Text("AUDIO_SETTING_CARD_BACKEND_DESC".tr()),
+                ),
+              ],
             ],
           ),
         ),

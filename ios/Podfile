@@ -31,8 +31,6 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  pod 'CoastAudio', :git => 'https://github.com/potatosalad775/coast_audio.git', :branch => 'custom'
-
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
     inherit! :search_paths
@@ -46,12 +44,6 @@ post_install do |installer|
     # Update build settings
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-    end
-
-    if target.name == 'CoastAudio'
-      target.build_configurations.each do |config|
-        config.build_settings["EXCLUDED_ARCHS[sdk=iphonesimulator*]"] = "x86_64"
-      end
     end
 
     if target.name == 'ffmpeg_kit_flutter_new'

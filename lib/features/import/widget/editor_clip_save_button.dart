@@ -1,4 +1,3 @@
-import 'package:coast_audio/coast_audio.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
@@ -29,20 +28,25 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
             setState(() {
               _isProcessing = true;
             });
-            await player.pause();
-            if (!context.mounted) return;
+            player.pause();
             final clipService = context.read<AudioClipService>();
             final messenger = ScaffoldMessenger.of(context);
+            // Non-null whenever the editor is reachable — the button only
+            // renders after loadAudioFile() succeeded. Handled rather than
+            // forced so a torn-down player surfaces the save error instead of
+            // throwing out of the callback.
+            final sourcePath = player.filePath;
             // A clip counts as trimmed if either edge was moved off the full
             // extent. The previous check compared only the end time, so a
             // start-only trim was silently discarded and the whole file copied.
-            final isTrimmed = clipTimeData.clipStartTime != AudioTime.zero ||
+            final isTrimmed = clipTimeData.clipStartTime != Duration.zero ||
                 clipTimeData.clipEndTime != player.fetchDuration;
             try {
+              if (sourcePath == null) throw StateError('no source loaded');
               await clipService.createClip(
-                sourcePath: player.filePath,
-                startSec: clipTimeData.clipStartTime.seconds,
-                endSec: clipTimeData.clipEndTime.seconds,
+                sourcePath: sourcePath,
+                startSec: clipTimeData.clipStartTime.inMicroseconds / 1e6,
+                endSec: clipTimeData.clipEndTime.inMicroseconds / 1e6,
                 isTrimmed: isTrimmed,
               );
             } catch (_) {

@@ -33,7 +33,6 @@ dependencies:
   cupertino_icons: ^1.0.2
   file_picker: ^12.0.0-beta.7
   provider: ^6.0.5
-  audio_session: ^0.2.2
   font_awesome_flutter: ^11.0.0
   url_launcher: ^6.1.11
   hive_ce: ^2.13.1
@@ -57,10 +56,6 @@ dependencies:
       url: https://github.com/google/flutter-desktop-embedding
       path: plugins/window_size
       ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601 # was: HEAD
-  coast_audio:
-    git:
-      url: https://github.com/potatosalad775/coast_audio.git
-      ref: bde17592f908dde7c066b0554ed44096d57f21bc # was: custom
   audio_decoder:
     git:
       url: https://github.com/potatosalad775/audio_decoder.git

@@ -1,7 +1,6 @@
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
-import 'package:eq_trainer/shared/model/error.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -22,18 +21,10 @@ class EditorControlButtonGroup extends StatelessWidget {
         if (playerState.isPlaying) {
           player.pause();
         } else {
-          player.play().onError((e, _) {
-            if (context.mounted) {
-              showPlayerErrorDialog(context,
-                action: () {
-                  player.shutdown();
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-                },
-                error: e,
-              );
-            }
-          });
+          // play() is a synchronous FFI write now, so there is no Future to
+          // attach an error handler to — a file that won't load already
+          // failed in the awaited launch() the import workflow does.
+          player.play();
         }
       },
       thirdIcon: Icons.skip_next,

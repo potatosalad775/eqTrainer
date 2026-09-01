@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:coast_audio/coast_audio.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:eq_trainer/shared/model/error.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
@@ -18,39 +18,38 @@ class SessionControl extends StatefulWidget {
 }
 
 class _SessionControlState extends State<SessionControl> {
-  // Guards previous/next while a track switch (pause -> shutdown -> launch ->
-  // play) is in flight. Without it, rapid taps interleave concurrent
-  // shutdown/launch calls and the playlist index can advance before the
-  // previous relaunch even finishes.
+  // Guards previous/next while a track switch (pause -> launch -> play) is in
+  // flight. Without it, rapid taps interleave concurrent launches and the
+  // playlist index can advance before the previous relaunch even finishes.
   bool _switching = false;
 
   Future<void> _relaunchWith(
     BuildContext context,
     String path, {
-    required AudioDeviceBackend backend,
-    required AudioDeviceId? outputDeviceId,
+    required AndroidAudioBackend androidBackend,
+    required PlaybackDevice? outputDevice,
   }) async {
-    final player = context.read<PlayerIsolate>();
-    // Capture the pre-switch EQ state: the new isolate always launches with
-    // EQ bypassed, and updatePlayerState needs to know whether to re-enable
-    // it so a manually-toggled "Filtered" view doesn't silently become
-    // "Original" on the fresh player.
+    final player = context.read<PlayerService>();
+    // Capture the pre-switch EQ state: launch() always takes the band back
+    // out, and updatePlayerState needs to know whether to re-enable it so a
+    // manually-toggled "Filtered" view doesn't silently become "Original" on
+    // the new track.
     final wasEqEnabled = player.fetchEQState;
     final volumeCompensation = context.read<MiscSettingsProvider>().volumeCompensation;
     try {
-      await player.pause();
-      await player.shutdown();
+      player.pause();
+      // No shutdown() first: launch() disposes the old source itself and
+      // keeps the engine and its output device open, so a track switch no
+      // longer pays a device re-open.
       await player.launch(
-        backend: backend,
-        outputDeviceId: outputDeviceId,
+        androidBackend: androidBackend,
+        outputDevice: outputDevice,
         path: path,
         volumeCompensation: volumeCompensation,
       );
       if (context.mounted) {
-        await context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
-      }
-      if (context.mounted) {
-        await player.play();
+        context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
+        player.play();
       }
     } catch (e) {
       if (context.mounted) {
@@ -68,28 +67,29 @@ class _SessionControlState extends State<SessionControl> {
 
   Future<void> _playerNext(
     BuildContext context, {
-    required AudioDeviceBackend backend,
-    required AudioDeviceId? outputDeviceId,
+    required AndroidAudioBackend androidBackend,
+    required PlaybackDevice? outputDevice,
   }) async {
     final sessionStore = context.read<SessionStore>();
     if (sessionStore.playlistPaths.isEmpty) return;
     sessionStore.nextTrack();
     final nextPath = sessionStore.currentClipPath;
     if (nextPath != null) {
-      await _relaunchWith(context, nextPath, backend: backend, outputDeviceId: outputDeviceId);
+      await _relaunchWith(context, nextPath,
+          androidBackend: androidBackend, outputDevice: outputDevice);
     }
   }
 
   Future<void> _playerPrevious(
     BuildContext context, {
-    required AudioDeviceBackend backend,
-    required AudioDeviceId? outputDeviceId,
+    required AndroidAudioBackend androidBackend,
+    required PlaybackDevice? outputDevice,
   }) async {
-    final player = context.read<PlayerIsolate>();
+    final player = context.read<PlayerService>();
 
     // If player position > 3 seconds, reset to 0 instead of going to previous
-    if (player.fetchPosition > const AudioTime(3)) {
-      await player.seek(AudioTime.zero);
+    if (player.fetchPosition > const Duration(seconds: 3)) {
+      await player.seek(Duration.zero);
       return;
     }
     final sessionStore = context.read<SessionStore>();
@@ -97,7 +97,8 @@ class _SessionControlState extends State<SessionControl> {
     sessionStore.previousTrack();
     final prevPath = sessionStore.currentClipPath;
     if (prevPath != null) {
-      await _relaunchWith(context, prevPath, backend: backend, outputDeviceId: outputDeviceId);
+      await _relaunchWith(context, prevPath,
+          androidBackend: androidBackend, outputDevice: outputDevice);
     }
   }
 
@@ -113,43 +114,50 @@ class _SessionControlState extends State<SessionControl> {
 
   @override
   Widget build(BuildContext context) {
-    final (backend, outputDeviceId) = context.select<AudioState, (AudioDeviceBackend, AudioDeviceId?)>(
-      (s) => (s.backend, s.outputDevice?.id),
+    final (androidBackend, outputDevice) =
+        context.select<AudioState, (AndroidAudioBackend, PlaybackDevice?)>(
+      (s) => (s.androidBackend, s.outputDevice),
     );
-    final player = context.read<PlayerIsolate>();
-    final playerState = context.select<PlayerIsolate, PlayerStateResponse>((p) => p.fetchPlayerState);
+    final player = context.read<PlayerService>();
+    final playerState = context.select<PlayerService, PlayerStateResponse>((p) => p.fetchPlayerState);
 
     return PlayerControlButtons(
       isPlaying: playerState.isPlaying,
       onPrevious: _switching
           ? null
-          : () => _guardedSwitch(
-              () => _playerPrevious(context, backend: backend, outputDeviceId: outputDeviceId)),
+          : () => _guardedSwitch(() => _playerPrevious(context,
+              androidBackend: androidBackend, outputDevice: outputDevice)),
       onPlayPause: _switching
           ? null
           : () {
               if (playerState.isPlaying) {
                 player.pause();
               } else {
-                player.play().onError((e, _) {
-                  if (context.mounted) {
-                    showPlayerErrorDialog(context,
-                      action: () {
-                        player.shutdown();
-                        Navigator.of(context).pop();
-                        Navigator.of(context).pop();
-                      },
-                      error: e,
-                    );
-                  }
-                });
+                // play() is a synchronous FFI write on an already-loaded
+                // source, so there is no Future to attach an error handler to
+                // any more — a load failure surfaces from the awaited
+                // launch() above instead. The catch stays for the rare
+                // synchronous native throw, which would otherwise take down
+                // the whole gesture with no feedback.
+                try {
+                  player.play();
+                } catch (e) {
+                  showPlayerErrorDialog(context,
+                    action: () {
+                      player.shutdown();
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    error: e,
+                  );
+                }
               }
             },
       thirdIcon: Icons.skip_next,
       onThird: _switching
           ? null
-          : () => _guardedSwitch(
-              () => _playerNext(context, backend: backend, outputDeviceId: outputDeviceId)),
+          : () => _guardedSwitch(() => _playerNext(context,
+              androidBackend: androidBackend, outputDevice: outputDevice)),
     );
   }
 }
