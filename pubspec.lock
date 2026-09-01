@@ -427,9 +427,11 @@ packages:
   flutter_soloud:
     dependency: "direct main"
     description:
-      path: "../flutter_soloud"
-      relative: true
-    source: path
+      path: "."
+      ref: a1c2693effa25614cec0c4505b2ffc380ec66d56
+      resolved-ref: a1c2693effa25614cec0c4505b2ffc380ec66d56
+      url: "https://github.com/potatosalad775/flutter_soloud.git"
+    source: git
     version: "5.0.0-pre.3"
   flutter_test:
     dependency: "direct dev"

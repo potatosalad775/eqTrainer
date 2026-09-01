@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.5.0+260722
+version: 2.6.0+260901
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -64,14 +64,7 @@ dependencies:
   flutter_soloud:
     git:
       url: https://github.com/potatosalad775/flutter_soloud.git
-      ref: c8ead6edc5e7a3b5ef03f15f643fe7b1deebca7f # was: feat/peaking-eq
-
-# TEMPORARY: point flutter_soloud at the local clone while the offline-encode
-# work (F1-F5) is unreviewed and unpushed. Replace with a pinned ref on the
-# fork's feat/offline-encode branch before this lands.
-dependency_overrides:
-  flutter_soloud:
-    path: ../flutter_soloud
+      ref: a1c2693effa25614cec0c4505b2ffc380ec66d56 # was: custom
 
 dev_dependencies:
   flutter_test:
