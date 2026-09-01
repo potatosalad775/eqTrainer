@@ -138,6 +138,18 @@
   "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (Lossless)",
   "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (Compact)",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Uncompressed)",
+  ## Audio Setting Card - Recompress Library
+  "AUDIO_SETTING_RECOMPRESS_TITLE": "Recompress Library",
+  "AUDIO_SETTING_RECOMPRESS_ACTION": "Free up to {_SIZE}",
+  "AUDIO_SETTING_RECOMPRESS_DESC":
+    "Re-encodes WAV clips in your library to FLAC. FLAC is lossless — the audio is identical — and usually about half the size. Clips imported as Opus or FLAC are left alone, and nothing is ever re-encoded into a lossy format.",
+  "AUDIO_SETTING_RECOMPRESS_CONFIRM":
+    "Recompress {_COUNT} WAV clips to FLAC?\n\nThey currently use {_SIZE} and should end up near {_AFTER}. The audio is unchanged; this only reclaims disk space.",
+  "AUDIO_SETTING_RECOMPRESS_START": "Recompress",
+  "AUDIO_SETTING_RECOMPRESS_DONE": "Recompressed {_COUNT} clips, freeing {_SAVED}",
+  "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS":
+    "Recompressed {_COUNT} clips, freeing {_SAVED}. {_FAILED} could not be converted and were left as they are.",
+  "DIALOG_CANCEL": "Cancel",
   ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "Gain Volume Compensation",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":

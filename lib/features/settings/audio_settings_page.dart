@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dart';
+import 'package:eq_trainer/features/settings/widget/clip_recompress_card.dart';
 import 'package:eq_trainer/features/settings/audio_backend_page.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 import 'package:eq_trainer/features/settings/widget/volume_compensation_card.dart';
@@ -26,6 +27,14 @@ class AudioSettingsPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                 child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC".tr()),
+              ),
+              const SizedBox(height: 12),
+              // Renders nothing when the library holds no WAV clips, so this
+              // costs an empty box rather than a dead button.
+              const ClipRecompressCard(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                child: Text("AUDIO_SETTING_RECOMPRESS_DESC".tr()),
               ),
               const SizedBox(height: 12),
               const VolumeCompensationCard(),

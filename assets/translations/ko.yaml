@@ -138,6 +138,18 @@
   "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (무손실)",
   "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (경량)",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무압축)",
+  ## Audio Setting Card - Recompress Library
+  "AUDIO_SETTING_RECOMPRESS_TITLE": "라이브러리 다시 압축",
+  "AUDIO_SETTING_RECOMPRESS_ACTION": "최대 {_SIZE} 확보",
+  "AUDIO_SETTING_RECOMPRESS_DESC":
+    "라이브러리의 WAV 클립을 FLAC으로 다시 인코딩합니다. FLAC은 무손실이라 음질은 완전히 동일하며, 크기는 보통 절반 정도입니다. Opus나 FLAC으로 가져온 클립은 그대로 두며, 손실 형식으로는 절대 다시 인코딩하지 않습니다.",
+  "AUDIO_SETTING_RECOMPRESS_CONFIRM":
+    "WAV 클립 {_COUNT}개를 FLAC으로 다시 압축할까요?\n\n현재 {_SIZE}를 사용하며, 압축 후에는 약 {_AFTER} 정도가 됩니다. 음질은 그대로이고 저장 공간만 확보됩니다.",
+  "AUDIO_SETTING_RECOMPRESS_START": "다시 압축",
+  "AUDIO_SETTING_RECOMPRESS_DONE": "클립 {_COUNT}개를 다시 압축하여 {_SAVED}를 확보했습니다",
+  "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS":
+    "클립 {_COUNT}개를 다시 압축하여 {_SAVED}를 확보했습니다. {_FAILED}개는 변환하지 못해 그대로 두었습니다.",
+  "DIALOG_CANCEL": "취소",
   ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "게인 볼륨 보정",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":

@@ -22,6 +22,7 @@ import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/clip_format_migration.dart';
+import 'package:eq_trainer/shared/service/clip_recompress_service.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/shared/service/upgrader_service.dart';
@@ -217,6 +218,10 @@ class AppState extends State<App> with WidgetsBindingObserver {
           ctx.read<AppDirectories>(),
         )),
         Provider<ImportWorkflowService>(create: (_) => ImportWorkflowService()),
+        Provider<ClipRecompressService>(create: (ctx) => ClipRecompressService(
+          ctx.read<IAudioClipRepository>(),
+          ctx.read<AppDirectories>(),
+        )),
 
         // Session parameters and data notifiers
         ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),
