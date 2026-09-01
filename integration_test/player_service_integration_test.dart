@@ -98,18 +98,18 @@ void main() {
     testWidgets('play then pause reports the transport state', (_) async {
       await launch('sine_440hz_3s.mp3');
 
-      await player.play();
+      player.play();
       expect(player.fetchPlayerState.isPlaying, isTrue);
 
-      await player.pause();
+      player.pause();
       expect(player.fetchPlayerState.isPlaying, isFalse);
     });
 
     testWidgets('playback advances the position', (_) async {
       await launch('sine_440hz_3s.mp3');
-      await player.play();
+      player.play();
       await Future<void>.delayed(const Duration(milliseconds: 400));
-      await player.pause();
+      player.pause();
 
       expect(player.fetchPosition, greaterThan(Duration.zero));
     });
@@ -141,11 +141,11 @@ void main() {
 
       // Nothing is rendering, so the toggle applies immediately: there is no
       // signal to click on, and a fade would never advance.
-      await player.setEQ(true);
+      player.setEQ(true);
       expect(player.fetchEQState, isTrue);
       expect(eq.wet.value, closeTo(1, 0.001));
 
-      await player.setEQ(false);
+      player.setEQ(false);
       expect(player.fetchEQState, isFalse);
       expect(eq.wet.value, closeTo(0, 0.001));
     });
@@ -173,7 +173,7 @@ void main() {
         '(while playing)', (_) async {
       await launch('sine_440hz_3s.mp3');
       final eq = SoLoud.instance.filters.peakingEqFilter;
-      await player.play();
+      player.play();
 
       await player.setEQParams(enableEQ: true, frequency: 200, gainDb: 15);
       await Future<void>.delayed(const Duration(milliseconds: 150));
@@ -214,13 +214,13 @@ void main() {
     testWidgets('setEQ toggles reach their target while playing', (_) async {
       await launch('sine_440hz_3s.mp3');
       final eq = SoLoud.instance.filters.peakingEqFilter;
-      await player.play();
+      player.play();
 
-      await player.setEQ(true);
+      player.setEQ(true);
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(eq.wet.value, closeTo(1, 0.001));
 
-      await player.setEQ(false);
+      player.setEQ(false);
       await Future<void>.delayed(const Duration(milliseconds: 150));
       expect(eq.wet.value, closeTo(0, 0.001));
     });
@@ -229,16 +229,16 @@ void main() {
         (_) async {
       await launch('sine_440hz_3s.mp3');
       final eq = SoLoud.instance.filters.peakingEqFilter;
-      await player.play();
+      player.play();
 
       // Hammer the Original/Filtered button. Each fade restarts from the
       // currently applied value (soloud_filter.cpp:141), so the parameter
       // stays piecewise-linear throughout and no toggle can step it.
       for (var i = 0; i < 12; i++) {
-        await player.setEQ(i.isEven);
+        player.setEQ(i.isEven);
         await Future<void>.delayed(const Duration(milliseconds: 5));
       }
-      await player.setEQ(true);
+      player.setEQ(true);
 
       expect(player.fetchEQState, isTrue);
       await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -249,7 +249,7 @@ void main() {
         (_) async {
       await launch('sine_440hz_3s.mp3');
       final eq = SoLoud.instance.filters.peakingEqFilter;
-      await player.play();
+      player.play();
 
       await player.setEQParams(enableEQ: true, frequency: 200, gainDb: 15);
       await Future<void>.delayed(const Duration(milliseconds: 150));
@@ -261,7 +261,7 @@ void main() {
       // state and the actual band disagreeing.
       final transition =
           player.setEQParams(enableEQ: false, frequency: 5000, gainDb: 12);
-      await player.setEQ(true);
+      player.setEQ(true);
       await transition;
 
       await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -273,7 +273,7 @@ void main() {
     testWidgets('setEQQ applies the session bandwidth', (_) async {
       await launch('sine_440hz_3s.mp3');
 
-      await player.setEQQ(4.5);
+      player.setEQQ(4.5);
 
       expect(SoLoud.instance.filters.peakingEqFilter.q.value, closeTo(4.5, 0.01));
     });
@@ -283,7 +283,7 @@ void main() {
     testWidgets('pre-attenuates by the absolute gain', (_) async {
       await launch('sine_440hz_3s.mp3');
 
-      await player.setEQGain(15);
+      player.setEQGain(15);
 
       expect(player.outputVolume,
           closeTo(expectedCompensation(15), 0.0001));
@@ -292,7 +292,7 @@ void main() {
     testWidgets('compensates a cut by the same amount as a boost', (_) async {
       await launch('sine_440hz_3s.mp3');
 
-      await player.setEQGain(-15);
+      player.setEQGain(-15);
 
       expect(player.outputVolume,
           closeTo(expectedCompensation(15), 0.0001));
@@ -326,7 +326,7 @@ void main() {
     testWidgets('stays at unity when compensation is disabled', (_) async {
       await launch('sine_440hz_3s.mp3', volumeCompensation: false);
 
-      await player.setEQGain(15);
+      player.setEQGain(15);
 
       expect(player.outputVolume, closeTo(1.0, 0.0001));
     });

@@ -67,7 +67,7 @@ void main() {
         path: p.join(fixturesDir.path, 'sine_440hz_3s.flac'),
         volumeCompensation: false,
       );
-      await player.setEQQ(q);
+      player.setEQQ(q);
       await player.setEQParams(
         enableEQ: false,
         frequency: frequency,
@@ -76,14 +76,14 @@ void main() {
 
       final stream = SoLoud.instance.startMixerOutputStream();
       sub = stream.listen(chunks.add);
-      await player.play();
+      player.play();
 
       // Let the dry signal render, then capture the boundary between the two
       // states so each half can be measured separately.
       await Future<void>.delayed(const Duration(milliseconds: 600));
       final dryBytes = chunks.fold<int>(0, (a, c) => a + c.length);
 
-      await player.setEQ(true);
+      player.setEQ(true);
       // Skip past the fade so only the settled wet signal is measured.
       await Future<void>.delayed(const Duration(milliseconds: 300));
       final wetStart = chunks.fold<int>(0, (a, c) => a + c.length);

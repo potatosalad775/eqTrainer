@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:audio_decoder/audio_decoder.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:path/path.dart' as p;
 
 /// Snapshot of the player's transport state, polled for the UI.
 ///
@@ -41,11 +43,12 @@ class PlayerPositionResponse extends Equatable {
 /// there is no Dart code in the audio path and none of the in-flight guards,
 /// poll cooldowns or stale-clock races the isolate needed. Every control call
 /// here is a synchronous FFI write; the only `await`s left are genuine waits
-/// (file loading, and the deliberate fade delay in [setEQParams]).
+/// (file loading, and the fade-out [setEQParams] has to see land).
 ///
-/// The public surface deliberately mirrors the old `PlayerIsolate` so the
-/// session UI and its tests carry over, except that `AudioTime` is now
-/// [Duration].
+/// Only the four methods that genuinely wait are async: [launch] and
+/// [shutdown] (file I/O and native teardown), [seek], and [setEQParams] —
+/// which awaits the band's fade-out before retuning it. Everything else is
+/// `void`, so a call site can tell at a glance which ones it has to sequence.
 class PlayerService extends ChangeNotifier {
   /// How often the transport state is polled for the UI. Unlike the old
   /// isolate poll this is a plain synchronous read, so it cannot back up.
@@ -74,6 +77,15 @@ class PlayerService extends ChangeNotifier {
   static const double _wetEpsilon = 1e-4;
 
   SoLoud get _soloud => SoLoud.instance;
+
+  /// Id of the device the (singleton) engine currently has open.
+  ///
+  /// Static because the engine is: the session page, the playlist preview and
+  /// the import editor each build their own [PlayerService] over one shared
+  /// SoLoud instance. Per-instance, a second player would always see `null`
+  /// here and re-run `changeDevice` on a device that was already open,
+  /// needlessly restarting the output.
+  static int? _activeDeviceId;
 
   AudioSource? _source;
   SoundHandle? _handle;
@@ -176,7 +188,7 @@ class PlayerService extends ChangeNotifier {
 
     if (path == null) return;
 
-    _source = await _soloud.loadFile(path, mode: LoadMode.disk);
+    _source = await _loadSource(path);
     _path = path;
 
     // Duration is available as soon as the sound is loaded — no polling loop.
@@ -186,6 +198,38 @@ class PlayerService extends ChangeNotifier {
     _startPolling();
     _poll();
   }
+
+  /// Loads [path], decoding it up front only if SoLoud cannot read it.
+  ///
+  /// The normal path is [LoadMode.disk]: SoLoud streams and decodes on the
+  /// native audio thread, so a full song costs a file handle rather than the
+  /// ~21 MB per stereo minute that fully-decoded float PCM would take in RAM.
+  ///
+  /// The fallback exists for one case. SoLoud plays wav/mp3/flac/ogg natively
+  /// and the importer converts everything else to wav
+  /// (`audio_format_helper.dart`), but libraries created before that policy
+  /// hold `.m4a` clips. Those are converted once at startup by
+  /// `ClipFormatMigration`; this catches the ones it could not convert, so a
+  /// clip that fails migration still plays instead of failing to load. It
+  /// holds the whole file in memory, which is what disk mode exists to avoid —
+  /// so it is a fallback, not a supported format.
+  Future<AudioSource> _loadSource(String path) async {
+    final ext = p.extension(path).toLowerCase();
+    if (_soloudNativeExts.contains(ext)) {
+      return _soloud.loadFile(path, mode: LoadMode.disk);
+    }
+    final wav = await AudioDecoder.convertToWavBytes(
+      await File(path).readAsBytes(),
+      formatHint: ext.replaceFirst('.', ''),
+    );
+    // Still LoadMode.disk: the buffer is already plain PCM, so SoLoud reads
+    // it straight through rather than expanding it again into float PCM.
+    return _soloud.loadMem(path, wav, mode: LoadMode.disk);
+  }
+
+  /// Extensions SoLoud's own decoders handle, i.e. those [_loadSource] can
+  /// hand straight to [LoadMode.disk].
+  static const _soloudNativeExts = {'.wav', '.mp3', '.flac', '.ogg'};
 
   /// Brings up the SoLoud engine on first use and keeps it up afterwards.
   ///
@@ -225,8 +269,6 @@ class PlayerService extends ChangeNotifier {
       eq.activate();
     }
   }
-
-  int? _activeDeviceId;
 
   /// Creates a paused voice for the loaded source at position 0 and applies
   /// the compensation volume to it.
@@ -271,7 +313,8 @@ class PlayerService extends ChangeNotifier {
   // Transport
   // ---------------------------------------------------------------------------
 
-  Future<void> play() async {
+  /// Resumes playback. Synchronous: this is a plain FFI write.
+  void play() {
     final handle = _handle;
     if (handle == null) return;
     // The voice is invalidated once it reaches the end of the clip; recreate
@@ -286,7 +329,8 @@ class PlayerService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> pause() async {
+  /// Pauses playback. Synchronous: this is a plain FFI write.
+  void pause() {
     final handle = _handle;
     if (handle == null) return;
     if (_soloud.getIsValidVoiceHandle(handle)) {
@@ -319,7 +363,7 @@ class PlayerService extends ChangeNotifier {
     );
   }
 
-  Future<void> setVolume(double volume) async {
+  void setVolume(double volume) {
     final handle = _handle;
     if (handle == null) return;
     _soloud.setVolume(handle, volume);
@@ -334,7 +378,7 @@ class PlayerService extends ChangeNotifier {
   /// This is the Original/Filtered toggle. Never set `wet` in a step: the
   /// instantaneous dry/filtered swap is exactly the "noise burst out of
   /// nowhere" this migration exists to fix.
-  Future<void> setEQ(bool enableEQ) async {
+  void setEQ(bool enableEQ) {
     if (!isLaunched) return;
     // A round transition owns the band while it runs, and its EQ state has to
     // win over a tap that raced it: the user can hit Filtered in the same
@@ -355,18 +399,18 @@ class PlayerService extends ChangeNotifier {
   /// The attenuation is applied whether or not the band is currently audible,
   /// so switching between Original and Filtered doesn't change perceived
   /// loudness.
-  Future<void> setEQGain(double gainDb) async {
+  void setEQGain(double gainDb) {
     if (!isLaunched) return;
     _applyCompensation(gainDb);
     _soloud.filters.peakingEqFilter.gain.value = gainDb;
   }
 
-  Future<void> setEQFreq(double frequency) async {
+  void setEQFreq(double frequency) {
     if (!isLaunched) return;
     _soloud.filters.peakingEqFilter.frequency.value = frequency;
   }
 
-  Future<void> setEQQ(double q) async {
+  void setEQQ(double q) {
     if (!isLaunched) return;
     _soloud.filters.peakingEqFilter.q.value = q;
   }
