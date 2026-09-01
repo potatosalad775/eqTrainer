@@ -7,7 +7,7 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 **eqTrainer** is a cross-platform Flutter application for ear-training / critical-listening practice. Users listen to audio processed through a parametric EQ, then identify which frequency band was boosted or cut.
 
 - **Framework:** Flutter (stable), Dart ≥ 3.0.0
-- **Supported platforms:** Android 7+, iOS 14+, Windows 10+, macOS 11+, Linux
+- **Supported platforms:** Android 7+, iOS 15+, Windows 10+, macOS 12+, Linux
 
 ---
 
@@ -197,9 +197,34 @@ Uses `flutter_lints` (^6.0.0) with Material3 recommendations and `custom_lint`.
 
 The project has `flutter_test` + `mocktail` configured. When adding tests, place them in `test/` mirroring the `lib/` structure. Start with the pure session math (`FrequencyCalculator`, threshold logic, answer mapping).
 
+```bash
+flutter test test/              # unit tests — headless, this is what CI runs
+flutter test integration_test/  # integration tests — local only, see below
+```
+
+**Integration tests are not run in CI, and are not meant to be.** The suites in
+`integration_test/` drive a real SoLoud engine against a real output device:
+
+| Suite | Needs |
+|---|---|
+| `audio_clip_service_integration_test.dart` | native decode/convert only |
+| `player_service_integration_test.dart` | an output device (engine init) |
+| `peaking_eq_audio_integration_test.dart` | an output device that actually renders — stream time has to advance for fades to land |
+
+GitHub-hosted runners have no audio hardware, so an engine that comes up there
+proves nothing about the environment users are in. Run these on a real machine
+(`flutter test integration_test/ --device-id windows|macos|linux`, or a
+connected phone) before landing player changes.
+
 ---
 
 ## CI/CD
+
+`.github/workflows/test.yml` runs unit tests on Ubuntu / Windows / macOS. It
+fires on every branch push (skipping doc-only changes), on PR open/reopen/
+ready-for-review — `pull_request` deliberately has no `synchronize`, since the
+branch push already covers it — and on manual dispatch. In-progress runs for a
+ref are cancelled when a newer commit lands.
 
 `.github/workflows/build.yml` builds all 5 platforms **only on `release: published` + manual dispatch**
 
