@@ -134,8 +134,10 @@
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "Audio Import Format",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "Smart",
   "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
-    "In 'Smart' mode, eqTrainer keeps WAV, MP3, FLAC and OGG files as they are and converts every other format to WAV. 'WAV' converts everything, which costs disk space but guarantees playback.",
-  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Lossless)",
+    "'Smart' keeps files eqTrainer can already play (WAV, MP3, FLAC, OGG, Opus) exactly as they are, and converts anything else — to FLAC if the original was lossless, or to Opus if it was already lossy. The other options convert everything: 'FLAC' is lossless at about half the size of WAV, 'Opus' is much smaller still at a quality setting high enough for critical listening, and 'WAV' is uncompressed and largest.",
+  "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (Lossless)",
+  "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (Compact)",
+  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Uncompressed)",
   ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "Gain Volume Compensation",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":

@@ -134,8 +134,10 @@
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "오디오 가져오기 형식",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "스마트",
   "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
-    "'스마트' 모드에서는 WAV, MP3, FLAC, OGG 파일을 그대로 두고 나머지 형식만 WAV로 변환합니다. 'WAV'는 모든 파일을 변환하므로 저장 공간을 더 사용하지만 재생을 보장합니다.",
-  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무손실)",
+    "'스마트' 모드는 eqTrainer가 바로 재생할 수 있는 파일(WAV, MP3, FLAC, OGG, Opus)은 그대로 두고, 나머지만 변환합니다. 원본이 무손실이면 FLAC으로, 이미 손실 압축이면 Opus로 변환합니다. 다른 옵션은 모든 파일을 변환합니다. 'FLAC'은 무손실이면서 WAV의 약 절반 크기이고, 'Opus'는 critical listening에 충분한 품질로 훨씬 더 작으며, 'WAV'는 무압축이라 가장 큽니다.",
+  "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (무손실)",
+  "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (경량)",
+  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무압축)",
   ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "게인 볼륨 보정",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":

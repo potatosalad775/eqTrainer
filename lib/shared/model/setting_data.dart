@@ -17,7 +17,10 @@ class MiscSettings {
   @HiveField(0, defaultValue: false)
   bool frequencyToolTip;
 
-  @HiveField(1, defaultValue: 1) // Default to allM4A
+  // Default to ImportFormat.smart. It used to default to allM4a, which is a
+  // retired value; since that is read as Smart anyway this changes nothing at
+  // runtime, it just stops new records being written with a dead ordinal.
+  @HiveField(1, defaultValue: 0)
   int importFormat;
 
   @HiveField(2, defaultValue: true)

@@ -8,7 +8,7 @@ import Foundation
 import audio_decoder
 import connectivity_plus
 import device_info_plus
-import file_picker
+import file_picker_darwin
 import flutter_soloud
 import package_info_plus
 import shared_preferences_foundation

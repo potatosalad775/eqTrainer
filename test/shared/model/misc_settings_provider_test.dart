@@ -29,7 +29,9 @@ void main() {
     test('defaults match fresh-install values when box is empty', () {
       final provider = MiscSettingsProvider();
       expect(provider.frequencyToolTip, isFalse);
-      expect(provider.importFormat, equals(ImportFormat.allM4a));
+      // A fresh install starts on Smart. It used to start on the retired
+      // allM4a ordinal, which read as Smart anyway.
+      expect(provider.importFormat, equals(ImportFormat.smart));
       expect(provider.volumeCompensation, isTrue);
       expect(provider.themeMode, equals(ThemeMode.system));
     });
@@ -102,7 +104,41 @@ void main() {
 
       expect(provider.frequencyToolTip, isTrue);
       expect(provider.volumeCompensation, isFalse);
-      expect(provider.importFormat, equals(ImportFormat.allM4a));
+      expect(provider.importFormat, equals(ImportFormat.smart));
+    });
+
+    test('migrates a retired import-format ordinal on load', () async {
+      await Hive.box<MiscSettings>(miscSettingsBoxName).put(
+        miscSettingsKey,
+        MiscSettings(false, ImportFormat.allM4a, true),
+      );
+
+      final provider = MiscSettingsProvider();
+      expect(provider.importFormat, equals(ImportFormat.smart));
+
+      // Rewritten in the box, not merely normalized on read, so the settings
+      // UI never has to display a value it has no item for.
+      final stored =
+          Hive.box<MiscSettings>(miscSettingsBoxName).get(miscSettingsKey);
+      expect(stored!.importFormat, equals(ImportFormat.smart));
+    });
+
+    test('migrates keepOriginal the same way', () async {
+      await Hive.box<MiscSettings>(miscSettingsBoxName).put(
+        miscSettingsKey,
+        MiscSettings(false, ImportFormat.keepOriginal, true),
+      );
+      expect(MiscSettingsProvider().importFormat, equals(ImportFormat.smart));
+    });
+
+    test('leaves a still-supported stored value untouched', () async {
+      for (final format in ImportFormat.selectable) {
+        await Hive.box<MiscSettings>(miscSettingsBoxName).put(
+          miscSettingsKey,
+          MiscSettings(false, format, true),
+        );
+        expect(MiscSettingsProvider().importFormat, equals(format));
+      }
     });
 
     group('toggleTheme', () {
