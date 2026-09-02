@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -19,7 +19,7 @@ jobs:
 
       - name: Get Keystore
         id: android_keystore
-        uses: timheuer/base64-to-file@v1.2.4
+        uses: timheuer/base64-to-file@v2
         with:
           fileName: keystore.jks
           encodedString: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -41,7 +41,7 @@ jobs:
           flutter build appbundle --release
 
       - name: Upload APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-android
           path: build/app/outputs/bundle/release/*
@@ -49,7 +49,7 @@ jobs:
   build-iOS:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -73,7 +73,7 @@ jobs:
           mv Payload.zip build/ios/Payload.ipa
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-iOS
           path: build/ios/Payload.ipa
@@ -81,7 +81,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -94,7 +94,7 @@ jobs:
           flutter build windows --release
 
       - name: Upload EXE
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-windows
           path: build/windows/x64/runner/Release/*
@@ -102,7 +102,7 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -139,7 +139,7 @@ jobs:
             "eq_trainer.app"
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-macOS
           path: build/macos/Build/Products/Release/eq_trainer.dmg
@@ -148,7 +148,7 @@ jobs:
     runs-on: ubuntu-latest
   
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
   
       - uses: subosito/flutter-action@v2
         with:
@@ -177,7 +177,7 @@ jobs:
           $HOME/.pub-cache/bin/flutter_distributor release --name=release --jobs=release-linux-deb
   
       - name: Upload APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-linux
           path: dist/*
