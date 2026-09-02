@@ -10,7 +10,6 @@ import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
-import 'package:window_size/window_size.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/features/main_page.dart';
@@ -56,10 +55,6 @@ Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    setWindowTitle('eqTrainer');
-    setWindowMinSize(const Size(400, 480));
-  }
 
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();

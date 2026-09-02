@@ -5,7 +5,6 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audio_decoder
   url_launcher_linux
-  window_size
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

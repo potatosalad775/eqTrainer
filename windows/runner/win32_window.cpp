@@ -29,6 +29,15 @@ constexpr const wchar_t kGetPreferredBrightnessRegValue[] = L"AppsUseLightTheme"
 // The number of Win32Window objects that currently exist.
 static int g_active_window_count = 0;
 
+// Smallest the window may be resized to, in logical pixels. Previously set
+// from main.dart through the window_size plugin; it is a constant, so it lives
+// here instead and costs no plugin. Unlike that plugin, which passed the
+// numbers straight through as physical pixels, this scales by the window's DPI
+// the same way Create() scales the initial size — so on a 200% display the
+// floor is the layout size the UI actually needs, not half of it.
+constexpr int kMinWindowWidth = 400;
+constexpr int kMinWindowHeight = 480;
+
 using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
 
 // Scale helper to convert logical scaler values to physical using passed in
@@ -216,6 +225,16 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
+
+    case WM_GETMINMAXINFO: {
+      // ptMinTrackSize is the whole window, frame included, which is what the
+      // window_size plugin constrained too.
+      auto* info = reinterpret_cast<MINMAXINFO*>(lparam);
+      double scale_factor = FlutterDesktopGetDpiForHWND(hwnd) / 96.0;
+      info->ptMinTrackSize.x = Scale(kMinWindowWidth, scale_factor);
+      info->ptMinTrackSize.y = Scale(kMinWindowHeight, scale_factor);
+      return 0;
+    }
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);

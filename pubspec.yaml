@@ -52,11 +52,6 @@ dependencies:
   version: ^3.0.2
   # Git deps are pinned to exact commit SHAs (not mutable branches) so builds
   # are reproducible and the audio engine can't change silently on re-resolve.
-  window_size:
-    git:
-      url: https://github.com/google/flutter-desktop-embedding
-      path: plugins/window_size
-      ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601 # was: HEAD
   # Fork adds the click-free peaking EQ filter (a bandpass-refactored biquad
   # whose poles don't depend on gain, so the dry/wet fade touches no recursive
   # coefficient) and an Android backend override, needed because upstream

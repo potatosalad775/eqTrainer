@@ -416,6 +416,25 @@ ref are cancelled when a newer commit lands.
 | `device_info_plus` + `version` | OS-version gating for the appcast updater |
 | `equatable` | Value equality for Equatable models |
 
-`flutter_soloud` and `window_size` are the only Git dependencies, both pinned to
-exact commit SHAs rather than mutable branches so builds are reproducible and
-the audio engine cannot change under a re-resolve (see `pubspec.yaml`).
+`flutter_soloud` is the only Git dependency, pinned to an exact commit SHA
+rather than a mutable branch so builds are reproducible and the audio engine
+cannot change under a re-resolve (see `pubspec.yaml`).
+
+Desktop window title and minimum size are set per platform, not from Dart.
+They used to come from the `window_size` plugin, which was dropped: the values
+are constants, and the plugin had no Swift Package Manager support, which
+Flutter is moving to require.
+
+| Platform | Minimum size | Title |
+|---|---|---|
+| macOS | `NSWindow.minSize` in `macos/Runner/MainFlutterWindow.swift` | `PRODUCT_DISPLAY_NAME` in `macos/Runner/Configs/AppInfo.xcconfig` |
+| Windows | `WM_GETMINMAXINFO` in `windows/runner/win32_window.cpp` | `window.Create` in `windows/runner/main.cpp` |
+| Linux | `gtk_window_set_geometry_hints` in `linux/my_application.cc` | same file, both titlebar branches |
+
+On macOS the title is deliberately *not* set from `MainFlutterWindow`.
+Assigning `NSWindow.title` in `awakeFromNib` does not survive — AppKit
+re-applies the nib's `APP_NAME` afterwards, so the title reverts to the bundle
+name a moment after launch. It comes from `CFBundleName` instead, which also
+fixes the menu items the nib builds from `APP_NAME` ("Quit eqTrainer" rather
+than "Quit eq_trainer"). `PRODUCT_NAME` stays `eq_trainer` because it names the
+binary and the `.app`, which the DMG packaging in CI depends on.
