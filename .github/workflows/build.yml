@@ -109,13 +109,12 @@ jobs:
           channel: "stable"
           flutter-version: 3.47.2
 
-      - name: Setup Podfile
+      # macOS has no CocoaPods integration any more — every plugin it uses is a
+      # Swift Package, which "flutter build" resolves on its own.
+      - name: Prepare
         run: |
-          cd macos
           flutter clean
           flutter pub get
-          pod install
-          cd ..
 
       - name: Build macOS
         run: |
