@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:audio_decoder/audio_decoder.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/model/audio_clip.dart';
@@ -88,7 +89,7 @@ class ClipFormatMigration extends ChangeNotifier {
   void pause() {
     _pauseDepth++;
     _resumed ??= Completer<void>();
-    if (_pauseDepth == 1) notifyListeners();
+    if (_pauseDepth == 1) _notifyOffFrame();
   }
 
   /// Releases one [pause]. Unbalanced calls are ignored rather than driving
@@ -99,7 +100,25 @@ class ClipFormatMigration extends ChangeNotifier {
     if (_pauseDepth > 0) return;
     _resumed?.complete();
     _resumed = null;
-    notifyListeners();
+    _notifyOffFrame();
+  }
+
+  /// [pause] and [resume] are called from `initState` and `dispose`, which run
+  /// inside the build phase. Notifying there marks this provider's element
+  /// dirty while the framework is already building it, which is an assertion
+  /// in debug and a dropped rebuild in release, so the notification waits for
+  /// the end of the frame. The pause itself still takes effect immediately —
+  /// only the listeners are deferred.
+  void _notifyOffFrame() {
+    switch (SchedulerBinding.instance.schedulerPhase) {
+      case SchedulerPhase.persistentCallbacks:
+      case SchedulerPhase.midFrameMicrotasks:
+        SchedulerBinding.instance.addPostFrameCallback((_) => notifyListeners());
+      case SchedulerPhase.idle:
+      case SchedulerPhase.transientCallbacks:
+      case SchedulerPhase.postFrameCallbacks:
+        notifyListeners();
+    }
   }
 
   Future<void> _waitWhilePaused() async {
