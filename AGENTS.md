@@ -281,7 +281,19 @@ Uses `flutter_lints` (^6.0.0) with Material3 recommendations and `custom_lint`.
 
 ### Testing
 
-The project has `flutter_test` + `mocktail` configured. When adding tests, place them in `test/` mirroring the `lib/` structure. Start with the pure session math (`FrequencyCalculator`, threshold logic, answer mapping).
+Unit tests live in `test/`, mirroring `lib/` (`flutter_test` + `mocktail`).
+The session math, store, controller, format policy, WAV parser, repository
+and the three library-rewrite services are all covered there. Shared
+scaffolding is in `test/helpers/`:
+
+| Helper | Use it for |
+|---|---|
+| `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
+| `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
+| `hive_test_box.dart` | `HiveTestBox`: a throwaway `AudioClip` box. Anything that goes through `clip.key` needs clips added via a box: a bare `AudioClip(...)` has a **null** key, so two of them compare equal and a "was this record deleted?" check passes for the wrong reason. |
+
+Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
+`setMockMethodCallHandler`; see `import_workflow_service_test.dart`.
 
 ```bash
 flutter test test/              # unit tests — headless, this is what CI runs
@@ -294,14 +306,45 @@ flutter test integration_test/  # integration tests — local only, see below
 | Suite | Needs |
 |---|---|
 | `audio_clip_service_integration_test.dart` | native decode/convert only |
+| `clip_encoder_integration_test.dart` | the offline encoder, plus an engine to load the result back |
 | `audio_state_integration_test.dart` | a real device list, enumerated *before* the engine starts |
 | `player_service_integration_test.dart` | an output device (engine init) |
 | `peaking_eq_audio_integration_test.dart` | an output device that actually renders — stream time has to advance for fades to land |
+
+**Fixtures are synthesised, not bundled.** `integration_test/helpers/fixtures.dart`
+writes the test audio into a temp directory at suite start: the WAVs are
+generated in Dart, the FLAC is encoded from one of them through `ClipEncoder`,
+and the MP3 is an embedded base64 constant (`fixture_mp3.dart`). Do not add
+audio under `assets:` in `pubspec.yaml` for tests; everything listed there
+ships in every release build.
 
 GitHub-hosted runners have no audio hardware, so an engine that comes up there
 proves nothing about the environment users are in. Run these on a real machine
 (`flutter test integration_test/ --device-id windows|macos|linux`, or a
 connected phone) before landing player changes.
+
+**The directory form fails on an unpatched SDK — it is a `flutter_tools` bug,
+not ours.** Every file after the first dies with "Error waiting for a debug
+connection: The log reader stopped unexpectedly, or never started." The tool
+resolves the target device *once* per `flutter test` invocation and reuses that
+one `Device` for every test file, but `DesktopDevice` holds a single
+`DesktopLogReader` whose broadcast controller is **closed when the first app
+process exits**. The relaunch for file two then subscribes the new process's
+stdout to a dead controller, so `ProtocolDiscovery` sees an
+already-done stream and never finds the VM service URI. Nothing about the app
+is involved — two empty `testWidgets` files reproduce it. It affects every
+desktop device, not just Windows.
+
+Two ways out:
+
+- Run the files one at a time (`flutter test integration_test/<one>_test.dart -d windows`).
+- Patch the SDK — in `packages/flutter_tools/lib/src/desktop_device.dart`, make
+  `DesktopLogReader._inputController` non-`final` and re-create it at the top of
+  `initializeProcess` when `isClosed`. Delete `bin/cache/flutter_tools.stamp`
+  (delete it — do not blank it, an empty stamp makes `shared.bat` fail to parse)
+  so the tool snapshot rebuilds. The whole suite then passes in one directory
+  run. The patch lives in the SDK checkout, so `fvm` reinstalling the pinned
+  version wipes it.
 
 **Still unaudited by ear.** The fork's resampler and `seekOpus` rewrite are
 verified numerically and by test, never by listening. Two things are worth
