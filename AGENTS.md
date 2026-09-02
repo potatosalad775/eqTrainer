@@ -63,6 +63,8 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `AudioClipService` | Provider | File import / clip management |
 | `PlaylistService` | Provider | Playlist operations & enabled-clip queries |
 | `ImportWorkflowService` | Provider | File-picker import flow |
+| `ClipRecompressService` | Provider | User-triggered WAV→FLAC recompress |
+| `ClipFormatMigration` | ChangeNotifier | Legacy-clip conversion; constructed and started in `main()` before `runApp`, then provided by `.value` so playback screens can pause it |
 | `SessionParameter` | ChangeNotifier | Session config (band, gain, Q, filter type, threshold) |
 | `SessionStore` | ChangeNotifier | Session runtime state & results |
 | `SessionController` | Provider | Orchestrates session launch & answer submission |
@@ -83,7 +85,7 @@ Each feature is a self-contained module with:
 | `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `SettingData` (Hive settings), `MiscSettingsProvider` (ChangeNotifier over `SettingData`) |
 | `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper` |
+| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
 | `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
@@ -134,7 +136,66 @@ assumption. Two consequences: `launch()` must reset the band, because the
 filter outlives any one `PlayerService`; and every track switch must re-apply
 the compensation volume, because a fresh voice starts at 1.0.
 
-Fuller rationale, measurements and landmines: `SOLOUD_MIGRATION.md`.
+### What the `flutter_soloud` fork carries
+
+The engine is a fork, pinned to an exact SHA in `pubspec.yaml`. Know what is in
+it before considering a move back to upstream — all of this would be lost:
+
+| Delta | Why it exists |
+|---|---|
+| Peaking EQ filter | A bandpass-refactored biquad whose poles don't depend on gain, so sweeping dry/wet moves no recursive coefficient. This is what makes the Original/Filtered toggle click-free by construction. |
+| Android backend override | Upstream prefers AAudio on API ≥ 30; several DAP devices misbehave on it. |
+| Offline PCM-to-file encode | `encodePcmToFile` — Ogg Opus / FLAC / WAV from a float buffer. Runs on a `compute()` isolate and touches no engine state, so it is safe to call while audio is playing and two encodes may overlap. `ClipEncoder` is built on it. |
+| Opus bitrate + complexity | Upstream ran libopus defaults with no `OPUS_SET_BITRATE`. |
+| Kaiser-windowed sinc polyphase resampler | Replaced a linear-interpolation 44.1→48 kHz resampler. Opus mandates 48 kHz, so *every* Opus encode went through it — on the exact top-octave material users train against. |
+| Bisected `seekOpus` | Was a linear rewind-and-decode, i.e. O(position), and `PlayerService.seek` is a synchronous FFI call. Deep seeks in long Opus files blocked. |
+
+Measured, on the fork's own test material:
+
+- **Resampler** — 44.1→48 kHz response went from −3.9 dB at 16 kHz and −6.3 dB
+  at 20 kHz to −0.000 dB and −0.279 dB; images went from 1.7 dB down to
+  24.7 dB down.
+- **Seek** — seeking to 115 s in a two-minute file went from 71.77 ms to
+  0.45 ms, and is now flat in position rather than linear.
+
+Three upstream bugs were found and fixed along the way: OpusHead advertised a
+pre-skip of 0, granulepos was written before being advanced (truncating ~20 ms
+off every file), and FLAC never declared `total_samples`, so every decoder
+reported an unknown duration.
+
+MP3 output was considered and dropped: it was the only target needing a new
+codec (LAME) and an LGPL dependency. WAV remains the zero-work fallback.
+
+### Clip Formats
+
+Clips are app-owned copies, converted once at import rather than on every load.
+`AudioFormatHelper` holds the mapping and is the single source of truth for
+which extensions the engine plays natively — `PlayerService` shares that set
+rather than restating it, because the two drifting apart is what breaks Ogg on
+Apple platforms (the `audio_decoder` fallback is AVFoundation, which cannot
+open an Ogg container at all).
+
+Two background passes rewrite clips in an existing library:
+
+| Pass | Trigger | Rule |
+|---|---|---|
+| `ClipFormatMigration` | Automatic, every launch (a no-op scan after the first) | Converts `.m4a`/`.aac` — the formats SoLoud cannot read — to whatever the user's import-format setting would produce for them today. |
+| `ClipRecompressService` | User-triggered, from audio settings | WAV → FLAC only. Never re-encodes a *lossless* clip to a lossy format. |
+
+Both keep the record and the basename and change only the extension. The
+basename is the clip's identity (`AudioClipService` names imports after
+`microsecondsSinceEpoch`), which is what `PlaylistService.resolveClipPath`
+relies on to follow a clip that moved underneath a live session.
+
+**Anything that rewrites the library must yield to playback, not block it.** A
+decode-plus-encode is CPU-seconds per clip on a phone or a DAP — the hardware
+where libraries are largest and the contention is audible. `ClipFormatMigration`
+exposes `pause()`/`resume()`, and the screens that play audio (`SessionPage`,
+`PlaylistControlView`) hold it while they are open; the checkpoint is between
+clips, which the per-clip commit makes free. Disabling the UI instead was
+considered and rejected: a large library on a slow device is minutes of a dead
+Start button, and legacy clips still play through `PlayerService`'s
+decode-on-load fallback meanwhile, so there is nothing to wait for.
 
 ### Session Flow
 
@@ -169,7 +230,7 @@ SessionController.submitAnswer()
 ### Theming
 
 - Material Design 3, seed color `0xFF375778` (slate blue)
-- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to the `miscSettingsBox` Hive box (TASKS.md M14)
+- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to the `miscSettingsBox` Hive box
 - Custom font: `PretendardVariable` (supports Korean)
 - Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`
@@ -242,6 +303,12 @@ proves nothing about the environment users are in. Run these on a real machine
 (`flutter test integration_test/ --device-id windows|macos|linux`, or a
 connected phone) before landing player changes.
 
+**Still unaudited by ear.** The fork's resampler and `seekOpus` rewrite are
+verified numerically and by test, never by listening. Two things are worth
+auditioning when someone next has the hardware in front of them: a seek into a
+long Opus clip (no click or garble at the landing point), and top-octave
+material through a 44.1 kHz import.
+
 ### Commiting
 
 **Keep commit messages short.** Default to a subject line alone. Add a body only when the why can't be read off the diff, and cap it at one paragraph of two or three lines. Never one paragraph per design decision. Things like alternatives considered, per-decision tradeoffs, secondary fixes, follow-up caveats — belongs in the PR description, and the doc/code comments are where the durable rationale already lives.
@@ -278,9 +345,12 @@ ref are cancelled when a newer commit lands.
 | `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
 | `lib/features/session/model/frequency_calculator.dart` | Pure EQ frequency math |
 | `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
-| `lib/shared/service/clip_format_migration.dart` | One-time conversion of existing libraries off `.m4a`/`.aac`, to whatever the user's import-format setting maps them to (Opus under Smart) |
+| `lib/shared/service/clip_format_migration.dart` | One-time conversion of existing libraries off `.m4a`/`.aac`, to whatever the user's import-format setting maps them to (Opus under Smart). Pauses while audio is playing |
+| `lib/shared/service/clip_recompress_service.dart` | User-triggered WAV→FLAC recompress, from audio settings |
+| `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
+| `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
 | `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
-| `lib/shared/service/playlist_service.dart` | Playlist business logic |
+| `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
 | `lib/shared/model/audio_state.dart` | Output device + Android backend state |
 | `assets/translations/en.yaml` | English strings |
 | `assets/translations/ko.yaml` | Korean strings |
@@ -293,14 +363,16 @@ ref are cancelled when a newer commit lands.
 |---|---|
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Local persistence |
-| `flutter_soloud` (git fork) | Cross-platform audio engine; the fork adds the peaking EQ filter and an Android backend override |
-| `audio_decoder` (git fork) | Audio file decode / trim / conversion (native method channels) |
+| `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
+| `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
 | `easy_localization` | i18n |
 | `fl_chart` | EQ frequency graph visualization |
 | `toastification` | In-session answer feedback toasts |
-| `upgrader` + `store_checker` | In-app update prompts / install-source detection |
+| `upgrader` | In-app update prompts |
 | `file_picker` | Audio file import |
 | `device_info_plus` + `version` | OS-version gating for the appcast updater |
 | `equatable` | Value equality for Equatable models |
 
-`flutter_soloud`, `audio_decoder`, `store_checker`, and `window_size` are sourced directly from Git (see `pubspec.yaml`).
+`flutter_soloud` and `window_size` are the only Git dependencies, both pinned to
+exact commit SHAs rather than mutable branches so builds are reproducible and
+the audio engine cannot change under a re-resolve (see `pubspec.yaml`).

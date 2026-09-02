@@ -6,6 +6,7 @@ import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/error.dart';
 import 'package:eq_trainer/shared/player/player_service.dart';
+import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 
 class PlaylistControlView extends StatefulWidget {
@@ -20,9 +21,18 @@ class PlaylistControlView extends StatefulWidget {
 class _PlaylistControlViewState extends State<PlaylistControlView> {
   final _player = PlaylistPlayer();
 
+  /// Captured in initState rather than read in dispose, where the element is
+  /// already detached from the tree.
+  late final ClipFormatMigration _clipFormatMigration;
+
   @override
   void initState() {
     super.initState();
+    // Same reason as the session page: the preview is playback, and a
+    // decode-and-encode running against it costs CPU we would rather spend on
+    // the audio. Nested pauses are counted, so a preview opened over a
+    // session does not resume the run when only the preview closes.
+    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
     final audioState = context.read<AudioState>();
     _player.launch(
       androidBackend: audioState.androidBackend,
@@ -46,6 +56,7 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
 
   @override
   void dispose() {
+    _clipFormatMigration.resume();
     _player.dispose();
     super.dispose();
   }

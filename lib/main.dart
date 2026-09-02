@@ -104,11 +104,15 @@ Future<void> main() async {
   // startup behind a full library's worth of decode-and-encode would hold the
   // app on a blank screen. It commits one clip at a time, so a clip the user
   // reaches mid-run is either fully converted or untouched.
-  unawaited(ClipFormatMigration(
+  //
+  // Handed to the widget tree as well: the screens that play audio pause it
+  // while they are open, so the run never competes with playback for CPU.
+  final clipFormatMigration = ClipFormatMigration(
     AudioClipRepository(),
     AppDirectories(),
     importFormat: MiscSettingsProvider.storedImportFormat(),
-  ).run());
+  );
+  unawaited(clipFormatMigration.run());
 
   runApp(
     EasyLocalization(
@@ -120,6 +124,7 @@ Future<void> main() async {
       child: ToastificationWrapper(
         child: App(
           upgrader: upgrader,
+          clipFormatMigration: clipFormatMigration,
         ),
       ),
     ),
@@ -127,9 +132,14 @@ Future<void> main() async {
 }
 
 class App extends StatefulWidget {
-  const App({super.key, required this.upgrader});
+  const App({
+    super.key,
+    required this.upgrader,
+    required this.clipFormatMigration,
+  });
 
   final Upgrader upgrader;
+  final ClipFormatMigration clipFormatMigration;
 
   static AppState of(BuildContext context) {
     return context.findAncestorStateOfType<AppState>()!;
@@ -223,6 +233,11 @@ class AppState extends State<App> with WidgetsBindingObserver {
           ctx.read<AppDirectories>(),
         )),
         Provider<ImportWorkflowService>(create: (_) => ImportWorkflowService()),
+        // .value, not create: the run was started in main() before the tree
+        // existed, and main() owns it — the provider must not dispose it.
+        ChangeNotifierProvider<ClipFormatMigration>.value(
+          value: widget.clipFormatMigration,
+        ),
         Provider<ClipRecompressService>(create: (ctx) => ClipRecompressService(
           ctx.read<IAudioClipRepository>(),
           ctx.read<AppDirectories>(),

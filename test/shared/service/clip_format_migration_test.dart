@@ -294,5 +294,123 @@ void main() {
       expect(await migrationFor().run(), equals(1));
       verify(() => mockRepo.updateFileNameByKey(any(), '2000.opus')).called(1);
     });
+
+    test('refuses a concurrent run rather than racing itself over the same '
+        'files', () async {
+      final clip = await writeClip('1000.m4a');
+      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      final migration = migrationFor();
+
+      final first = migration.run();
+      expect(await migration.run(), equals(0));
+      expect(await first, equals(1));
+
+      verify(() => mockRepo.updateFileNameByKey(any(), '1000.opus')).called(1);
+    });
+
+    test('drops a conversion whose record was deleted while it ran, leaving '
+        'no orphan file', () async {
+      final clip = await writeClip('1000.m4a');
+      // The scan sees the clip; by the time the conversion is committed the
+      // user has deleted it from the playlist, so the record is gone.
+      var call = 0;
+      when(() => mockRepo.getAllClips())
+          .thenAnswer((_) => call++ == 0 ? [clip] : <AudioClip>[]);
+
+      expect(await migrationFor().run(), equals(0));
+
+      verifyNever(() => mockRepo.updateFileNameByKey(any(), any()));
+      // updateFileNameByKey would have no-opped on the missing key, so
+      // without the check this file would sit on disk unreferenced forever.
+      expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isFalse);
+    });
+
+    group('pausing for playback', () {
+      test('holds the run at a clip boundary until resumed', () async {
+        final clip = await writeClip('1000.m4a');
+        when(() => mockRepo.getAllClips()).thenReturn([clip]);
+        final migration = migrationFor();
+
+        migration.pause();
+        final run = migration.run();
+        // Let the loop reach its first checkpoint and park there.
+        await pumpEventQueue();
+
+        expect(migration.isPaused, isTrue);
+        expect(migration.isRunning, isTrue);
+        verifyNever(() => mockRepo.updateFileNameByKey(any(), any()));
+
+        migration.resume();
+        expect(await run, equals(1));
+        verify(() => mockRepo.updateFileNameByKey(any(), '1000.opus')).called(1);
+      });
+
+      test('stays held until every nested pause is released', () async {
+        final clip = await writeClip('1000.m4a');
+        when(() => mockRepo.getAllClips()).thenReturn([clip]);
+        final migration = migrationFor();
+
+        // A playlist preview opened over a session page: closing only the
+        // preview must not resume the run while the session still plays.
+        migration.pause();
+        migration.pause();
+        final run = migration.run();
+        await pumpEventQueue();
+
+        migration.resume();
+        await pumpEventQueue();
+        expect(migration.isPaused, isTrue);
+        verifyNever(() => mockRepo.updateFileNameByKey(any(), any()));
+
+        migration.resume();
+        expect(await run, equals(1));
+      });
+
+      test('ignores an unbalanced resume rather than un-pausing a live '
+          'session', () async {
+        final clip = await writeClip('1000.m4a');
+        when(() => mockRepo.getAllClips()).thenReturn([clip]);
+        final migration = migrationFor();
+
+        // A double dispose. The extra resume must not bank credit against
+        // the pause that comes after it.
+        migration.resume();
+        migration.pause();
+        final run = migration.run();
+        await pumpEventQueue();
+
+        expect(migration.isPaused, isTrue);
+        verifyNever(() => mockRepo.updateFileNameByKey(any(), any()));
+
+        migration.resume();
+        expect(await run, equals(1));
+      });
+
+      test('reports progress over the run and clears it when idle', () async {
+        when(() => mockRepo.getAllClips()).thenReturn([
+          await writeClip('1000.m4a'),
+          await writeClip('2000.m4a'),
+        ]);
+        final migration = migrationFor();
+
+        expect(migration.isRunning, isFalse);
+        expect(migration.total, equals(0));
+
+        migration.pause();
+        final run = migration.run();
+        await pumpEventQueue();
+
+        expect(migration.total, equals(2));
+        expect(migration.done, equals(0));
+
+        migration.resume();
+        expect(await run, equals(2));
+
+        // Idle again: nothing outstanding for a progress indicator to show.
+        expect(migration.isRunning, isFalse);
+        expect(migration.done, equals(0));
+        expect(migration.total, equals(0));
+      });
+    });
   });
 }

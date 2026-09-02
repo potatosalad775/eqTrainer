@@ -130,6 +130,91 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
+    // resolveClipPath
+    // -------------------------------------------------------------------------
+    //
+    // A session plays from the snapshot listEnabledClipPaths gave it at
+    // launch. ClipFormatMigration and ClipRecompressService both rewrite a
+    // clip to a different extension while that snapshot is live, so this is
+    // what stops a stale entry from failing to load and ending the session.
+    group('resolveClipPath', () {
+      test('returns the path unchanged while the file is still there',
+          () async {
+        await addClip(AudioClip('1000.opus', 'A', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([]);
+
+        final path = p.join(tmpClips.path, '1000.opus');
+        expect(await service.resolveClipPath(path), equals(path));
+      });
+
+      test('follows a clip the migration rewrote to another format', () async {
+        // The record and the basename survive the conversion; only the
+        // extension moves.
+        final converted = await addClip(AudioClip('1000.opus', 'A', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([converted]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          equals(p.join(tmpClips.path, '1000.opus')),
+        );
+      });
+
+      test('follows a WAV clip the recompress pass rewrote to FLAC', () async {
+        final converted = await addClip(AudioClip('1000.flac', 'A', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([converted]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.wav')),
+          equals(p.join(tmpClips.path, '1000.flac')),
+        );
+      });
+
+      test('resolves a disabled clip too — the snapshot outranks a toggle '
+          'made mid-session', () async {
+        final converted = await addClip(AudioClip('1000.opus', 'A', 10.0, false));
+        when(() => mockRepo.getAllClips()).thenReturn([converted]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          equals(p.join(tmpClips.path, '1000.opus')),
+        );
+      });
+
+      test('returns null when the clip has no record left', () async {
+        when(() => mockRepo.getAllClips()).thenReturn([]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          isNull,
+        );
+      });
+
+      test('returns null when the record survived but its file did not',
+          () async {
+        final orphan = await addClip(
+          AudioClip('1000.opus', 'A', 10.0, true),
+          withFile: false,
+        );
+        when(() => mockRepo.getAllClips()).thenReturn([orphan]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          isNull,
+        );
+      });
+
+      test('does not confuse one clip for another', () async {
+        final other = await addClip(AudioClip('2000.opus', 'B', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([other]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          isNull,
+        );
+      });
+    });
+
+    // -------------------------------------------------------------------------
     // watchEnabledClipPaths
     // -------------------------------------------------------------------------
     group('watchEnabledClipPaths', () {

@@ -5,6 +5,7 @@ import 'package:eq_trainer/shared/model/error.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/player_service.dart';
+import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
@@ -65,6 +66,37 @@ class _SessionControlState extends State<SessionControl> {
     }
   }
 
+  /// Steps one track and returns a path that is actually on disk, skipping
+  /// clips that are not.
+  ///
+  /// The session plays from a snapshot taken at launch, and a clip's file can
+  /// be rewritten to another format underneath it while the session runs (see
+  /// `PlaylistService.resolveClipPath`). Before this, a stale entry threw out
+  /// of `launch()` into the error dialog below, which pops twice and ends the
+  /// session — losing the user's score over a file that is still perfectly
+  /// playable under a different extension.
+  ///
+  /// Bounded by the playlist length so a library that vanished entirely stops
+  /// rather than looping.
+  Future<String?> _stepToPlayable(BuildContext context, {required bool forward}) async {
+    final sessionStore = context.read<SessionStore>();
+    final playlistService = context.read<PlaylistService>();
+
+    for (var attempt = 0; attempt < sessionStore.playlistPaths.length; attempt++) {
+      forward ? sessionStore.nextTrack() : sessionStore.previousTrack();
+
+      final candidate = sessionStore.currentClipPath;
+      if (candidate == null) return null;
+
+      final resolved = await playlistService.resolveClipPath(candidate);
+      if (resolved != null) {
+        sessionStore.updatePathAt(sessionStore.currentPlayingAudioIndex, resolved);
+        return resolved;
+      }
+    }
+    return null;
+  }
+
   Future<void> _playerNext(
     BuildContext context, {
     required AndroidAudioBackend androidBackend,
@@ -72,8 +104,8 @@ class _SessionControlState extends State<SessionControl> {
   }) async {
     final sessionStore = context.read<SessionStore>();
     if (sessionStore.playlistPaths.isEmpty) return;
-    sessionStore.nextTrack();
-    final nextPath = sessionStore.currentClipPath;
+    final nextPath = await _stepToPlayable(context, forward: true);
+    if (!context.mounted) return;
     if (nextPath != null) {
       await _relaunchWith(context, nextPath,
           androidBackend: androidBackend, outputDevice: outputDevice);
@@ -94,8 +126,8 @@ class _SessionControlState extends State<SessionControl> {
     }
     final sessionStore = context.read<SessionStore>();
     if (sessionStore.playlistPaths.isEmpty) return;
-    sessionStore.previousTrack();
-    final prevPath = sessionStore.currentClipPath;
+    final prevPath = await _stepToPlayable(context, forward: false);
+    if (!context.mounted) return;
     if (prevPath != null) {
       await _relaunchWith(context, prevPath,
           androidBackend: androidBackend, outputDevice: outputDevice);

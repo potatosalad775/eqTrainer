@@ -273,6 +273,38 @@ void main() {
       });
     });
 
+    // The launch snapshot goes stale when a background pass rewrites a clip
+    // to another format mid-session; the resolved path is written back here
+    // so the lookup is paid once per clip rather than on every visit.
+    group('updatePathAt', () {
+      test('repoints the entry it names and leaves the rest alone', () {
+        store.setPlaylistPaths(['/a.m4a', '/b.flac']);
+        store.updatePathAt(0, '/a.opus');
+        expect(store.playlistPaths, equals(['/a.opus', '/b.flac']));
+      });
+
+      test('is what currentClipPath reads back', () {
+        store.setPlaylistPaths(['/a.m4a', '/b.flac']);
+        store.updatePathAt(0, '/a.opus');
+        expect(store.currentClipPath, equals('/a.opus'));
+      });
+
+      test('ignores an out-of-range index', () {
+        store.setPlaylistPaths(['/a.flac']);
+        store.updatePathAt(5, '/x.flac');
+        store.updatePathAt(-1, '/x.flac');
+        expect(store.playlistPaths, equals(['/a.flac']));
+      });
+
+      test('does not notify when the path is unchanged', () {
+        store.setPlaylistPaths(['/a.flac']);
+        var notifications = 0;
+        store.addListener(() => notifications++);
+        store.updatePathAt(0, '/a.flac');
+        expect(notifications, isZero);
+      });
+    });
+
     group('nextTrack', () {
       test('is no-op when playlist is empty', () {
         store.nextTrack();

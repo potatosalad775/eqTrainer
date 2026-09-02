@@ -215,6 +215,19 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Repoints the entry at [index] at [path].
+  ///
+  /// The snapshot taken at launch goes stale when a background task rewrites
+  /// a clip to another format mid-session (see
+  /// `PlaylistService.resolveClipPath`). Writing the resolved path back means
+  /// the lookup is paid once per clip rather than on every visit to it.
+  void updatePathAt(int index, String path) {
+    if (index < 0 || index >= _playlistPaths.length) return;
+    if (_playlistPaths[index] == path) return;
+    _playlistPaths = List<String>.from(_playlistPaths)..[index] = path;
+    notifyListeners();
+  }
+
   void setCurrentPlayingIndex(int index) {
     if (_playlistPaths.isEmpty) {
       _currentPlayingAudioIndex = 0;
