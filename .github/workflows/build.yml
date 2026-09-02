@@ -162,19 +162,21 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y clang cmake git ninja-build \
           pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
-          libasound2-dev \
+          libasound2-dev rpm \
           libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
           gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
   
-      - name: Enable flutter_distributor
+      - name: Enable fastforge
         run: |
-          dart pub global activate flutter_distributor
-          
-      - name: Build Deb
+          dart pub global activate fastforge
+
+      # No --jobs: the `release` release in distribute_options.yaml is exactly
+      # the deb and rpm jobs, and one invocation reuses a single flutter build.
+      - name: Build Deb and RPM
         run: |
-          $HOME/.pub-cache/bin/flutter_distributor release --name=release --jobs=release-linux-deb
-  
-      - name: Upload APK
+          $HOME/.pub-cache/bin/fastforge release --name=release
+
+      - name: Upload Linux packages
         uses: actions/upload-artifact@v7
         with:
           name: build-linux
