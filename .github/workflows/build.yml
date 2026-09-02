@@ -171,13 +171,20 @@ jobs:
           dart pub global activate fastforge
 
       # No --jobs: the `release` release in distribute_options.yaml is exactly
-      # the deb and rpm jobs, and one invocation reuses a single flutter build.
+      # the deb and rpm jobs. The second job re-runs `flutter build linux`, but
+      # incrementally against the first job's output (~4s), so splitting the
+      # invocation would buy nothing.
       - name: Build Deb and RPM
         run: |
           $HOME/.pub-cache/bin/fastforge release --name=release
 
+      # always(): the packages are built one after another, so a failure in the
+      # later one would otherwise discard the artifact the earlier one already
+      # produced.
       - name: Upload Linux packages
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: build-linux
           path: dist/*
+          if-no-files-found: warn
