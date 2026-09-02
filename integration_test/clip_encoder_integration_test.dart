@@ -1,13 +1,13 @@
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/service/wav_pcm.dart';
+
+import 'helpers/fixtures.dart';
 
 /// End-to-end coverage for the Opus/FLAC clip path.
 ///
@@ -24,22 +24,14 @@ import 'package:eq_trainer/shared/service/wav_pcm.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  late Directory workDir;
+  late TestFixtures fixtures;
   late ClipEncoder encoder;
 
-  String fixture(String name) => p.join(workDir.path, name);
+  /// Fixtures and encoder output share one scratch directory.
+  String fixture(String name) => fixtures.path(name);
 
   setUpAll(() async {
-    workDir = await Directory.systemTemp.createTemp('eqt_encoder_');
-    for (final name in [
-      'sine_440hz_1s.wav',
-      'sine_440hz_3s.mp3',
-      'sine_440hz_3s.flac',
-    ]) {
-      final data = await rootBundle.load('test/fixtures/audio/$name');
-      await File(p.join(workDir.path, name))
-          .writeAsBytes(data.buffer.asUint8List());
-    }
+    fixtures = await TestFixtures.create();
     encoder = ClipEncoder();
 
     // The encoder needs no engine, but loading its output back to check that
@@ -54,7 +46,7 @@ void main() {
       await SoLoud.instance.disposeAllSources();
       SoLoud.instance.deinit();
     }
-    if (workDir.existsSync()) workDir.deleteSync(recursive: true);
+    await fixtures.dispose();
   });
 
   group('ClipEncoder produces files SoLoud can load', () {
@@ -125,19 +117,20 @@ void main() {
       expect(File(dest).readAsBytesSync(), equals(wavBytes));
     });
 
-    test('round-trips sample rate and channel count through Opus', () async {
+    test('keeps the clip length through an Opus round-trip', () async {
       final wavBytes = await File(fixture('sine_440hz_1s.wav')).readAsBytes();
       final original = parseWav(wavBytes);
+      final originalMs = original.frameCount * 1000 ~/ original.sampleRate;
 
       final dest = fixture('roundtrip.opus');
       await encoder.encodeWavBytes(wavBytes: wavBytes, destPath: dest);
 
+      // Opus always decodes at 48 kHz regardless of the input rate, and
+      // SoLoud does not expose a source's channel count, so duration is the
+      // one property of the input that can be checked against the output.
       final source = await SoLoud.instance.loadFile(dest, mode: LoadMode.disk);
-      // Opus always decodes at 48 kHz regardless of the input rate, so the
-      // channel count is the part that must survive verbatim.
-      expect(original.channels, greaterThan(0));
       expect(SoLoud.instance.getLength(source).inMilliseconds,
-          closeTo(1000, 120));
+          closeTo(originalMs, 120));
       await SoLoud.instance.disposeSource(source);
     });
 

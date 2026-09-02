@@ -1,15 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/player/player_service.dart';
+
+import 'helpers/fixtures.dart';
 
 /// End-to-end check that the peaking EQ actually shapes eqTrainer's audio.
 ///
@@ -25,7 +24,7 @@ import 'package:eq_trainer/shared/player/player_service.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  late Directory fixturesDir;
+  late TestFixtures fixtures;
 
   /// Root-mean-square of interleaved float32 PCM.
   double rms(Float32List samples) {
@@ -40,11 +39,10 @@ void main() {
   double toDb(double ratio) => 20 * (log(ratio) / ln10);
 
   setUpAll(() async {
-    fixturesDir = await Directory.systemTemp.createTemp('eqt_audio_');
-    final data = await rootBundle.load('test/fixtures/audio/sine_440hz_3s.flac');
-    await File(p.join(fixturesDir.path, 'sine_440hz_3s.flac'))
-        .writeAsBytes(data.buffer.asUint8List());
+    fixtures = await TestFixtures.create();
   });
+
+  tearDownAll(() => fixtures.dispose());
 
   /// Plays the sine with the band at [frequency]/[gainDb] and returns the RMS
   /// of the rendered output with the band out, then with the band in.
@@ -64,7 +62,7 @@ void main() {
       await player.launch(
         androidBackend: defaultAndroidBackend,
         outputDevice: null,
-        path: p.join(fixturesDir.path, 'sine_440hz_3s.flac'),
+        path: fixtures.path(TestFixtures.sine440hz3sFlac),
         volumeCompensation: false,
       );
       player.setEQQ(q);

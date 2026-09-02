@@ -1,13 +1,12 @@
-import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/player/player_service.dart';
+
+import 'helpers/fixtures.dart';
 
 /// Exercises [PlayerService] against a real SoLoud engine and a real output
 /// device. The native filter's own correctness (response vs RBJ, fade
@@ -18,23 +17,20 @@ import 'package:eq_trainer/shared/player/player_service.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  late Directory fixturesDir;
+  late TestFixtures fixtures;
   late PlayerService player;
 
-  String fixture(String name) => p.join(fixturesDir.path, name);
+  String fixture(String name) => fixtures.path(name);
 
   /// The compensation volume the player should be holding for [gainDb].
   double expectedCompensation(double gainDb) =>
       pow(10, -gainDb.abs() / 20.0).toDouble();
 
   setUpAll(() async {
-    fixturesDir = await Directory.systemTemp.createTemp('eqt_player_');
-    for (final name in ['sine_440hz_3s.mp3', 'silence_2s.wav']) {
-      final data = await rootBundle.load('test/fixtures/audio/$name');
-      await File(p.join(fixturesDir.path, name))
-          .writeAsBytes(data.buffer.asUint8List());
-    }
+    fixtures = await TestFixtures.create();
   });
+
+  tearDownAll(() => fixtures.dispose());
 
   setUp(() {
     player = PlayerService();
