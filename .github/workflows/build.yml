@@ -155,11 +155,16 @@ jobs:
           channel: "stable"
           flutter-version: 3.47.2
 
+      # libasound2-dev is for flutter_soloud: its build hook compiles the
+      # SoLoud ALSA backend (-DWITH_ALSA) and links -lasound, so the headers
+      # have to be on the runner. The gstreamer -dev packages are what
+      # audio_decoder's Linux plugin builds against.
       - name: Update system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y clang cmake git ninja-build \
           pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
+          libasound2-dev \
           libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
           gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
   

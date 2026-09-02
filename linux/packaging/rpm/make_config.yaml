@@ -10,9 +10,13 @@ url: https://github.com/potatosalad775/eqTrainer
 
 build_arch: x86_64, aarch64
 
+# See the deb make_config: ALSA for flutter_soloud, GStreamer for
+# audio_decoder.
 requires:
-  - libmpv-dev
-  - mpv
+  - alsa-lib
+  - gstreamer1
+  - gstreamer1-plugins-base
+  - gstreamer1-plugins-good
 
 keywords:
   - eq

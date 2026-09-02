@@ -7,9 +7,15 @@ priority: optional
 section: x11
 installed_size: 6604
 
+# Runtime libraries the bundle links against: ALSA for flutter_soloud's
+# SoLoud backend, GStreamer for audio_decoder's Linux plugin. (mpv was a
+# leftover from the old media_kit engine and is no longer used.)
 dependencies:
-  - libmpv-dev
-  - mpv
+  - libasound2t64 | libasound2
+  - libgstreamer1.0-0
+  - libgstreamer-plugins-base1.0-0
+  - gstreamer1.0-plugins-good
+  - gstreamer1.0-plugins-bad
 
 essential: false
 icon: linux/assets/app_icon.png
