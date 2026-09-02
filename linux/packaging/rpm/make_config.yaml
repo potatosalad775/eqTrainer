@@ -1,14 +1,18 @@
 display_name: eqTrainer
 icon: linux/assets/app_icon.png
-summary: A beautiful lightweight open-source cross-platform API Client
+summary: A Listening Experience Training App.
 group: Applications/
 vendor: potatosalad775
 packager: potatosalad775
 packagerEmail: transaction@kakao.com
-license:
+license: MIT
 url: https://github.com/potatosalad775/eqTrainer
 
-build_arch: x86_64, aarch64
+# Single-valued: rpm tokenises BuildArch on whitespace, so a list here
+# ships "x86_64," + "aarch64", neither of which scores on an x86_64
+# builder -> "No compatible architectures found for build". A second
+# arch needs a second build on a runner of that arch.
+build_arch: x86_64
 
 # See the deb make_config: ALSA for flutter_soloud, GStreamer for
 # audio_decoder.
