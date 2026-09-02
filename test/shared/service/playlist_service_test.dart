@@ -2,15 +2,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
-import 'package:hive_ce/hive.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 
-class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
-
-class MockAppDirectories extends Mock implements AppDirectories {}
+import '../../helpers/hive_test_box.dart';
+import '../../helpers/mocks.dart';
 
 void main() {
   group('PlaylistService', () {
@@ -18,8 +14,7 @@ void main() {
     late MockAppDirectories mockDirs;
     late PlaylistService service;
     late Directory tmpClips;
-    late Directory tmpHive;
-    late Box<AudioClip> box;
+    late HiveTestBox hive;
 
     setUp(() async {
       mockRepo = MockIAudioClipRepository();
@@ -30,32 +25,22 @@ void main() {
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
       when(() => mockRepo.deleteByKey(any())).thenAnswer((_) async {});
 
-      // listEnabledClipPaths checks the backing file exists and reconciles
-      // missing records via clip.key, which only a real HiveObject-backed
-      // instance has — a bare AudioClip(...) not added to a box throws when
-      // .key is accessed. Use a real (temp) box so clips carry a valid key,
-      // matching how the production repository's getAllClips/watchClips
-      // (Box.values) attach one.
-      tmpHive = await Directory.systemTemp.createTemp('pls_hive_');
-      Hive.init(tmpHive.path);
-      if (!Hive.isAdapterRegistered(AudioClipAdapter().typeId)) {
-        Hive.registerAdapter(AudioClipAdapter());
-      }
-      box = await Hive.openBox<AudioClip>('pls_test_box');
+      // listEnabledClipPaths reconciles a missing file by deleting its record
+      // through clip.key, so the assertion on deleteByKey needs clips with
+      // real, distinct keys — which only a box hands out.
+      hive = await HiveTestBox.open();
     });
 
     tearDown(() async {
-      await box.close();
-      await Hive.deleteBoxFromDisk('pls_test_box', path: tmpHive.path);
+      await hive.dispose();
       await tmpClips.delete(recursive: true);
-      await tmpHive.delete(recursive: true);
     });
 
     /// Adds [clip] to the real test box (so it carries a valid Hive key) and,
     /// unless [withFile] is false, creates its backing file in the fake clips
     /// directory so File.exists() finds it.
     Future<AudioClip> addClip(AudioClip clip, {bool withFile = true}) async {
-      await box.add(clip);
+      await hive.box.add(clip);
       if (withFile) {
         File(p.join(tmpClips.path, clip.fileName)).createSync(recursive: true);
       }

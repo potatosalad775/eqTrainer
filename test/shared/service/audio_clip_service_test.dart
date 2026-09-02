@@ -4,14 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
-class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
-
-class MockAppDirectories extends Mock implements AppDirectories {}
+import '../../helpers/mocks.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -111,8 +107,10 @@ void main() {
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        // isTrimmed: false copies as-is, preserving source extension
-        // (conversion to m4a/wav happens at import time, not in createClip)
+        // isTrimmed: false copies as-is, preserving the source extension. Any
+        // format conversion happened earlier, in ImportWorkflowService, so
+        // by the time createClip sees a foreign format it has already been
+        // converted to whatever the import-format setting maps it to.
         expect(clip.fileName, endsWith('.mp3'));
       });
 
@@ -130,7 +128,7 @@ void main() {
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        // Source extension preserved; conversion happens at import time
+        // Source extension preserved; createClip does not decide formats.
         expect(clip.fileName, endsWith('.aac'));
       });
 

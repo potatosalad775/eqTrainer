@@ -1,64 +1,25 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 
-import 'package:hive_ce/hive.dart';
-
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
-import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/service/clip_recompress_service.dart';
 
-class _MockRepository extends Mock implements IAudioClipRepository {}
-
-class _MockAppDirectories extends Mock implements AppDirectories {}
-
-/// Stands in for the real encoder so these tests stay headless — the native
-/// encoder is covered by the integration suite and the fork's own tests.
-class _FakeEncoder implements ClipEncoder {
-  _FakeEncoder({this.outputSize = 100, this.throwOnEncode = false});
-
-  final int outputSize;
-  final bool throwOnEncode;
-  final List<String> encoded = [];
-
-  @override
-  Future<void> encodeWavBytes({
-    required Uint8List wavBytes,
-    required String destPath,
-  }) async {
-    if (throwOnEncode) throw Exception('encoder failed');
-    encoded.add(destPath);
-    await File(destPath).writeAsBytes(List<int>.filled(outputSize, 0));
-  }
-
-  @override
-  Future<void> convertFile({
-    required String sourcePath,
-    required String destPath,
-  }) async =>
-      throw UnimplementedError();
-}
+import '../../helpers/fake_encoder.dart';
+import '../../helpers/hive_test_box.dart';
+import '../../helpers/mocks.dart';
 
 void main() {
   late Directory clipsDir;
-  late Directory hiveDir;
-  late Box<AudioClip> box;
-  late _MockRepository repo;
-  late _MockAppDirectories dirs;
+  late HiveTestBox hive;
+  late MockIAudioClipRepository repo;
+  late MockAppDirectories dirs;
 
-  /// Clips must live in a real box: the service reconciles records through
-  /// clip.key, and a bare AudioClip that was never added to one throws when
-  /// .key is read.
-  Future<AudioClip> clip(String fileName) async {
-    final c = AudioClip(fileName, fileName, 1, true);
-    await box.add(c);
-    return c;
-  }
+  /// A record in the real test box, so it carries a distinct Hive key for the
+  /// service to commit against.
+  Future<AudioClip> clip(String fileName) => hive.addClip(fileName);
 
   /// Writes a file of [bytes] length into the clips directory.
   void writeClipFile(String name, int bytes) {
@@ -68,25 +29,18 @@ void main() {
 
   setUp(() async {
     clipsDir = Directory.systemTemp.createTempSync('eqt_recompress_');
-    hiveDir = Directory.systemTemp.createTempSync('eqt_recompress_hive_');
-    Hive.init(hiveDir.path);
-    if (!Hive.isAdapterRegistered(AudioClipAdapter().typeId)) {
-      Hive.registerAdapter(AudioClipAdapter());
-    }
-    box = await Hive.openBox<AudioClip>('recompress_test_box');
+    hive = await HiveTestBox.open();
 
-    repo = _MockRepository();
-    dirs = _MockAppDirectories();
+    repo = MockIAudioClipRepository();
+    dirs = MockAppDirectories();
     when(() => dirs.getClipsPath()).thenAnswer((_) async => clipsDir.path);
     when(() => repo.updateFileNameByKey(any(), any()))
         .thenAnswer((_) async {});
   });
 
   tearDown(() async {
-    await box.close();
-    await Hive.deleteBoxFromDisk('recompress_test_box', path: hiveDir.path);
+    await hive.dispose();
     if (clipsDir.existsSync()) clipsDir.deleteSync(recursive: true);
-    if (hiveDir.existsSync()) hiveDir.deleteSync(recursive: true);
   });
 
   group('estimate', () {
@@ -103,7 +57,7 @@ void main() {
       writeClipFile('c.flac', 500);
 
       final service = ClipRecompressService(repo, dirs,
-          encoder: _FakeEncoder());
+          encoder: FakeClipEncoder());
 
       final estimate = await service.estimate();
       expect(estimate.clipCount, equals(2));
@@ -113,7 +67,7 @@ void main() {
     test('is empty for a library with no WAV clips', () async {
       when(repo.getAllClips).thenReturn([await clip('a.flac'), await clip('b.opus')]);
       final service =
-          ClipRecompressService(repo, dirs, encoder: _FakeEncoder());
+          ClipRecompressService(repo, dirs, encoder: FakeClipEncoder());
       final estimate = await service.estimate();
       expect(estimate.isEmpty, isTrue);
       expect(estimate.clipCount, equals(0));
@@ -126,7 +80,7 @@ void main() {
       writeClipFile('a.wav', 5000);
       writeClipFile('b.wav', 5000);
 
-      final encoder = _FakeEncoder(outputSize: 2000);
+      final encoder = FakeClipEncoder(outputSize: 2000);
       final result =
           await ClipRecompressService(repo, dirs, encoder: encoder).run();
 
@@ -145,7 +99,7 @@ void main() {
       writeClipFile('a.opus', 1000);
       writeClipFile('b.flac', 1000);
 
-      final encoder = _FakeEncoder();
+      final encoder = FakeClipEncoder();
       final result =
           await ClipRecompressService(repo, dirs, encoder: encoder).run();
 
@@ -162,7 +116,7 @@ void main() {
 
       // Already-compressed or pathological content can encode larger.
       final result = await ClipRecompressService(repo, dirs,
-              encoder: _FakeEncoder(outputSize: 4000))
+              encoder: FakeClipEncoder(outputSize: 4000))
           .run();
 
       expect(result.converted, equals(0));
@@ -177,7 +131,7 @@ void main() {
       writeClipFile('a.wav', 5000);
 
       final result = await ClipRecompressService(repo, dirs,
-              encoder: _FakeEncoder(throwOnEncode: true))
+              encoder: FakeClipEncoder(throwOnEncode: true))
           .run();
 
       expect(result.converted, equals(0));
@@ -193,7 +147,7 @@ void main() {
       // b.wav is deliberately absent, so it is skipped rather than converted.
 
       final result = await ClipRecompressService(repo, dirs,
-              encoder: _FakeEncoder(outputSize: 1000))
+              encoder: FakeClipEncoder(outputSize: 1000))
           .run();
 
       expect(result.converted, equals(1));
@@ -205,7 +159,7 @@ void main() {
       writeClipFile('a.wav', 5000);
 
       final result = await ClipRecompressService(repo, dirs,
-              encoder: _FakeEncoder(outputSize: 10))
+              encoder: FakeClipEncoder(outputSize: 10))
           .run();
 
       expect(result.failed, equals(1));
@@ -219,7 +173,7 @@ void main() {
       writeClipFile('a.flac', 3); // truncated leftover
 
       final result = await ClipRecompressService(repo, dirs,
-              encoder: _FakeEncoder(outputSize: 1000))
+              encoder: FakeClipEncoder(outputSize: 1000))
           .run();
 
       expect(result.converted, equals(1));
@@ -235,7 +189,7 @@ void main() {
 
       final seen = <(int, int)>[];
       await ClipRecompressService(repo, dirs,
-              encoder: _FakeEncoder(outputSize: 1000))
+              encoder: FakeClipEncoder(outputSize: 1000))
           .run(onProgress: (done, total) => seen.add((done, total)));
 
       expect(seen, equals([(1, 3), (2, 3), (3, 3)]));
@@ -244,7 +198,7 @@ void main() {
     test('does nothing and reports nothing for an empty library', () async {
       when(repo.getAllClips).thenReturn(<AudioClip>[]);
       final result =
-          await ClipRecompressService(repo, dirs, encoder: _FakeEncoder())
+          await ClipRecompressService(repo, dirs, encoder: FakeClipEncoder())
               .run();
       expect(result.converted, equals(0));
       expect(result.failed, equals(0));

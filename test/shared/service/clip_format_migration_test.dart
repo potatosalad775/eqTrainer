@@ -5,45 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 
-class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
+import '../../helpers/fake_encoder.dart';
+import '../../helpers/hive_test_box.dart';
+import '../../helpers/mocks.dart';
 
-class MockAppDirectories extends Mock implements AppDirectories {}
-
-/// Stands in for the real encoder so these tests stay headless — the native
-/// Opus and FLAC encoders are covered by the integration suite and the fork's
-/// own tests.
-class _FakeEncoder implements ClipEncoder {
-  _FakeEncoder({this.outputSize = 128, this.throwOnEncode = false});
-
-  final int outputSize;
-  final bool throwOnEncode;
-  final List<String> encoded = [];
-
-  @override
-  Future<void> convertFile({
-    required String sourcePath,
-    required String destPath,
-  }) async {
-    if (throwOnEncode) throw Exception('encoder failed');
-    encoded.add(destPath);
-    await File(destPath).writeAsBytes(List<int>.filled(outputSize, 0));
-  }
-
-  @override
-  Future<void> encodeWavBytes({
-    required Uint8List wavBytes,
-    required String destPath,
-  }) async =>
-      throw UnimplementedError();
-}
-
-/// The one-time conversion of pre-SoLoud `.m4a` clips.
+/// The one-time conversion of pre-SoLoud `.m4a`/`.aac` clips.
 ///
 /// It deletes files out of the user's library, so the invariant that matters
 /// most is the ordering: the record is repointed at the new file *before* the
@@ -51,6 +21,10 @@ class _FakeEncoder implements ClipEncoder {
 /// usable file. The second invariant is that the target tracks the user's
 /// import-format setting rather than a constant, so a migrated clip lands
 /// where the same file would land if it were imported today.
+///
+/// Clips live in a real Hive box so each carries a distinct key: the
+/// "was this record deleted while I converted it?" check compares keys, and
+/// bare clips would all share a null one.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -58,6 +32,7 @@ void main() {
     late MockIAudioClipRepository mockRepo;
     late MockAppDirectories mockDirs;
     late Directory tmpClips;
+    late HiveTestBox hive;
 
     /// What the mocked WAV converter writes. Bigger than the 64-byte gate the
     /// migration uses as its "did this decode?" check.
@@ -74,13 +49,14 @@ void main() {
           mockRepo,
           mockDirs,
           importFormat: importFormat,
-          encoder: encoder ?? _FakeEncoder(),
+          encoder: encoder ?? FakeClipEncoder(),
         );
 
     setUp(() async {
       mockRepo = MockIAudioClipRepository();
       mockDirs = MockAppDirectories();
       tmpClips = await Directory.systemTemp.createTemp('cfm_clips_');
+      hive = await HiveTestBox.open();
 
       convertedBytes = List<int>.filled(128, 0);
       convertShouldThrow = false;
@@ -111,12 +87,18 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(const MethodChannel('audio_decoder'), null);
       await tmpClips.delete(recursive: true);
+      await hive.dispose();
     });
 
+    /// A record in the box plus its backing file on disk.
     Future<AudioClip> writeClip(String fileName) async {
       await File(p.join(tmpClips.path, fileName)).writeAsBytes([1, 2, 3, 4]);
-      return AudioClip(fileName, 'original.m4a', 12.5, true);
+      return hive.addClip(fileName, ogAudioName: 'original.m4a', duration: 12.5);
     }
+
+    /// A record in the box with no file behind it.
+    Future<AudioClip> orphanClip(String fileName) =>
+        hive.addClip(fileName, ogAudioName: 'original.m4a', duration: 3);
 
     test(
         'converts an m4a clip to Opus, repoints the record and removes the '
@@ -145,7 +127,7 @@ void main() {
     test('honours an explicit All-FLAC setting', () async {
       final clip = await writeClip('1000.m4a');
       when(() => mockRepo.getAllClips()).thenReturn([clip]);
-      final encoder = _FakeEncoder();
+      final encoder = FakeClipEncoder();
 
       expect(
         await migrationFor(
@@ -163,7 +145,7 @@ void main() {
         () async {
       final clip = await writeClip('1000.m4a');
       when(() => mockRepo.getAllClips()).thenReturn([clip]);
-      final encoder = _FakeEncoder();
+      final encoder = FakeClipEncoder();
 
       expect(
         await migrationFor(
@@ -202,7 +184,7 @@ void main() {
         await writeClip('e.opus'),
       ];
       when(() => mockRepo.getAllClips()).thenReturn(clips);
-      final encoder = _FakeEncoder();
+      final encoder = FakeClipEncoder();
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
 
@@ -221,8 +203,8 @@ void main() {
 
       // The record now points at the Opus file, which is what a relaunch reads.
       when(() => mockRepo.getAllClips())
-          .thenReturn([AudioClip('1000.opus', 'original.m4a', 12.5, true)]);
-      final encoder = _FakeEncoder();
+          .thenReturn([await orphanClip('1000.opus')]);
+      final encoder = FakeClipEncoder();
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
       expect(encoder.encoded, isEmpty);
@@ -233,7 +215,7 @@ void main() {
       when(() => mockRepo.getAllClips()).thenReturn([clip]);
 
       expect(
-        await migrationFor(encoder: _FakeEncoder(throwOnEncode: true)).run(),
+        await migrationFor(encoder: FakeClipEncoder(throwOnEncode: true)).run(),
         equals(0),
       );
 
@@ -249,7 +231,7 @@ void main() {
       // Shorter than any container header: the encoder claimed success but
       // wrote nothing playable.
       expect(
-        await migrationFor(encoder: _FakeEncoder(outputSize: 10)).run(),
+        await migrationFor(encoder: FakeClipEncoder(outputSize: 10)).run(),
         equals(0),
       );
 
@@ -265,7 +247,7 @@ void main() {
       when(() => mockRepo.getAllClips()).thenReturn([clip]);
 
       expect(
-        await migrationFor(encoder: _FakeEncoder(outputSize: 128)).run(),
+        await migrationFor(encoder: FakeClipEncoder(outputSize: 128)).run(),
         equals(1),
       );
 
@@ -275,8 +257,8 @@ void main() {
     test('skips a record whose file is already gone, without touching it',
         () async {
       when(() => mockRepo.getAllClips())
-          .thenReturn([AudioClip('missing.m4a', 'original.m4a', 3, true)]);
-      final encoder = _FakeEncoder();
+          .thenReturn([await orphanClip('missing.m4a')]);
+      final encoder = FakeClipEncoder();
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
 
@@ -287,7 +269,7 @@ void main() {
     test('one failing clip does not stop the others', () async {
       final good = await writeClip('2000.m4a');
       when(() => mockRepo.getAllClips()).thenReturn([
-        AudioClip('missing.m4a', 'original.m4a', 3, true),
+        await orphanClip('missing.m4a'),
         good,
       ]);
 
@@ -312,10 +294,12 @@ void main() {
         'no orphan file', () async {
       final clip = await writeClip('1000.m4a');
       // The scan sees the clip; by the time the conversion is committed the
-      // user has deleted it from the playlist, so the record is gone.
+      // user has deleted it from the playlist, so the record is gone. Another
+      // record survives, so the check has to compare keys, not just count.
+      final other = await writeClip('2000.flac');
       var call = 0;
       when(() => mockRepo.getAllClips())
-          .thenAnswer((_) => call++ == 0 ? [clip] : <AudioClip>[]);
+          .thenAnswer((_) => call++ == 0 ? [clip, other] : [other]);
 
       expect(await migrationFor().run(), equals(0));
 
