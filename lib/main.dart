@@ -11,7 +11,6 @@ import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:easy_localization/easy_localization.dart';
-import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
@@ -115,7 +114,6 @@ Future<void> main() async {
       path: 'assets/translations',
       fallbackLocale: const Locale('en'),
       useOnlyLangCode: true,
-      assetLoader: const YamlAssetLoader(),
       child: ToastificationWrapper(
         child: App(
           upgrader: upgrader,

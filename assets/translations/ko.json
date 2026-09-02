@@ -1,19 +1,14 @@
 {
-  # Main Page
-  ## Main Page Appbar
   "MAIN_APPBAR_TITLE_CONFIG_1": "세션",
   "MAIN_APPBAR_TITLE_CONFIG_2": "설정하기",
   "MAIN_APPBAR_TITLE_PLAYLIST_1": "플레이리스트",
   "MAIN_APPBAR_TITLE_PLAYLIST_2": "설정하기",
   "MAIN_APPBAR_TITLE_SETTING_1": "eqTrainer",
   "MAIN_APPBAR_TITLE_SETTING_2": "설정",
-  ## Main Page - Navigation Bar
   "MAIN_NAVBAR_MAIN": "메인",
   "MAIN_NAVBAR_PLAYLIST": "플레이리스트",
   "MAIN_NAVBAR_SETTINGS": "설정",
 
-  # Configuration Page
-  ## Config Card
   "CONFIG_CARD_TITLE_SB": "시작 주파수 밴드",
   "CONFIG_CARD_SUBTITLE_SB": "필터가 적용될 수 있는 중심 주파수의 개수",
   "CONFIG_CARD_TITLE_G": "게인",
@@ -27,36 +22,26 @@
   "CONFIG_CARD_DDB_FT_PD": "피크 & 딥",
   "CONFIG_CARD_TITLE_T": "임계값",
   "CONFIG_CARD_SUBTITLE_T": "세션 진행 중 중심 주파수 증감을 위한 임계값",
-  ## Button
   "CONFIG_BUTTON_START": "세션 시작하기",
 
-  # Session Page
   "SESSION_APPBAR_TITLE": "세션",
-  ## Alert Dialog - Error Playlist
   "SESSION_ALERT_ERROR_TITLE": "오류",
   "SESSION_ALERT_ERROR_CONTENT": "세션을 시작하던 도중 오류가 발생했습니다. 다시 시도해주세요.",
   "SESSION_ALERT_ERROR_BUTTON": "확인",
-  ## Empty Playlist Alert
   "SESSION_ALERT_EMPTY_TITLE": "빈 플레이리스트",
   "SESSION_ALERT_EMPTY_CONTENT": "세션을 시작하기에 앞서 적어도 하나의 오디오 클립을 추가한 뒤 활성화해주세요.",
   "SESSION_ALERT_EMPTY_BUTTON": "네",
-  ## Exiting Session Alert
   "SESSION_ALERT_EXIT_TITLE": "알림",
   "SESSION_ALERT_EXIT_CONTENT": "정말로 세션을 그만두고 나가시겠습니까?",
   "SESSION_ALERT_EXIT_BUTTON_YES": "네",
   "SESSION_ALERT_EXIT_BUTTON_NO": "아니오",
-  ## in-Session Button
   "SESSION_BUTTON_ORIGINAL": "원음",
   "SESSION_BUTTON_EQ_FILTERED": "EQ 적용",
   "SESSION_BUTTON_SUBMIT" : "제출하기",
-  ## Session Snackbar
-  ## * 'DO NOT' translate '{_INDEX}' - it will be replaced to an actual value
   "SESSION_SNACKBAR_CORRECT": "정답입니다!",
   "SESSION_SNACKBAR_INCORRECT": "오답입니다! 올바른 정답은 {_INDEX}이었습니다.",
-  ## Session Device Dropdown Button
-  "SESSION_DDBUTTON_DEVICE_DISCLAIMER": "변경된 출력기기를 적용하려면 세션을 다시 시작하세요.",
+  "SESSION_DDBUTTON_DEVICE_DISCLAIMER": "변경된 출력 기기는 다음 오디오 클립부터 적용됩니다.",
 
-  # Session Result Page
   "RESULT_APPBAR_TITLE": "결과",
   "RESULT_BOTTOM_BAR_TITLE": "최종 결과",
   "RESULT_BOTTOM_BAR_ZERO_RESULT": "없음",
@@ -69,68 +54,45 @@
   "RESULT_FREQ_TREBLE": "고음",
   "RESULT_FREQ_UPPER_TREBLE": "초고음",
 
-  # Playlist Page
   "PLAYLIST_EMPTY_TEXT": "발견된 오디오 클립이 없습니다",
   "PLAYLIST_FOOTER": "원형 체크박스를 드래그하여 순서를 바꿀 수 있습니다.",
   "PLAYLIST_AUDIO_ACTION_DELETE": "삭제",
-  ## Alert Dialog - Deleting Audio Clip
   "PLAYLIST_AUDIO_ALERT_DELETE_TITLE": "경고",
   "PLAYLIST_AUDIO_ALERT_DELETE_CONTENT": "정말로 선택하신 음악 파일을 삭제하시겠습니까?",
   "PLAYLIST_AUDIO_ALERT_DELETE_YES": "네",
   "PLAYLIST_AUDIO_ALERT_DELETE_NO": "아니오",
 
-  # Import Audio Page
   "IMPORT_APPBAR_TITLE": "오디오 불러오기",
-  ## Alert Dialog - Exiting Page
   "IMPORT_ALERT_EXIT_TITLE": "경고",
   "IMPORT_ALERT_EXIT_CONTENT": "정말로 작업 중이던 내용을 버리고 편집기를 나가시겠습니까?",
   "IMPORT_ALERT_EXIT_YES": "네",
   "IMPORT_ALERT_EXIT_NO": "아니오",
-  ## Alert Dialog - Error
   "IMPORT_ALERT_ERROR_TITLE": "오류",
   "IMPORT_ALERT_ERROR_CONTENT": "오디오 파일을 불러오는 동안 오류가 발생했습니다.",
   "IMPORT_ALERT_ERROR_BUTTON": "확인",
-  ## Alert Dialog - Aborted
   "IMPORT_ALERT_ABORTED_CONTENT": "파일 불러오기가 취소되었습니다",
   "IMPORT_ALERT_ABORTED_BUTTON": "확인",
-  ## Loading Dialog - Converting Audio Clip
   "IMPORT_CONVERTING_1": "잠시만 기다려주세요...",
   "IMPORT_CONVERTING_2": "오디오 파일을 최적화하는 중입니다.",
-  ## CLIP EDITOR
-  ### Time Stamp Indicator
-  ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value
   "IMPORT_EDITOR_TIMESTAMP_START": "클립 시작 시점 : {_TIME}",
   "IMPORT_EDITOR_TIMESTAMP_END": "클립 종료 시점 : {_TIME}",
-  ### Time setter button
   "IMPORT_EDITOR_BUTTON_SET_START": "지금 시작 시점 설정",
   "IMPORT_EDITOR_BUTTON_SET_END": "지금 종료 시점 설정",
-  ### Alert Dialog - Start and End time
   "IMPORT_EDITOR_ALERT_START_CONTENT": "시작 시점을 종료 시점 이후로 설정할 수 없습니다.",
   "IMPORT_EDITOR_ALERT_END_CONTENT": "종료 시점을 시작 시점 이전으로 설정할 수 없습니다.",
   "IMPORT_EDITOR_ALERT_BUTTON": "확인",
-  ### Button - Done Editing
   "IMPORT_EDITOR_BUTTON_DONE": "완료",
   "IMPORT_EDITOR_SAVE_ERROR": "오디오 클립을 저장하지 못했습니다. 다시 시도해 주세요.",
 
-  # Setting Page
-  ## Setting Card - Theme
   "SETTING_CARD_THEME_TITLE": "테마",
-  ## Setting Card - Language
   "SETTING_CARD_LANG_TITLE": "언어",
-  ## Setting Card - Github
   "SETTING_CARD_GITHUB_TITLE": "Github",
-  ## Setting Card - Contact Dev
   "SETTING_CARD_CONTACT_TITLE": "개발자와 연락하기",
-  ## Setting Card - Open Source License
   "SETTING_CARD_LICENSE_TITLE": "오픈소스 라이선스",
-  ## Setting Card - Audio Settings
   "SETTING_CARD_AUDIO_SETTING_TITLE": "오디오 설정",
-  ## Misc Setting Card - Frequency Tooltip Toggle
   "MISC_SETTING_CARD_TOOLTIP_TITLE": "그래프 중심 주파수 표시",
 
-  # Audio Settings Page
   "AUDIO_SETTING_APPBAR_TITLE": "오디오 설정",
-  ## Audio Setting Card - Audio Import Format
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "오디오 가져오기 형식",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "스마트",
   "AUDIO_SETTING_IMPORT_FORMAT_DESC_1": 
@@ -142,7 +104,6 @@
   "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (무손실)",
   "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (경량)",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무압축)",
-  ## Audio Setting Card - Recompress Library
   "AUDIO_SETTING_RECOMPRESS_TITLE": "라이브러리 다시 압축",
   "AUDIO_SETTING_RECOMPRESS_ACTION": "최대 {_SIZE} 확보",
   "AUDIO_SETTING_RECOMPRESS_DESC":
@@ -154,15 +115,12 @@
   "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS":
     "클립 {_COUNT}개를 다시 압축하여 {_SAVED}를 확보했습니다. {_FAILED}개는 변환하지 못해 그대로 두었습니다.",
   "DIALOG_CANCEL": "취소",
-  ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "게인 볼륨 보정",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":
     "EQ 게인에 비례하여 재생 볼륨을 조절하고 클리핑을 방지합니다. 이 옵션을 비활성화하면 볼륨이 일정하게 유지되지만, 높은 게인 값에서 클리핑 현상이 발생할 수 있습니다.",
-  ## Audio Setting Card - Android Backend API
   "AUDIO_SETTING_CARD_BACKEND_TITLE": "오디오 API",
   "AUDIO_SETTING_CARD_BACKEND_DESC":
     "오디오가 원활하게 재생되지 않는다면, 오디오 백엔드 API를 변경해 보세요.",
-  ## Audio Setting - Backend
   "AUDIO_SETTING_BACKEND_APPBAR": "오디오 백엔드 API 설정",
   "AUDIO_SETTING_BACKEND_AUTO": "자동",
   "AUDIO_SETTING_BACKEND_AUTO_DESC": "오디오 엔진이 직접 선택합니다. Android 11 이상에서는 AAudio를 우선 사용합니다.",
@@ -171,7 +129,6 @@
   "AUDIO_SETTING_BACKEND_RESTART_NOTE": "오디오 백엔드는 재생을 시작할 때 결정됩니다. 변경 사항을 적용하려면 eqTrainer를 다시 시작하세요.",
   "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND}가 선택되었습니다.",
 
-  # Update Alert
   "UPDATE_ALERT_MESSAGE_BODY": "새로운 버전의 eqTrainer가 발견되었습니다!",
   "UPDATE_ALERT_BUTTON_IGNORE": "무시",
   "UPDATE_ALERT_BUTTON_LATER": "나중에",
@@ -180,7 +137,6 @@
   "UPDATE_ALERT_RELEASE_NOTE": "변경사항",
   "UPDATE_ALERT_MESSAGE_TITLE": "업데이트 가능",
 
-  # Player Error Alert
   "ERROR_PLAYER_ALERT_CONTENT": "오디오 재생 중 오류가 발생했습니다",
-  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "확인",
+  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "확인"
 }

@@ -1,19 +1,14 @@
 {
-  # Main Page
-  ## Main Page - Appbar
   "MAIN_APPBAR_TITLE_CONFIG_1": "Session",
   "MAIN_APPBAR_TITLE_CONFIG_2": "Configuration",
   "MAIN_APPBAR_TITLE_PLAYLIST_1": "Playlist",
   "MAIN_APPBAR_TITLE_PLAYLIST_2": "Configuration",
   "MAIN_APPBAR_TITLE_SETTING_1": "eqTrainer",
   "MAIN_APPBAR_TITLE_SETTING_2": "Settings",
-  ## Main Page - Navigation Bar
   "MAIN_NAVBAR_MAIN": "Main",
   "MAIN_NAVBAR_PLAYLIST": "Playlist",
   "MAIN_NAVBAR_SETTINGS": "Settings",
 
-  # Configuration Page
-  ## Config Card
   "CONFIG_CARD_TITLE_SB": "Starting Band",
   "CONFIG_CARD_SUBTITLE_SB": "Number of Center Frequencies for Filter",
   "CONFIG_CARD_TITLE_G": "Gain",
@@ -27,36 +22,26 @@
   "CONFIG_CARD_DDB_FT_PD": "Peak & Dip",
   "CONFIG_CARD_TITLE_T": "Threshold",
   "CONFIG_CARD_SUBTITLE_T": "Threshold Limit for Session",
-  ## Button
   "CONFIG_BUTTON_START": "Start Session",
 
-  # Session Page
   "SESSION_APPBAR_TITLE": "Session",
-  ## Alert Dialog - Error Playlist
   "SESSION_ALERT_ERROR_TITLE": "Error",
   "SESSION_ALERT_ERROR_CONTENT": "There was an error executing session. Please Try Again.",
   "SESSION_ALERT_ERROR_BUTTON": "Okay",
-  ## Alert Dialog - Empty Playlist
   "SESSION_ALERT_EMPTY_TITLE": "Playlist Empty",
   "SESSION_ALERT_EMPTY_CONTENT": "Please Add and Enable at least one Audio Clip before starting Session.",
   "SESSION_ALERT_EMPTY_BUTTON": "Okay",
-  ## Alert Dialog - Exiting Page
   "SESSION_ALERT_EXIT_TITLE": "Alert",
   "SESSION_ALERT_EXIT_CONTENT": "Are you sure you wanna End and Exit Session?",
   "SESSION_ALERT_EXIT_BUTTON_YES": "Yes",
   "SESSION_ALERT_EXIT_BUTTON_NO": "No",
-  ## in-Session Button
   "SESSION_BUTTON_ORIGINAL": "Original",
   "SESSION_BUTTON_EQ_FILTERED": "Modified",
   "SESSION_BUTTON_SUBMIT": "Submit",
-  ## Session Snackbar
-  ## * 'DO NOT' translate '{_INDEX}' - it will be replaced to an actual value
   "SESSION_SNACKBAR_CORRECT": "Correct!",
   "SESSION_SNACKBAR_INCORRECT": "Incorrect! the correct answer was {_INDEX}.",
-  ## Session Device Dropdown Button
-  "SESSION_DDBUTTON_DEVICE_DISCLAIMER": "Please Restart the session to take effect.",
+  "SESSION_DDBUTTON_DEVICE_DISCLAIMER": "The changed output device will be applied from the next audio clip.",
 
-  # Session Result Page
   "RESULT_APPBAR_TITLE": "Result",
   "RESULT_BOTTOM_BAR_TITLE": "Result",
   "RESULT_BOTTOM_BAR_ZERO_RESULT": "N/A",
@@ -69,68 +54,45 @@
   "RESULT_FREQ_TREBLE": "Treble",
   "RESULT_FREQ_UPPER_TREBLE": "Upper-Treble",
 
-  # Playlist Page
   "PLAYLIST_EMPTY_TEXT": "No Audio Clip Found",
   "PLAYLIST_FOOTER": "You can re-order playlist by dragging circular checkbox.",
   "PLAYLIST_AUDIO_ACTION_DELETE": "Delete",
-  ## Alert Dialog - Deleting Audio Clip
   "PLAYLIST_AUDIO_ALERT_DELETE_TITLE": "Alert",
   "PLAYLIST_AUDIO_ALERT_DELETE_CONTENT": "Are you sure you wanna delete the audio clip?",
   "PLAYLIST_AUDIO_ALERT_DELETE_YES": "Yes",
   "PLAYLIST_AUDIO_ALERT_DELETE_NO": "No",
 
-  # Import Audio Page
   "IMPORT_APPBAR_TITLE": "Audio Import",
-  ## Alert Dialog - Exiting Page
   "IMPORT_ALERT_EXIT_TITLE": "Alert",
   "IMPORT_ALERT_EXIT_CONTENT": "Are you sure you wanna exit and discard audio clip?",
   "IMPORT_ALERT_EXIT_YES": "Yes",
   "IMPORT_ALERT_EXIT_NO": "No",
-  ## Alert Dialog - Error
   "IMPORT_ALERT_ERROR_TITLE": "Error",
   "IMPORT_ALERT_ERROR_CONTENT": "There was an error while trying to loading audio clip",
   "IMPORT_ALERT_ERROR_BUTTON": "Okay",
-  ## Alert Dialog - Aborted
   "IMPORT_ALERT_ABORTED_CONTENT": "File import cancelled",
   "IMPORT_ALERT_ABORTED_BUTTON": "Okay",
-  ## Loading Dialog - Converting Audio Clip
   "IMPORT_CONVERTING_1": "Please wait a moment...",
   "IMPORT_CONVERTING_2": "Optimizing audio file for playback.",
-  ## CLIP EDITOR
-  ### Time Stamp Indicator
-  ### * 'DO NOT' translate '{_TIME}' - it will be replaced to an actual value
   "IMPORT_EDITOR_TIMESTAMP_START": "Audio Start Time : {_TIME}",
   "IMPORT_EDITOR_TIMESTAMP_END": "Audio End Time : {_TIME}",
-  ### Button - Time setter
   "IMPORT_EDITOR_BUTTON_SET_START": "Set Start Now",
   "IMPORT_EDITOR_BUTTON_SET_END": "Set End Now",
-  ### Alert Dialog - Start and End time
   "IMPORT_EDITOR_ALERT_START_CONTENT": "You cannot set Start Time later than End Time",
   "IMPORT_EDITOR_ALERT_END_CONTENT": "You cannot set End Time earlier than Start Time",
   "IMPORT_EDITOR_ALERT_BUTTON": "Okay",
-  ### Button - Done Editing
   "IMPORT_EDITOR_BUTTON_DONE": "Done",
   "IMPORT_EDITOR_SAVE_ERROR": "Failed to save the audio clip. Please try again.",
 
-  # Setting Page
-  ## Setting Card - Theme
   "SETTING_CARD_THEME_TITLE": "Theme",
-  ## Setting Card - Language
   "SETTING_CARD_LANG_TITLE": "Language",
-  ## Setting Card - Github
   "SETTING_CARD_GITHUB_TITLE": "Github",
-  ## Setting Card - Contact Dev
   "SETTING_CARD_CONTACT_TITLE": "Contact Dev",
-  ## Setting Card - Open Source License
   "SETTING_CARD_LICENSE_TITLE": "Open Source License",
-  ## Setting Card - Audio Settings
   "SETTING_CARD_AUDIO_SETTING_TITLE": "Audio Settings",
-  ## Misc Setting Card - Frequency Tooltip Toggle
   "MISC_SETTING_CARD_TOOLTIP_TITLE": "Graph Frequency Tooltip",
 
-  # Audio Settings Page
   "AUDIO_SETTING_APPBAR_TITLE": "Audio Settings",
-  ## Audio Setting Card - Audio Import Format
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "Audio Import Format",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "Smart",
   "AUDIO_SETTING_IMPORT_FORMAT_DESC_1": 
@@ -142,7 +104,6 @@
   "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (Lossless)",
   "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (Compact)",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Uncompressed)",
-  ## Audio Setting Card - Recompress Library
   "AUDIO_SETTING_RECOMPRESS_TITLE": "Recompress Library",
   "AUDIO_SETTING_RECOMPRESS_ACTION": "Free up to {_SIZE}",
   "AUDIO_SETTING_RECOMPRESS_DESC":
@@ -154,15 +115,12 @@
   "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS":
     "Recompressed {_COUNT} clips, freeing {_SAVED}. {_FAILED} could not be converted and were left as they are.",
   "DIALOG_CANCEL": "Cancel",
-  ## Audio Setting Card - Volume Compensation Toggle
   "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "Gain Volume Compensation",
   "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":
     "Attenuates playback volume proportionally to the EQ gain to prevent clipping. Disabling this keeps volume constant but may cause clipping at higher gain values.",
-  ## Audio Setting Card - Android Backend API
   "AUDIO_SETTING_CARD_BACKEND_TITLE": "Audio API",
   "AUDIO_SETTING_CARD_BACKEND_DESC":
     "If audio is not playing as expected, Try changing audio backend API.",
-  ## Audio Setting - Backend
   "AUDIO_SETTING_BACKEND_APPBAR": "Audio Backend API Settings",
   "AUDIO_SETTING_BACKEND_AUTO": "Automatic",
   "AUDIO_SETTING_BACKEND_AUTO_DESC": "Let the audio engine choose. Prefers AAudio on Android 11 and later.",
@@ -171,7 +129,6 @@
   "AUDIO_SETTING_BACKEND_RESTART_NOTE": "The audio backend is selected when playback starts. Restart eqTrainer for the change to take effect.",
   "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "{_BACKEND} Selected.",
 
-  # Update Alert
   "UPDATE_ALERT_MESSAGE_BODY": "New version of eqTrainer is Available!",
   "UPDATE_ALERT_BUTTON_IGNORE": "Ignore",
   "UPDATE_ALERT_BUTTON_LATER": "Later",
@@ -180,7 +137,6 @@
   "UPDATE_ALERT_RELEASE_NOTE": "Release Note",
   "UPDATE_ALERT_MESSAGE_TITLE": "Update Available",
 
-  # Player Error Alert
   "ERROR_PLAYER_ALERT_CONTENT": "Error occurred while playing audio",
-  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "Okay",
+  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "Okay"
 }

@@ -42,7 +42,6 @@ dependencies:
   path: ^1.9.0
   fl_chart: ^1.0.0
   easy_localization: ^3.0.2
-  easy_localization_loader: ^2.0.1
   toastification: ^3.0.3
   upgrader: ^13.5.0
   audio_video_progress_bar: ^2.0.0
