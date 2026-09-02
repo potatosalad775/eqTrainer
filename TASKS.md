@@ -96,9 +96,31 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[-]` won't fix 
 ## Phase 3 — library care (optional)
 
 - [x] **F13 — Offer WAV→FLAC recompress.** Libraries that went through
-  `clip_format_migration.dart` (m4a → WAV) hold large WAV files. → Optional,
-  user-triggered recompress to FLAC (lossless-safe, roughly halves size). Never
-  auto-transcode user clips to Opus.
+  `clip_format_migration.dart` back when it hardcoded WAV hold large WAV files,
+  and a WAV-mode import still produces more. → Optional, user-triggered
+  recompress to FLAC (lossless-safe, roughly halves size). Never auto-transcode
+  a *lossless* clip to Opus — see F14 for why that qualifier matters.
+
+- [x] **F14 — Migrate legacy clips to the import policy, not to WAV.**
+  `clip_format_migration.dart` hardcoded WAV, so the same `.m4a` became `.wav`
+  or `.opus` depending only on *when* it was imported — `targetExtForImport`
+  has sent a lossy non-native source to Opus since F10. WAV there stored a
+  decode of an already-lossy file at roughly 6× the source's size (a 3-minute
+  256 kbps AAC: 5.5 MB → 31 MB WAV, 16 MB FLAC, 4.3 MB Opus).
+
+  F13's "never auto-transcode to Opus" was really a rule about *lossless*
+  sources — the reasoning in `clip_recompress_service.dart` is that re-encoding
+  clips the user still has lossless throws audio away. `.m4a`/`.aac` are already
+  lossy, so there is nothing lossless to protect, and a second Opus generation
+  at 192 kbps sits far below the multi-dB EQ boost being identified. → The
+  migration now derives its target from `targetExtForImport` against the stored
+  `ImportFormat` (`MiscSettingsProvider.storedImportFormat()`), so All-FLAC and
+  All-WAV are honoured for anyone who wants the decoded signal kept intact.
+
+  Two details: the `_minWavBytes = 44` gate became a format-agnostic
+  `_minOutputBytes = 64` (above a WAV header, FLAC STREAMINFO and an OpusHead
+  page alike), and WAV targets still take audio_decoder's file-based path
+  rather than `ClipEncoder`, which buffers the whole clip as float PCM.
 
 ---
 

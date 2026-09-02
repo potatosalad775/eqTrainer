@@ -278,7 +278,7 @@ ref are cancelled when a newer commit lands.
 | `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
 | `lib/features/session/model/frequency_calculator.dart` | Pure EQ frequency math |
 | `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
-| `lib/shared/service/clip_format_migration.dart` | One-time `.m4a` → WAV conversion of existing libraries |
+| `lib/shared/service/clip_format_migration.dart` | One-time conversion of existing libraries off `.m4a`/`.aac`, to whatever the user's import-format setting maps them to (Opus under Smart) |
 | `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
 | `lib/shared/service/playlist_service.dart` | Playlist business logic |
 | `lib/shared/model/audio_state.dart` | Output device + Android backend state |

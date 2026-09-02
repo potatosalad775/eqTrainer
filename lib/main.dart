@@ -98,12 +98,17 @@ Future<void> main() async {
   // Prepare Upgrader
   final upgrader = await UpgraderService().getInstance();
 
-  // Convert any pre-SoLoud .m4a clips to WAV. Deliberately not awaited: it is
-  // a no-op scan on every launch but the first one after updating, and
-  // blocking startup behind a full library's worth of native decodes would
-  // hold the app on a blank screen. It commits one clip at a time, so a clip
-  // the user reaches mid-run is either fully converted or untouched.
-  unawaited(ClipFormatMigration(AudioClipRepository(), AppDirectories()).run());
+  // Convert any pre-SoLoud .m4a clips to whatever the user's import-format
+  // setting would produce for them today. Deliberately not awaited: it is a
+  // no-op scan on every launch but the first one after updating, and blocking
+  // startup behind a full library's worth of decode-and-encode would hold the
+  // app on a blank screen. It commits one clip at a time, so a clip the user
+  // reaches mid-run is either fully converted or untouched.
+  unawaited(ClipFormatMigration(
+    AudioClipRepository(),
+    AppDirectories(),
+    importFormat: MiscSettingsProvider.storedImportFormat(),
+  ).run());
 
   runApp(
     EasyLocalization(

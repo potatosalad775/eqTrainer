@@ -37,6 +37,19 @@ class MiscSettingsProvider extends ChangeNotifier {
     Hive.box<MiscSettings>(miscSettingsBoxName).put(miscSettingsKey, _value);
   }
 
+  /// The stored import format, read without building a provider.
+  ///
+  /// `ClipFormatMigration` runs before the widget tree exists and needs the
+  /// user's format choice to pick its target; the box is already open by then.
+  /// Normalized on the way out for the same reason reads are elsewhere — a box
+  /// written before the SoLoud migration can still hold a retired ordinal.
+  static int storedImportFormat() => ImportFormat.normalize(
+        Hive.box<MiscSettings>(miscSettingsBoxName)
+                .get(miscSettingsKey)
+                ?.importFormat ??
+            ImportFormat.smart,
+      );
+
   bool get frequencyToolTip => _value.frequencyToolTip;
   int get importFormat => _value.importFormat;
   bool get volumeCompensation => _value.volumeCompensation;

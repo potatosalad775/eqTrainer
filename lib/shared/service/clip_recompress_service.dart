@@ -42,10 +42,10 @@ class RecompressResult {
 
 /// Recompresses WAV clips in the library to FLAC, losslessly.
 ///
-/// Libraries that went through [ClipFormatMigration] hold WAV copies of what
-/// used to be m4a, and a WAV-mode import produces more. FLAC stores the same
-/// samples in roughly half the space, and SoLoud decodes it natively, so the
-/// only thing given up is disk usage.
+/// Libraries migrated back when [ClipFormatMigration] hardcoded WAV hold WAV
+/// copies of what used to be m4a, and a WAV-mode import still produces more.
+/// FLAC stores the same samples in roughly half the space, and SoLoud decodes
+/// it natively, so the only thing given up is disk usage.
 ///
 /// Deliberately user-triggered rather than automatic. It rewrites files the
 /// user owns, and a long library costs real time and CPU, so it should be a
