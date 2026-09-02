@@ -371,7 +371,7 @@ ref are cancelled when a newer commit lands.
 | Platform | Artifact |
 |---|---|
 | Android | APK + AAB |
-| iOS | IPA (pod install required) |
+| iOS | IPA |
 | Windows | Windows executable |
 | macOS | DMG |
 | Linux | DEB (via flutter_distributor) |
@@ -419,6 +419,12 @@ ref are cancelled when a newer commit lands.
 `flutter_soloud` is the only Git dependency, pinned to an exact commit SHA
 rather than a mutable branch so builds are reproducible and the audio engine
 cannot change under a re-resolve (see `pubspec.yaml`).
+
+Neither Apple platform uses CocoaPods any more — every plugin the app depends
+on ships as a Swift Package, so `flutter build` resolves them itself and there
+is no `Podfile` on either side. Nothing in CI runs `pod install`. If a future
+dependency is CocoaPods-only, `flutter create` templates are the reference for
+putting a `Podfile` back.
 
 Desktop window title and minimum size are set per platform, not from Dart.
 They used to come from the `window_size` plugin, which was dropped: the values
