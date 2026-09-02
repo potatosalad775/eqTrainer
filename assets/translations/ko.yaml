@@ -133,8 +133,12 @@
   ## Audio Setting Card - Audio Import Format
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "오디오 가져오기 형식",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "스마트",
-  "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
-    "'스마트' 모드는 eqTrainer가 바로 재생할 수 있는 파일(WAV, MP3, FLAC, OGG, Opus)은 그대로 두고, 나머지만 변환합니다. 원본이 무손실이면 FLAC으로, 이미 손실 압축이면 Opus로 변환합니다. 다른 옵션은 모든 파일을 변환합니다. 'FLAC'은 무손실이면서 WAV의 약 절반 크기이고, 'Opus'는 critical listening에 충분한 품질로 훨씬 더 작으며, 'WAV'는 무압축이라 가장 큽니다.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_1": 
+    "'스마트' 모드는 eqTrainer가 바로 재생할 수 있는 파일(WAV, MP3, FLAC, OGG, Opus)은 그대로 두고, 나머지만 변환합니다. 원본이 무손실이면 FLAC으로, 이미 손실 압축이면 Opus로 변환합니다.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_2": 
+    "특정 오디오 포맷을 사용하는 나머지 모드는 전체 음원을 지정한 포맷으로 변환합니다.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_3": 
+    "'FLAC'은 무손실 압축 코덱으로, WAV의 약 절반 크기로 우수한 음질을 제공합니다. 'Opus'는 손실 압축 코덱이지만 청취 훈련 목적에 충분한 품질을 제공합니다. 'WAV'는 무압축 무손실 코덱으로, 우수한 음질을 제공하나 파일 크기가 매우 커질 수 있습니다.",
   "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (무손실)",
   "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (경량)",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (무압축)",
@@ -144,7 +148,7 @@
   "AUDIO_SETTING_RECOMPRESS_DESC":
     "라이브러리의 WAV 클립을 FLAC으로 다시 인코딩합니다. FLAC은 무손실이라 음질은 완전히 동일하며, 크기는 보통 절반 정도입니다. Opus나 FLAC으로 가져온 클립은 그대로 두며, 손실 형식으로는 절대 다시 인코딩하지 않습니다.",
   "AUDIO_SETTING_RECOMPRESS_CONFIRM":
-    "WAV 클립 {_COUNT}개를 FLAC으로 다시 압축할까요?\n\n현재 {_SIZE}를 사용하며, 압축 후에는 약 {_AFTER} 정도가 됩니다. 음질은 그대로이고 저장 공간만 확보됩니다.",
+    "WAV 클립 {_COUNT}개를 FLAC으로 다시 압축할까요?\n\n현재 {_SIZE}를 사용하고 있으며, 압축 후에는 약 {_AFTER} 정도가 됩니다. 음질은 그대로이고 저장 공간만 확보됩니다.",
   "AUDIO_SETTING_RECOMPRESS_START": "다시 압축",
   "AUDIO_SETTING_RECOMPRESS_DONE": "클립 {_COUNT}개를 다시 압축하여 {_SAVED}를 확보했습니다",
   "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS":

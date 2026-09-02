@@ -133,8 +133,12 @@
   ## Audio Setting Card - Audio Import Format
   "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "Audio Import Format",
   "AUDIO_SETTING_IMPORT_FORMAT_SMART": "Smart",
-  "AUDIO_SETTING_IMPORT_FORMAT_DESC": 
-    "'Smart' keeps files eqTrainer can already play (WAV, MP3, FLAC, OGG, Opus) exactly as they are, and converts anything else — to FLAC if the original was lossless, or to Opus if it was already lossy. The other options convert everything: 'FLAC' is lossless at about half the size of WAV, 'Opus' is much smaller still at a quality setting high enough for critical listening, and 'WAV' is uncompressed and largest.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_1": 
+    "'Smart' keeps files eqTrainer can already play (WAV, MP3, FLAC, OGG, Opus) exactly as they are, and converts anything else — to FLAC if the original was lossless, or to Opus if it was already lossy.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_2": 
+    "The other options convert everything to the specified format.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_3": 
+    "'FLAC' is a lossless compression codec that provides excellent audio quality at about half the size of WAV files. 'Opus' is a lossy compression codec that offers good quality for critical listening, and 'WAV' is an uncompressed lossless codec that provides the best audio quality but results in large file sizes.",
   "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (Lossless)",
   "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (Compact)",
   "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (Uncompressed)",

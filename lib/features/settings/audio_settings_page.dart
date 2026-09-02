@@ -26,7 +26,15 @@ class AudioSettingsPage extends StatelessWidget {
               const AudioImportFormatCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC".tr()),
+                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_1".tr()),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_2".tr()),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_3".tr()),
               ),
               const SizedBox(height: 12),
               // Renders nothing when the library holds no WAV clips, so this
