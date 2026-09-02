@@ -53,8 +53,7 @@ void main() {
       });
 
       test('returns "100.00%" when all attempts for a band are correct', () {
-        // 440 Hz falls in band 3 (Centre-Midrange: 200–800 Hz? No, 800–1500)
-        // 440 Hz: 200 <= 440 < 800 → band 2 (Lower-Midrange)
+        // 440 Hz sits in band 2, Lower-Midrange (200 <= f < 800).
         store.applySubmission(centerFreq: 440.0, isCorrect: true);
         expect(store.getResultPercentagePerFreq(2), equals('100.00%'));
       });
@@ -342,6 +341,51 @@ void main() {
         store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
         store.previousTrack(); // 0 → 2 (wrap)
         expect(store.currentPlayingAudioIndex, equals(2));
+      });
+
+      // Deep into a track, "previous" means restart it, not jump back. The
+      // store only decides whether to move the index; the caller seeks.
+      test('stays on the current track when past the restart threshold', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
+        store.nextTrack(); // 0 → 1
+        store.previousTrack(currentPosition: const Duration(seconds: 10));
+        expect(store.currentPlayingAudioIndex, equals(1));
+      });
+
+      test('goes back when still inside the restart threshold', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
+        store.nextTrack(); // 0 → 1
+        store.previousTrack(currentPosition: const Duration(seconds: 1));
+        expect(store.currentPlayingAudioIndex, equals(0));
+      });
+
+      test('exactly at the threshold still goes back', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac']);
+        store.nextTrack();
+        store.previousTrack(
+          threshold: const Duration(seconds: 3),
+          currentPosition: const Duration(seconds: 3),
+        );
+        expect(store.currentPlayingAudioIndex, equals(0));
+      });
+
+      test('honours a custom threshold', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac']);
+        store.nextTrack();
+        store.previousTrack(
+          threshold: const Duration(seconds: 1),
+          currentPosition: const Duration(seconds: 2),
+        );
+        expect(store.currentPlayingAudioIndex, equals(1));
+      });
+
+      test('does not notify when it decides to restart instead', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac']);
+        store.nextTrack();
+        var notifications = 0;
+        store.addListener(() => notifications++);
+        store.previousTrack(currentPosition: const Duration(seconds: 10));
+        expect(notifications, isZero);
       });
     });
 
