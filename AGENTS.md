@@ -26,7 +26,7 @@ eqTrainer/
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
 │   └── shared/                # Cross-feature code
-│       ├── model/             # Data models: AudioClip, AudioState, SettingData, MiscSettingsProvider
+│       ├── model/             # AudioClip, AudioState, BackendData/MiscSettings, MiscSettingsProvider
 │       ├── player/            # Audio engine: PlayerService (flutter_soloud)
 │       ├── repository/        # IAudioClipRepository + Hive implementation
 │       ├── service/           # Business logic services
@@ -35,9 +35,15 @@ eqTrainer/
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
 │   ├── icon/                  # App icon
-│   └── translations/          # en.yaml, ko.yaml (easy_localization)
+│   └── translations/          # en.json, ko.json (easy_localization)
+├── test/                      # Unit tests, mirroring lib/ (+ helpers/)
+├── integration_test/          # Real-engine tests — local only, never CI
 ├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners
-├── .github/workflows/build.yml           # CI/CD (5-platform builds)
+├── .github/workflows/
+│   ├── build.yml              # 5-platform release builds
+│   └── test.yml               # Unit tests, every push
+├── distribute_options.yaml    # fastforge jobs: Linux deb + rpm
+├── appcast.xml                # `upgrader` feed
 ├── pubspec.yaml
 ├── analysis_options.yaml
 ├── CONTRIBUTING.md
@@ -64,7 +70,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `PlaylistService` | Provider | Playlist operations & enabled-clip queries |
 | `ImportWorkflowService` | Provider | File-picker import flow |
 | `ClipRecompressService` | Provider | User-triggered WAV→FLAC recompress |
-| `ClipFormatMigration` | ChangeNotifier | Legacy-clip conversion; constructed and started in `main()` before `runApp`, then provided by `.value` so playback screens can pause it |
+| `ClipFormatMigration` | ChangeNotifier | Started in `main()` before `runApp`, so provided by `.value`; playback screens pause it. See [Clip Formats](#clip-formats) |
 | `SessionParameter` | ChangeNotifier | Session config (band, gain, Q, filter type, threshold) |
 | `SessionStore` | ChangeNotifier | Session runtime state & results |
 | `SessionController` | Provider | Orchestrates session launch & answer submission |
@@ -76,16 +82,17 @@ Each feature is a self-contained module with:
 - `widget/` or `widgets/` — feature-local widgets
 - `data/` — local state/data classes (if any)
 - `model/` — feature-specific models (if any)
-- `index.dart` — barrel export
+
+There are **no barrel files.** Import the specific `package:eq_trainer/...` path.
 
 ### Shared Layer (`lib/shared/`)
 
 | Sub-directory | Content |
 |---|---|
-| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `SettingData` (Hive settings), `MiscSettingsProvider` (ChangeNotifier over `SettingData`) |
+| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (the two Hive records, both in `setting_data.dart`), `MiscSettingsProvider` (ChangeNotifier over `MiscSettings`) |
 | `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
+| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
 | `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
 | `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
@@ -98,7 +105,6 @@ Each feature is a self-contained module with:
 - **Files:** `snake_case.dart`
 - **Classes:** `PascalCase`
 - **Private members:** `_camelCase` prefix
-- **Barrel exports:** every module exposes an `index.dart`
 
 ### Audio Engine (`PlayerService`)
 
@@ -222,14 +228,25 @@ SessionController.submitAnswer()
 
 ### Localization
 
-- `easy_localization` with YAML files in `assets/translations/`
+- `easy_localization` with **JSON** files in `assets/translations/` (`en.json`, `ko.json`)
 - Keys are SCREAMING_SNAKE_CASE strings (e.g. `"SESSION_SNACKBAR_CORRECT"`)
 - Access via `.tr()` extension: `"MY_KEY".tr(namedArgs: {'_VAR': value})`
 - Supported locales: `en`, `ko`
 
+JSON, not YAML, because it is what easy_localization's built-in
+`RootBundleAssetLoader` reads. The YAML that used to live here needed
+`easy_localization_loader`, which drags in `connectivity_plus` — a **native
+plugin on all five platforms** — purely for a network loader the app never
+calls. Do not reintroduce it; a custom `AssetLoader` is the cheaper way back to
+YAML if the section comments are ever worth it. Chosen locale persists through
+`shared_preferences` (easy_localization's own storage, not the Hive boxes), so
+tests that boot it must stub that channel — see `l10n_asset_smoke_test.dart`.
+
 ### Theming
 
-- Material Design 3, seed color `0xFF375778` (slate blue)
+- Material Design 3. `AppColors` holds fully enumerated `lightScheme`/`darkScheme`
+  `ColorScheme` literals — there is **no** `ColorScheme.fromSeed` call to edit;
+  regenerate the pair if the palette changes
 - Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to the `miscSettingsBox` Hive box
 - Custom font: `PretendardVariable` (supports Korean)
 - Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
@@ -241,43 +258,24 @@ SessionController.submitAnswer()
 
 ### Setup
 
-```bash
-flutter pub get
-flutter run
-```
-
-Requires Flutter stable 3.35.3+. See [Flutter install docs](https://docs.flutter.dev/get-started/install).
+`flutter pub get`, then `flutter run`. CI pins Flutter stable **3.47.2**
+(every job in both workflows); match it locally when reproducing a CI failure.
 
 ### Code Generation
 
-After modifying Hive models (`@HiveType`/`@HiveField`) or freezed annotations:
+After modifying Hive models (`@HiveType`/`@HiveField`):
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-### Running / Building
-
-```bash
-# Run on connected device/emulator
-flutter run
-
-# Build for a specific platform
-flutter build apk          # Android APK
-flutter build appbundle    # Android AAB
-flutter build ios          # iOS
-flutter build macos        # macOS
-flutter build windows      # Windows
-flutter build linux        # Linux
-```
-
 ### Linting
 
-```bash
-flutter analyze
-```
-
-Uses `flutter_lints` (^6.0.0) with Material3 recommendations and `custom_lint`.
+`flutter analyze`. `flutter_lints` ^6.0.0 plus five rules turned on explicitly
+in `analysis_options.yaml`: `prefer_const_constructors`,
+`prefer_const_literals_to_create_immutables`, `use_build_context_synchronously`,
+`avoid_empty_else`, `unawaited_futures`. The platform runner directories are
+excluded from analysis. No `custom_lint`.
 
 ### Testing
 
@@ -292,8 +290,14 @@ scaffolding is in `test/helpers/`:
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
 | `hive_test_box.dart` | `HiveTestBox`: a throwaway `AudioClip` box. Anything that goes through `clip.key` needs clips added via a box: a bare `AudioClip(...)` has a **null** key, so two of them compare equal and a "was this record deleted?" check passes for the wrong reason. |
 
-Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
-`setMockMethodCallHandler`; see `import_workflow_service_test.dart`.
+Platform channels (`audio_decoder`, `path_provider`, `shared_preferences`) are
+stubbed per test with `setMockMethodCallHandler` rather than by depending on the
+plugin; see `import_workflow_service_test.dart`.
+
+`l10n_asset_smoke_test.dart` boots a real `EasyLocalization` and asserts both
+locales resolve out of the bundle. It exists because nothing else catches a
+broken translation asset: rename a file or drop the `assets:` entry and every
+string silently falls back to rendering its own raw key.
 
 ```bash
 flutter test test/              # unit tests — headless, this is what CI runs
@@ -370,11 +374,11 @@ ref are cancelled when a newer commit lands.
 
 | Platform | Artifact |
 |---|---|
-| Android | APK + AAB |
+| Android | AAB only (`flutter build appbundle`; the step is misnamed "Build APK") |
 | iOS | IPA |
 | Windows | Windows executable |
 | macOS | DMG |
-| Linux | DEB (via flutter_distributor) |
+| Linux | DEB + RPM (via `fastforge`, jobs in `distribute_options.yaml`) |
 
 ---
 
@@ -388,15 +392,15 @@ ref are cancelled when a newer commit lands.
 | `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
 | `lib/features/session/model/frequency_calculator.dart` | Pure EQ frequency math |
 | `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
-| `lib/shared/service/clip_format_migration.dart` | One-time conversion of existing libraries off `.m4a`/`.aac`, to whatever the user's import-format setting maps them to (Opus under Smart). Pauses while audio is playing |
-| `lib/shared/service/clip_recompress_service.dart` | User-triggered WAV→FLAC recompress, from audio settings |
+| `lib/shared/service/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
+| `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
 | `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
 | `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
 | `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
 | `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
 | `lib/shared/model/audio_state.dart` | Output device + Android backend state |
-| `assets/translations/en.yaml` | English strings |
-| `assets/translations/ko.yaml` | Korean strings |
+| `assets/translations/en.json` | English strings |
+| `assets/translations/ko.json` | Korean strings |
 
 ---
 
@@ -408,7 +412,7 @@ ref are cancelled when a newer commit lands.
 | `hive_ce` + `hive_ce_flutter` | Local persistence |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
 | `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
-| `easy_localization` | i18n |
+| `easy_localization` | i18n. Default `RootBundleAssetLoader` only — no `easy_localization_loader`, see [Localization](#localization) |
 | `fl_chart` | EQ frequency graph visualization |
 | `toastification` | In-session answer feedback toasts |
 | `upgrader` | In-app update prompts |
