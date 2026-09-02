@@ -89,7 +89,13 @@ class AudioClipRepository implements IAudioClipRepository {
     final hi = oldIndex < target ? target : oldIndex;
     final updates = <dynamic, AudioClip>{};
     for (var i = lo; i <= hi; i++) {
-      updates[keys[i]] = values[i];
+      // Every entry in the range lands under a key other than the one it was
+      // read from, and Hive refuses to store a bound HiveObject under a second
+      // key. So write copies: readers take their instances from Box.values
+      // after the event anyway, never from the list passed in here.
+      final v = values[i];
+      updates[keys[i]] =
+          AudioClip(v.fileName, v.ogAudioName, v.duration, v.isEnabled);
     }
     await _box.putAll(updates);
   }
