@@ -166,11 +166,11 @@ class _ImportPageState extends State<ImportPage> {
     final audioState = Provider.of<AudioState>(context, listen: false);
     final workflow = context.read<ImportWorkflowService>();
 
-    const allowedExtensions = [
-      'wav', 'mp3', 'flac', 'm4a', 'aac', 'ogg', 'wma', 'aiff', 'opus', 'xmp4'
-    ];
+    // Single source of truth with the format policy, so a format can never be
+    // offered in the picker that the importer has no rule for.
+    const allowedExtensions = importPickerExtensions;
 
-    final FilePickerResult? importResult;
+    final List<PlatformFile> importResult;
     try {
       importResult = await FilePicker.pickFiles(
         type: FileType.custom,
@@ -184,12 +184,12 @@ class _ImportPageState extends State<ImportPage> {
 
     if (!mounted) return;
 
-    if (importResult == null || importResult.files.isEmpty) {
+    if (importResult.isEmpty) {
       importPageState.value = ImportPageState.aborted;
       return;
     }
 
-    final pickedFile = importResult.files.first;
+    final pickedFile = importResult.first;
     String? filePath = pickedFile.path;
     if (filePath == null) {
       importPageState.value = ImportPageState.error;
@@ -207,17 +207,11 @@ class _ImportPageState extends State<ImportPage> {
     if (targetExt != null) {
       importPageState.value = ImportPageState.converting;
       try {
-        if (targetExt == '.m4a') {
-          filePath = await workflow.convertToM4a(
-            fileNameWithoutExt: fileName,
-            sourcePath: filePath,
-          );
-        } else {
-          filePath = await workflow.convertToWav(
-            fileNameWithoutExt: fileName,
-            sourcePath: filePath,
-          );
-        }
+        filePath = await workflow.convertTo(
+          fileNameWithoutExt: fileName,
+          sourcePath: filePath,
+          targetExt: targetExt,
+        );
         // Track the converted temp file so it's cleaned up on dispose,
         // whether the import completes or is aborted.
         _tempConvertedPath = filePath;

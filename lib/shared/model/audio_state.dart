@@ -1,34 +1,41 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:coast_audio/coast_audio.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
+/// Output device selection, plus the Android backend the engine opens it with.
+///
+/// Under coast_audio this also owned a set of enabled *backends* per platform,
+/// because every platform's backend had to be picked explicitly. SoLoud picks
+/// the desktop backend itself and exposes no hook to override it (Windows and
+/// Linux never create an explicit `ma_context`), so the only choice left is
+/// Android's — which eqTrainer does need, see [androidBackend].
 final class AudioState extends ChangeNotifier {
   AudioState({
-    required this.backend,
+    required this.androidBackend,
     required this.outputDevice,
   });
 
-  late AudioDeviceBackend backend;
-  late AudioDeviceInfo? outputDevice;
+  /// Which native backend the engine opens the Android output device with.
+  ///
+  /// Read at [SoLoud.init] only. Ignored on every other platform, where SoLoud
+  /// chooses the backend and offers nothing to override it with.
+  AndroidAudioBackend androidBackend;
+
+  PlaybackDevice? outputDevice;
 
   /// True when the user has explicitly chosen a device from the dropdown.
   bool userSelectedDevice = false;
 
   Timer? _pollTimer;
 
-  /// Cached context for device enumeration — reused across polls to avoid
-  /// creating multiple miniaudio contexts on the same backend, which can
-  /// interfere with an active playback device (especially on AAudio/Android).
-  AudioDeviceContext? _pollContext;
-
   AudioState copyWith({
-    AudioDeviceBackend? backend,
-    AudioDeviceInfo? outputDevice,
+    AndroidAudioBackend? androidBackend,
+    PlaybackDevice? outputDevice,
     bool? userSelectedDevice,
   }) {
     return AudioState(
-      backend: backend ?? this.backend,
+      androidBackend: androidBackend ?? this.androidBackend,
       outputDevice: outputDevice ?? this.outputDevice,
     )..userSelectedDevice = userSelectedDevice ?? this.userSelectedDevice;
   }
@@ -40,8 +47,10 @@ final class AudioState extends ChangeNotifier {
   /// - If no explicit selection was made, follow the OS default device.
   void refreshDevices() {
     try {
-      _pollContext ??= AudioDeviceContext(backends: [backend]);
-      final devices = _pollContext!.getDevices(AudioDeviceType.playback);
+      // Safe with or without an initialized engine, and it does not create a
+      // second context — the coast_audio version had to cache an
+      // AudioDeviceContext here precisely to avoid that.
+      final devices = SoLoud.instance.listPlaybackDevices();
 
       if (userSelectedDevice && outputDevice != null) {
         final stillExists = devices.any((d) => d.name == outputDevice!.name);
@@ -73,13 +82,6 @@ final class AudioState extends ChangeNotifier {
   void stopDevicePolling() {
     _pollTimer?.cancel();
     _pollTimer = null;
-    final ctx = _pollContext;
-    if (ctx != null) {
-      // Release the native context instead of just dropping the reference —
-      // otherwise it leaks for the lifetime of the process.
-      AudioResourceManager.dispose(ctx.resourceId);
-    }
-    _pollContext = null;
   }
 
   @override
@@ -88,65 +90,65 @@ final class AudioState extends ChangeNotifier {
     super.dispose();
   }
 
-  factory AudioState.initialize({ required List<String> backendList }) {
-    final AudioDeviceContext deviceContext;
-    final backends = <AudioDeviceBackend, bool>{};
-
-    if(backendList.isNotEmpty) {
-      for (final backend in AudioDeviceBackend.values) {
-        backends[backend] = switch (backend) {
-          AudioDeviceBackend.coreAudio => backendList.contains("coreAudio"),
-          AudioDeviceBackend.aaudio => backendList.contains("aaudio"),
-          AudioDeviceBackend.openSLES => backendList.contains("openSLES"),
-          AudioDeviceBackend.wasapi => backendList.contains("wasapi"),
-          AudioDeviceBackend.alsa => backendList.contains("alsa"),
-          AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
-          AudioDeviceBackend.jack => backendList.contains("jack"),
-          // Previously hardcoded true regardless of the saved list, so a
-          // real backend failure silently fell back to dummy (plays
-          // silence, reports no error) instead of surfacing the failure.
-          AudioDeviceBackend.dummy => backendList.contains("dummy"),
-        };
-      }
-    } else {
-      // Initialize Default Backend
-      for (final backend in AudioDeviceBackend.values) {
-        backends[backend] = switch (backend) {
-          AudioDeviceBackend.coreAudio => Platform.isIOS || Platform.isMacOS,
-          AudioDeviceBackend.aaudio => false,
-          AudioDeviceBackend.openSLES => Platform.isAndroid,
-          AudioDeviceBackend.wasapi => Platform.isWindows,
-          AudioDeviceBackend.alsa => Platform.isLinux,
-          AudioDeviceBackend.pulseAudio => Platform.isLinux,
-          AudioDeviceBackend.jack => Platform.isLinux,
-          // Don't auto-fall-back to dummy: a real backend failure should
-          // throw (see the try/catch below) rather than silently succeed
-          // with a context that plays silence.
-          AudioDeviceBackend.dummy => false,
-        };
-      }
-    }
-
+  /// Builds the initial state from the saved backend setting.
+  ///
+  /// Device enumeration is best-effort: it runs before the engine is up, and a
+  /// null [outputDevice] simply means "let SoLoud open the OS default".
+  factory AudioState.initialize({required List<String> backendList}) {
+    PlaybackDevice? defaultDevice;
     try {
-      deviceContext = AudioDeviceContext(
-          backends: backends.entries.where((e) => e.value).map((e) => e.key).toList()
-      );
-    } on MaException catch (e) {
-      throw Exception(e.toString());
+      defaultDevice = SoLoud.instance
+          .listPlaybackDevices()
+          .where((d) => d.isDefault)
+          .firstOrNull;
+    } catch (_) {
+      defaultDevice = null;
     }
-
-    final activeBackend = deviceContext.activeBackend;
-    final defaultDevice = deviceContext.getDevices(AudioDeviceType.playback).where((d) => d.isDefault).firstOrNull;
-
-    // Dispose the probe context immediately — keeping it alive can interfere
-    // with the playback AudioDeviceContext created later in the audio isolate,
-    // especially on AAudio/Android where multiple ma_contexts on the same
-    // backend cause start-up failures.
-    AudioResourceManager.dispose(deviceContext.resourceId);
 
     return AudioState(
-      backend: activeBackend,
+      androidBackend: androidBackendFromSavedList(backendList),
       outputDevice: defaultDevice,
     );
   }
 }
+
+/// Reads the Android backend choice out of the saved coast_audio backend list.
+///
+/// The setting is still stored as `BackendData(List<String>)` in `backendBox`,
+/// which is what pre-migration installs already hold — so existing users are
+/// mapped rather than reset. Only two of those lists mean anything now:
+/// a user who deliberately enabled AAudio *and* turned OpenSL ES off keeps
+/// AAudio; everyone else (including the empty default list) gets OpenSL ES,
+/// which is what eqTrainer has always shipped on Android. Several Digital
+/// Audio Players accept an AAudio stream and then glitch on it, and automatic
+/// fallback cannot help — miniaudio only skips a backend that fails to
+/// *initialize*.
+AndroidAudioBackend androidBackendFromSavedList(List<String> backendList) =>
+    Platform.isAndroid
+        ? androidBackendFromSavedListOnAndroid(backendList)
+        : AndroidAudioBackend.auto;
+
+/// The Android half of [androidBackendFromSavedList], split out so the mapping
+/// can be tested off-device — a wrong answer here silently moves the Digital
+/// Audio Players this override exists for back onto AAudio.
+@visibleForTesting
+AndroidAudioBackend androidBackendFromSavedListOnAndroid(List<String> backendList) {
+  // Written by the current settings page, which stores one entry.
+  if (backendList.contains('auto')) return AndroidAudioBackend.auto;
+  // Anything else is a legacy coast_audio multi-backend list.
+  if (backendList.contains('aaudio') && !backendList.contains('openSLES')) {
+    return AndroidAudioBackend.aaudio;
+  }
+  return AndroidAudioBackend.openSles;
+}
+
+/// Inverse of [androidBackendFromSavedList], for writing the setting back.
+///
+/// Kept in the old list shape so one round-trip through Hive is lossless and
+/// the mapping above stays the single place that interprets it.
+List<String> savedListForAndroidBackend(AndroidAudioBackend backend) =>
+    switch (backend) {
+      AndroidAudioBackend.auto => ['auto'],
+      AndroidAudioBackend.aaudio => ['aaudio'],
+      AndroidAudioBackend.openSles => ['openSLES'],
+    };

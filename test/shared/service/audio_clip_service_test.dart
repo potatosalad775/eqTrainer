@@ -4,13 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
-class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
-
-class MockAppDirectories extends Mock implements AppDirectories {}
+import '../../helpers/mocks.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -79,6 +76,7 @@ void main() {
           startSec: 0.0,
           endSec: 5.5,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -104,12 +102,15 @@ void main() {
           startSec: 0.0,
           endSec: 180.0,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        // isTrimmed: false copies as-is, preserving source extension
-        // (conversion to m4a/wav happens at import time, not in createClip)
+        // isTrimmed: false copies as-is, preserving the source extension. Any
+        // format conversion happened earlier, in ImportWorkflowService, so
+        // by the time createClip sees a foreign format it has already been
+        // converted to whatever the import-format setting maps it to.
         expect(clip.fileName, endsWith('.mp3'));
       });
 
@@ -122,11 +123,12 @@ void main() {
           startSec: 0.0,
           endSec: 10.0,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
-        // Source extension preserved; conversion happens at import time
+        // Source extension preserved; createClip does not decide formats.
         expect(clip.fileName, endsWith('.aac'));
       });
 
@@ -139,6 +141,7 @@ void main() {
           startSec: 0.0,
           endSec: 3.0,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -155,6 +158,7 @@ void main() {
           startSec: 5.0, // startSec is ignored in the convert-to-wav path
           endSec: 42.7,
           isTrimmed: false,
+          importFormat: ImportFormat.smart,
         );
 
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
@@ -169,6 +173,7 @@ void main() {
             startSec: 0.0,
             endSec: 1.0,
             isTrimmed: false,
+            importFormat: ImportFormat.smart,
           ),
           throwsException,
         );

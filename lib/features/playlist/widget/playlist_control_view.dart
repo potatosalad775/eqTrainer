@@ -2,11 +2,11 @@
 import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:coast_audio/coast_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/error.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
+import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/widget/player_control_buttons.dart';
 
 class PlaylistControlView extends StatefulWidget {
@@ -21,13 +21,22 @@ class PlaylistControlView extends StatefulWidget {
 class _PlaylistControlViewState extends State<PlaylistControlView> {
   final _player = PlaylistPlayer();
 
+  /// Captured in initState rather than read in dispose, where the element is
+  /// already detached from the tree.
+  late final ClipFormatMigration _clipFormatMigration;
+
   @override
   void initState() {
     super.initState();
+    // Same reason as the session page: the preview is playback, and a
+    // decode-and-encode running against it costs CPU we would rather spend on
+    // the audio. Nested pauses are counted, so a preview opened over a
+    // session does not resume the run when only the preview closes.
+    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
     final audioState = context.read<AudioState>();
     _player.launch(
-      backend: audioState.backend,
-      outputDeviceId: audioState.outputDevice?.id,
+      androidBackend: audioState.androidBackend,
+      outputDevice: audioState.outputDevice,
       path: widget.filePath,
     ).onError((e, _) {
       // Unhandled before: a missing/unreadable file (e.g. a dangling
@@ -47,6 +56,7 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
 
   @override
   void dispose() {
+    _clipFormatMigration.resume();
     _player.dispose();
     super.dispose();
   }
@@ -56,8 +66,8 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
     return ChangeNotifierProvider<PlaylistPlayer>.value(
       value: _player,
       builder: (context, _) {
-        final playerPosition = context.select<PlaylistPlayer, AudioTime>((p) => p.fetchPosition);
-        final playerDuration = context.select<PlaylistPlayer, AudioTime>((p) => p.fetchDuration);
+        final playerPosition = context.select<PlaylistPlayer, Duration>((p) => p.fetchPosition);
+        final playerDuration = context.select<PlaylistPlayer, Duration>((p) => p.fetchDuration);
         final playerState = context.select<PlaylistPlayer, PlayerStateResponse>((p) => p.fetchPlayerState);
         return Padding(
           padding: const EdgeInsets.all(AppDimens.padding),
@@ -69,32 +79,24 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
               ProgressBar(
                 barHeight: 12,
                 timeLabelPadding: 8,
-                progress: Duration(microseconds: (playerPosition.seconds * 1000 * 1000).toInt()),
-                total: Duration(microseconds: (playerDuration.seconds * 1000 * 1000).toInt()),
+                progress: playerPosition,
+                total: playerDuration,
                 onSeek: (position) async {
-                  await _player.seek(AudioTime.fromDuration(position));
+                  await _player.seek(position);
                 },
               ),
               // Audio Control Button Row
               PlayerControlButtons(
                 isPlaying: playerState.isPlaying,
-                onPrevious: () => _player.seek(AudioTime.zero),
+                onPrevious: () => _player.seek(Duration.zero),
                 onPlayPause: () {
                   if (playerState.isPlaying) {
                     _player.pause();
                   } else {
-                    _player.play().onError((e, _) {
-                      if (context.mounted) {
-                        showPlayerErrorDialog(context,
-                          action: () {
-                            _player.shutdown();
-                            Navigator.of(context).pop();
-                            Navigator.of(context).pop();
-                          },
-                          error: e,
-                        );
-                      }
-                    });
+                    // play() is a synchronous FFI write now, so there is no
+                    // Future to hang an error handler off — a file that won't
+                    // load fails in the awaited launch() above instead.
+                    _player.play();
                   }
                 },
                 thirdIcon: Icons.close,
@@ -110,6 +112,6 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
   }
 }
 
-class PlaylistPlayer extends PlayerIsolate {
+class PlaylistPlayer extends PlayerService {
   PlaylistPlayer();
 }

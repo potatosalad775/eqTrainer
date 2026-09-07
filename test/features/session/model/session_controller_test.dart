@@ -1,36 +1,43 @@
+import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
-class MockPlayerIsolate extends Mock implements PlayerIsolate {}
+import '../../../helpers/mocks.dart';
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(AndroidAudioBackend.openSles);
+  });
+
   group('SessionController', () {
-    late MockPlayerIsolate mockPlayer;
+    late MockPlayerService mockPlayer;
     late SessionStore sessionStore;
     late SessionParameter sessionParameter;
     late SessionController controller;
 
     setUp(() async {
-      mockPlayer = MockPlayerIsolate();
+      mockPlayer = MockPlayerService();
       sessionStore = SessionStore();
       sessionParameter = SessionParameter();
       controller = SessionController();
 
-      // Stub all player calls used by initSession() and submitAnswer()
+      // Stub all player calls used by initSession() and submitAnswer().
+      // setEQParams is the only one that awaits — the rest are plain FFI
+      // writes and return void, so they stub with thenReturn.
       when(() => mockPlayer.setEQParams(
             enableEQ: any(named: 'enableEQ'),
             frequency: any(named: 'frequency'),
             gainDb: any(named: 'gainDb'),
           )).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQ(any())).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQFreq(any())).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQGain(any())).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQQ(any())).thenAnswer((_) async {});
+      when(() => mockPlayer.setEQ(any())).thenReturn(null);
+      when(() => mockPlayer.setEQFreq(any())).thenReturn(null);
+      when(() => mockPlayer.setEQGain(any())).thenReturn(null);
+      when(() => mockPlayer.setEQQ(any())).thenReturn(null);
 
       // Populate frequency/graph data so initSession() has a valid list to pick from
       await sessionStore.initFrequency(sessionParameter: sessionParameter);
@@ -286,6 +293,171 @@ void main() {
         final expectedFreqIndex = (controller.answerGraphIndex / 2).floor();
         final expectedFreq = sessionStore.centerFreqLogList[expectedFreqIndex];
         expect(controller.answerCenterFreq, equals(expectedFreq));
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // launchSession — the one path that touches every collaborator
+    // -------------------------------------------------------------------------
+    group('launchSession', () {
+      late MockPlaylistService playlist;
+      late AudioState audioState;
+
+      // A fresh store: the outer setUp has already run one round on the
+      // shared one, and launch has to be shown resetting that.
+      late SessionStore store;
+
+      setUp(() {
+        playlist = MockPlaylistService();
+        audioState = AudioState(
+          androidBackend: AndroidAudioBackend.openSles,
+          outputDevice: null,
+        );
+        store = SessionStore();
+        when(() => mockPlayer.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: null,
+              path: any(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            )).thenAnswer((_) async {});
+      });
+
+      tearDown(() {
+        store.dispose();
+        audioState.dispose();
+      });
+
+      Future<void> launch({bool Function()? shouldContinue}) =>
+          controller.launchSession(
+            mockPlayer,
+            audioState: audioState,
+            sessionStore: store,
+            sessionParameter: sessionParameter,
+            playlistService: playlist,
+            volumeCompensation: true,
+            shouldContinue: shouldContinue,
+          );
+
+      test('opens the first enabled clip and reports ready', () async {
+        when(playlist.listEnabledClipPaths)
+            .thenAnswer((_) async => ['/a.flac', '/b.flac']);
+
+        await launch();
+
+        expect(store.sessionState, equals(SessionState.ready));
+        expect(store.playlistPaths, equals(['/a.flac', '/b.flac']));
+        expect(store.currentClipPath, equals('/a.flac'));
+        verify(() => mockPlayer.launch(
+              androidBackend: AndroidAudioBackend.openSles,
+              outputDevice: null,
+              path: '/a.flac',
+              volumeCompensation: true,
+            )).called(1);
+        // The graph is populated and a first answer picked.
+        expect(store.graphBarDataList, isNotEmpty);
+        expect(controller.answerGraphIndex,
+            inInclusiveRange(0, store.graphBarDataList.length - 1));
+      });
+
+      test('applies the session Q to the fresh player once', () async {
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        sessionParameter.qFactor = 2.5;
+
+        await launch();
+
+        verify(() => mockPlayer.setEQQ(2.5)).called(1);
+      });
+
+      test('reports playlistEmpty and never touches the player when nothing '
+          'is enabled', () async {
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async => []);
+
+        await launch();
+
+        expect(store.sessionState, equals(SessionState.playlistEmpty));
+        verifyNever(() => mockPlayer.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: any(named: 'outputDevice'),
+              path: any(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            ));
+      });
+
+      test('resets the previous session\'s score and picker', () async {
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        // Leave a finished session behind in the store.
+        await store.initFrequency(sessionParameter: sessionParameter);
+        store.applySubmission(centerFreq: 440, isCorrect: true);
+        store.applySubmission(centerFreq: 440, isCorrect: false);
+        store.setPickerValue(3);
+
+        await launch();
+
+        expect(store.elapsedSession, isZero);
+        expect(store.resultCorrect, isZero);
+        expect(store.resultIncorrect, isZero);
+        expect(store.currentPickerValue, equals(1));
+      });
+
+      test('goes to init synchronously, before the first await', () {
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        store.setSessionState(SessionState.ready);
+
+        // Not awaited on purpose: the state must already have moved so a
+        // relaunch never renders the previous session's ready UI.
+        final pending = launch();
+        expect(store.sessionState, equals(SessionState.init));
+        return pending;
+      });
+
+      test('stops writing to the store once shouldContinue turns false',
+          () async {
+        var stillOnPage = true;
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async {
+          // The user leaves the page while the playlist is being read.
+          stillOnPage = false;
+          return ['/a.flac'];
+        });
+
+        await launch(shouldContinue: () => stillOnPage);
+
+        // Nothing after the abandoned await may land in the app-scoped store.
+        expect(store.sessionState, equals(SessionState.init));
+        expect(store.playlistPaths, isEmpty);
+        verifyNever(() => mockPlayer.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: any(named: 'outputDevice'),
+              path: any(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            ));
+      });
+
+      test('a player that fails to open reports error and rethrows', () async {
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        when(() => mockPlayer.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: null,
+              path: any(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            )).thenThrow(StateError('no device'));
+
+        await expectLater(launch(), throwsException);
+        expect(store.sessionState, equals(SessionState.error));
+      });
+
+      test('a failure after leaving the page does not write error either',
+          () async {
+        var stillOnPage = true;
+        when(playlist.listEnabledClipPaths).thenAnswer((_) async {
+          stillOnPage = false;
+          throw StateError('box closed');
+        });
+
+        await expectLater(
+          launch(shouldContinue: () => stillOnPage),
+          throwsException,
+        );
+        expect(store.sessionState, equals(SessionState.init));
       });
     });
   });

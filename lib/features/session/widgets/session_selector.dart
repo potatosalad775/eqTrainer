@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:toastification/toastification.dart';
@@ -20,7 +20,7 @@ class SessionSelector extends StatelessWidget {
     final sessionController = context.read<SessionController>();
 
     sessionController.submitAnswer(
-      player: context.read<PlayerIsolate>(),
+      player: context.read<PlayerService>(),
       sessionStore: context.read<SessionStore>(),
       sessionParameter: context.read<SessionParameter>(),
       onResult: (isCorrect, correctIndex) {

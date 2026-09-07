@@ -53,8 +53,7 @@ void main() {
       });
 
       test('returns "100.00%" when all attempts for a band are correct', () {
-        // 440 Hz falls in band 3 (Centre-Midrange: 200–800 Hz? No, 800–1500)
-        // 440 Hz: 200 <= 440 < 800 → band 2 (Lower-Midrange)
+        // 440 Hz sits in band 2, Lower-Midrange (200 <= f < 800).
         store.applySubmission(centerFreq: 440.0, isCorrect: true);
         expect(store.getResultPercentagePerFreq(2), equals('100.00%'));
       });
@@ -273,6 +272,38 @@ void main() {
       });
     });
 
+    // The launch snapshot goes stale when a background pass rewrites a clip
+    // to another format mid-session; the resolved path is written back here
+    // so the lookup is paid once per clip rather than on every visit.
+    group('updatePathAt', () {
+      test('repoints the entry it names and leaves the rest alone', () {
+        store.setPlaylistPaths(['/a.m4a', '/b.flac']);
+        store.updatePathAt(0, '/a.opus');
+        expect(store.playlistPaths, equals(['/a.opus', '/b.flac']));
+      });
+
+      test('is what currentClipPath reads back', () {
+        store.setPlaylistPaths(['/a.m4a', '/b.flac']);
+        store.updatePathAt(0, '/a.opus');
+        expect(store.currentClipPath, equals('/a.opus'));
+      });
+
+      test('ignores an out-of-range index', () {
+        store.setPlaylistPaths(['/a.flac']);
+        store.updatePathAt(5, '/x.flac');
+        store.updatePathAt(-1, '/x.flac');
+        expect(store.playlistPaths, equals(['/a.flac']));
+      });
+
+      test('does not notify when the path is unchanged', () {
+        store.setPlaylistPaths(['/a.flac']);
+        var notifications = 0;
+        store.addListener(() => notifications++);
+        store.updatePathAt(0, '/a.flac');
+        expect(notifications, isZero);
+      });
+    });
+
     group('nextTrack', () {
       test('is no-op when playlist is empty', () {
         store.nextTrack();
@@ -310,6 +341,51 @@ void main() {
         store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
         store.previousTrack(); // 0 → 2 (wrap)
         expect(store.currentPlayingAudioIndex, equals(2));
+      });
+
+      // Deep into a track, "previous" means restart it, not jump back. The
+      // store only decides whether to move the index; the caller seeks.
+      test('stays on the current track when past the restart threshold', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
+        store.nextTrack(); // 0 → 1
+        store.previousTrack(currentPosition: const Duration(seconds: 10));
+        expect(store.currentPlayingAudioIndex, equals(1));
+      });
+
+      test('goes back when still inside the restart threshold', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
+        store.nextTrack(); // 0 → 1
+        store.previousTrack(currentPosition: const Duration(seconds: 1));
+        expect(store.currentPlayingAudioIndex, equals(0));
+      });
+
+      test('exactly at the threshold still goes back', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac']);
+        store.nextTrack();
+        store.previousTrack(
+          threshold: const Duration(seconds: 3),
+          currentPosition: const Duration(seconds: 3),
+        );
+        expect(store.currentPlayingAudioIndex, equals(0));
+      });
+
+      test('honours a custom threshold', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac']);
+        store.nextTrack();
+        store.previousTrack(
+          threshold: const Duration(seconds: 1),
+          currentPosition: const Duration(seconds: 2),
+        );
+        expect(store.currentPlayingAudioIndex, equals(1));
+      });
+
+      test('does not notify when it decides to restart instead', () {
+        store.setPlaylistPaths(['/a.flac', '/b.flac']);
+        store.nextTrack();
+        var notifications = 0;
+        store.addListener(() => notifications++);
+        store.previousTrack(currentPosition: const Duration(seconds: 10));
+        expect(notifications, isZero);
       });
     });
 

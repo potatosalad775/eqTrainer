@@ -2,15 +2,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
-import 'package:hive_ce/hive.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 
-class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
-
-class MockAppDirectories extends Mock implements AppDirectories {}
+import '../../helpers/hive_test_box.dart';
+import '../../helpers/mocks.dart';
 
 void main() {
   group('PlaylistService', () {
@@ -18,8 +14,7 @@ void main() {
     late MockAppDirectories mockDirs;
     late PlaylistService service;
     late Directory tmpClips;
-    late Directory tmpHive;
-    late Box<AudioClip> box;
+    late HiveTestBox hive;
 
     setUp(() async {
       mockRepo = MockIAudioClipRepository();
@@ -30,32 +25,22 @@ void main() {
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
       when(() => mockRepo.deleteByKey(any())).thenAnswer((_) async {});
 
-      // listEnabledClipPaths checks the backing file exists and reconciles
-      // missing records via clip.key, which only a real HiveObject-backed
-      // instance has — a bare AudioClip(...) not added to a box throws when
-      // .key is accessed. Use a real (temp) box so clips carry a valid key,
-      // matching how the production repository's getAllClips/watchClips
-      // (Box.values) attach one.
-      tmpHive = await Directory.systemTemp.createTemp('pls_hive_');
-      Hive.init(tmpHive.path);
-      if (!Hive.isAdapterRegistered(AudioClipAdapter().typeId)) {
-        Hive.registerAdapter(AudioClipAdapter());
-      }
-      box = await Hive.openBox<AudioClip>('pls_test_box');
+      // listEnabledClipPaths reconciles a missing file by deleting its record
+      // through clip.key, so the assertion on deleteByKey needs clips with
+      // real, distinct keys — which only a box hands out.
+      hive = await HiveTestBox.open();
     });
 
     tearDown(() async {
-      await box.close();
-      await Hive.deleteBoxFromDisk('pls_test_box', path: tmpHive.path);
+      await hive.dispose();
       await tmpClips.delete(recursive: true);
-      await tmpHive.delete(recursive: true);
     });
 
     /// Adds [clip] to the real test box (so it carries a valid Hive key) and,
     /// unless [withFile] is false, creates its backing file in the fake clips
     /// directory so File.exists() finds it.
     Future<AudioClip> addClip(AudioClip clip, {bool withFile = true}) async {
-      await box.add(clip);
+      await hive.box.add(clip);
       if (withFile) {
         File(p.join(tmpClips.path, clip.fileName)).createSync(recursive: true);
       }
@@ -126,6 +111,91 @@ void main() {
         when(() => mockRepo.getAllClips()).thenReturn([missing]);
         await service.listEnabledClipPaths();
         verify(() => mockRepo.deleteByKey(missing.key)).called(1);
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // resolveClipPath
+    // -------------------------------------------------------------------------
+    //
+    // A session plays from the snapshot listEnabledClipPaths gave it at
+    // launch. ClipFormatMigration and ClipRecompressService both rewrite a
+    // clip to a different extension while that snapshot is live, so this is
+    // what stops a stale entry from failing to load and ending the session.
+    group('resolveClipPath', () {
+      test('returns the path unchanged while the file is still there',
+          () async {
+        await addClip(AudioClip('1000.opus', 'A', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([]);
+
+        final path = p.join(tmpClips.path, '1000.opus');
+        expect(await service.resolveClipPath(path), equals(path));
+      });
+
+      test('follows a clip the migration rewrote to another format', () async {
+        // The record and the basename survive the conversion; only the
+        // extension moves.
+        final converted = await addClip(AudioClip('1000.opus', 'A', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([converted]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          equals(p.join(tmpClips.path, '1000.opus')),
+        );
+      });
+
+      test('follows a WAV clip the recompress pass rewrote to FLAC', () async {
+        final converted = await addClip(AudioClip('1000.flac', 'A', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([converted]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.wav')),
+          equals(p.join(tmpClips.path, '1000.flac')),
+        );
+      });
+
+      test('resolves a disabled clip too — the snapshot outranks a toggle '
+          'made mid-session', () async {
+        final converted = await addClip(AudioClip('1000.opus', 'A', 10.0, false));
+        when(() => mockRepo.getAllClips()).thenReturn([converted]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          equals(p.join(tmpClips.path, '1000.opus')),
+        );
+      });
+
+      test('returns null when the clip has no record left', () async {
+        when(() => mockRepo.getAllClips()).thenReturn([]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          isNull,
+        );
+      });
+
+      test('returns null when the record survived but its file did not',
+          () async {
+        final orphan = await addClip(
+          AudioClip('1000.opus', 'A', 10.0, true),
+          withFile: false,
+        );
+        when(() => mockRepo.getAllClips()).thenReturn([orphan]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          isNull,
+        );
+      });
+
+      test('does not confuse one clip for another', () async {
+        final other = await addClip(AudioClip('2000.opus', 'B', 10.0, true));
+        when(() => mockRepo.getAllClips()).thenReturn([other]);
+
+        expect(
+          await service.resolveClipPath(p.join(tmpClips.path, '1000.m4a')),
+          isNull,
+        );
       });
     });
 

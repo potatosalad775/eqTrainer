@@ -1,14 +1,36 @@
 name: Test
 
 on:
+  # `push` covers every branch in this repo, so `pull_request` only needs to
+  # fire for the events a push does *not* already cover — opening a PR (or a
+  # fork's PR, where no push event reaches this repo) and taking one out of
+  # draft. Listing `pull_request` without `types` would double every run: one
+  # for the branch push, one for the same commit as a PR.
   push:
     branches: ['**']
+    paths-ignore:
+      - '**.md'
+      - 'appcast.xml'
+      - 'LICENSE'
   pull_request:
-    branches: ['**']
+    types: [opened, reopened, ready_for_review]
+  workflow_dispatch:
+
+# Superseded runs are pointless: a second push to the same branch cancels the
+# first one's jobs instead of queueing behind them.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Unit tests — headless, no device required, fastest feedback
+  # Unit tests — headless, no device required, fastest feedback.
+  #
+  # This is the whole of CI's test coverage on purpose. The integration
+  # suites under integration_test/ drive a real SoLoud engine against a real
+  # output device, and a hosted runner has no audio hardware — what they
+  # would verify there is not the environment any user runs in. They are run
+  # locally on real devices instead; see AGENTS.md > Testing.
   # ---------------------------------------------------------------------------
   unit-test:
     name: Unit Tests (${{ matrix.os }})
@@ -19,89 +41,23 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
+
+      # flutter_soloud ships a native build hook (hook/build.dart), so even a
+      # pure-Dart `flutter test` compiles its C sources. On Linux that build
+      # passes -DWITH_ALSA and includes <alsa/asoundlib.h>, which the runner
+      # image does not carry.
+      - name: Install ALSA headers (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -y && sudo apt-get install -y libasound2-dev
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Run unit tests
         run: flutter test test/ --reporter=github
-
-  # ---------------------------------------------------------------------------
-  # Integration tests (Linux desktop) — audio_decoder FFI, no audio hardware
-  # ---------------------------------------------------------------------------
-  #integration-linux:
-  #  name: Integration Tests (Linux)
-  #  runs-on: ubuntu-latest
-  #
-  #  steps:
-  #    - uses: actions/checkout@v6
-  #
-  #    - uses: subosito/flutter-action@v2
-  #      with:
-  #        channel: stable
-  #        flutter-version: 3.44.4
-  #
-  #    - name: Install Linux system dependencies
-  #      run: |
-  #        sudo apt-get update -y
-  #        sudo apt-get install -y clang cmake ninja-build pkg-config \
-  #          libgtk-3-dev liblzma-dev libstdc++-12-dev \
-  #          libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-  #          gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
-  #
-  #    - name: Install dependencies
-  #      run: flutter pub get
-  #
-  #    - name: Run integration tests (Linux desktop)
-  #      run: flutter test integration_test/ --device-id linux --reporter=github
-
-  # ---------------------------------------------------------------------------
-  # Integration tests (Windows desktop)
-  # ---------------------------------------------------------------------------
-  integration-windows:
-    name: Integration Tests (Windows)
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.44.4
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Run integration tests (Windows desktop)
-        run: flutter test integration_test/ --device-id windows --reporter=github
-
-  # ---------------------------------------------------------------------------
-  # Integration tests (macOS desktop)
-  # ---------------------------------------------------------------------------
-  integration-macos:
-    name: Integration Tests (macOS)
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: 3.44.4
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Install CocoaPods (required for coast_audio on macOS)
-        run: cd macos && pod install
-
-      - name: Run integration tests (macOS desktop)
-        run: flutter test integration_test/ --device-id macos --reporter=github --ci

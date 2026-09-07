@@ -4,8 +4,21 @@
 // future. If not, the values below would default to using the project name when this becomes a
 // 'flutter create' template.
 
-// The application's name. By default this is also the title of the Flutter window.
+// The application's name. This names the binary and the .app bundle, so the
+// build artifacts and the DMG packaging in CI depend on it — it is not the
+// name the user sees.
 PRODUCT_NAME = eq_trainer
+
+// The name the user sees: the window title, the menu bar, and every menu item
+// the nib builds out of APP_NAME ("About eqTrainer", "Quit eqTrainer"). AppKit
+// substitutes those from CFBundleName, which Info.plist points here.
+//
+// This is deliberately not set from MainFlutterWindow. Assigning NSWindow.title
+// in awakeFromNib does not survive - AppKit re-applies the nib's APP_NAME
+// afterwards, so the title reverted to the bundle name a moment after launch -
+// and it would only ever have fixed the window, leaving the menus reading
+// "Quit eq_trainer".
+PRODUCT_DISPLAY_NAME = eqTrainer
 
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = kr.potatosalad775.eqTrainer

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 2.5.0+260722
+version: 2.6.0+260901
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -30,10 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  audio_decoder: ^0.8.1
   cupertino_icons: ^1.0.2
   file_picker: ^12.0.0-beta.7
   provider: ^6.0.5
-  audio_session: ^0.2.2
   font_awesome_flutter: ^11.0.0
   url_launcher: ^6.1.11
   hive_ce: ^2.13.1
@@ -42,7 +42,6 @@ dependencies:
   path: ^1.9.0
   fl_chart: ^1.0.0
   easy_localization: ^3.0.2
-  easy_localization_loader: ^2.0.1
   toastification: ^3.0.3
   upgrader: ^13.5.0
   audio_video_progress_bar: ^2.0.0
@@ -52,19 +51,14 @@ dependencies:
   version: ^3.0.2
   # Git deps are pinned to exact commit SHAs (not mutable branches) so builds
   # are reproducible and the audio engine can't change silently on re-resolve.
-  window_size:
+  # Fork adds the click-free peaking EQ filter (a bandpass-refactored biquad
+  # whose poles don't depend on gain, so the dry/wet fade touches no recursive
+  # coefficient) and an Android backend override, needed because upstream
+  # prefers AAudio on API >= 30 while several DAP devices misbehave on it.
+  flutter_soloud:
     git:
-      url: https://github.com/google/flutter-desktop-embedding
-      path: plugins/window_size
-      ref: eb3964990cf19629c89ff8cb4a37640c7b3d5601 # was: HEAD
-  coast_audio:
-    git:
-      url: https://github.com/potatosalad775/coast_audio.git
-      ref: bde17592f908dde7c066b0554ed44096d57f21bc # was: custom
-  audio_decoder:
-    git:
-      url: https://github.com/potatosalad775/audio_decoder.git
-      ref: 7b39e1608c1cbcd8e2ebeef05df7c5cea4c4d476 # was: custom
+      url: https://github.com/potatosalad775/flutter_soloud.git
+      ref: 4d5e61dec14a71d0fecbf4db6dd763e3ea6f4bbb # was: custom
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +76,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.1
   mocktail: ^1.0.0
   msix: ^3.16.7
+  build_runner: ^2.16.0
 
 flutter_launcher_icons:
   windows:
@@ -122,7 +117,6 @@ flutter:
 
   assets:
     - assets/translations/
-    - test/fixtures/audio/
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

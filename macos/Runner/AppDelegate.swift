@@ -1,6 +1,5 @@
 import Cocoa
 import FlutterMacOS
-import CoastAudio
 
 @main
 class AppDelegate: FlutterAppDelegate {
@@ -8,8 +7,6 @@ class AppDelegate: FlutterAppDelegate {
     return true
   }
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-    // prevent native symbols from being stripped
-    CoastAudioSymbolKeeper.keep()
     return true
   }
 }

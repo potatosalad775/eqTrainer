@@ -10,16 +10,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
       - name: Get Keystore
         id: android_keystore
-        uses: timheuer/base64-to-file@v1.2.4
+        uses: timheuer/base64-to-file@v2
         with:
           fileName: keystore.jks
           encodedString: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -41,7 +41,7 @@ jobs:
           flutter build appbundle --release
 
       - name: Upload APK
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-android
           path: build/app/outputs/bundle/release/*
@@ -49,20 +49,19 @@ jobs:
   build-iOS:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
-      - name: Setup Podfile
+      # iOS has no CocoaPods integration any more — every plugin it uses is a
+      # Swift Package, which "flutter build" resolves on its own.
+      - name: Prepare
         run: |
-          cd ios
           flutter clean
           flutter pub get
-          pod install
-          cd ..
 
       - name: Build iOS
         run: |
@@ -73,7 +72,7 @@ jobs:
           mv Payload.zip build/ios/Payload.ipa
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-iOS
           path: build/ios/Payload.ipa
@@ -81,12 +80,12 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
       - name: Build Windows
         run: |
@@ -94,7 +93,7 @@ jobs:
           flutter build windows --release
 
       - name: Upload EXE
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-windows
           path: build/windows/x64/runner/Release/*
@@ -102,20 +101,19 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
-      - name: Setup Podfile
+      # macOS has no CocoaPods integration any more — every plugin it uses is a
+      # Swift Package, which "flutter build" resolves on its own.
+      - name: Prepare
         run: |
-          cd macos
           flutter clean
           flutter pub get
-          pod install
-          cd ..
 
       - name: Build macOS
         run: |
@@ -139,7 +137,7 @@ jobs:
             "eq_trainer.app"
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: build-macOS
           path: build/macos/Build/Products/Release/eq_trainer.dmg
@@ -148,31 +146,45 @@ jobs:
     runs-on: ubuntu-latest
   
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
   
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.44.4
+          flutter-version: 3.47.2
 
+      # libasound2-dev is for flutter_soloud: its build hook compiles the
+      # SoLoud ALSA backend (-DWITH_ALSA) and links -lasound, so the headers
+      # have to be on the runner. The gstreamer -dev packages are what
+      # audio_decoder's Linux plugin builds against.
       - name: Update system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y clang cmake git ninja-build \
           pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
+          libasound2-dev rpm \
           libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
           gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
   
-      - name: Enable flutter_distributor
+      - name: Enable fastforge
         run: |
-          dart pub global activate flutter_distributor
-          
-      - name: Build Deb
+          dart pub global activate fastforge
+
+      # No --jobs: the `release` release in distribute_options.yaml is exactly
+      # the deb and rpm jobs. The second job re-runs `flutter build linux`, but
+      # incrementally against the first job's output (~4s), so splitting the
+      # invocation would buy nothing.
+      - name: Build Deb and RPM
         run: |
-          $HOME/.pub-cache/bin/flutter_distributor release --name=release --jobs=release-linux-deb
-  
-      - name: Upload APK
-        uses: actions/upload-artifact@v6
+          $HOME/.pub-cache/bin/fastforge release --name=release
+
+      # always(): the packages are built one after another, so a failure in the
+      # later one would otherwise discard the artifact the earlier one already
+      # produced.
+      - name: Upload Linux packages
+        if: always()
+        uses: actions/upload-artifact@v7
         with:
           name: build-linux
           path: dist/*
+          if-no-files-found: warn

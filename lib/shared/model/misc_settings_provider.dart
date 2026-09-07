@@ -17,9 +17,38 @@ class MiscSettingsProvider extends ChangeNotifier {
             // defaultValue — otherwise a fresh install and an upgraded install
             // disagree on the default and get opposite answer-leak protection
             // from loudness cues.
-            MiscSettings(false, ImportFormat.allM4a, true);
+            MiscSettings(false, ImportFormat.smart, true) {
+    _migrateImportFormat();
+  }
 
   MiscSettings _value;
+
+  /// Rewrites a retired import-format ordinal to the value it now behaves as.
+  ///
+  /// allM4a and keepOriginal are read as Smart everywhere already, so this
+  /// changes no behavior; it just stops a box from carrying a value the
+  /// settings UI cannot display forever. Done once at construction rather than
+  /// on every read, and only written when it actually changes, so a launch
+  /// with nothing to migrate does not touch the disk.
+  void _migrateImportFormat() {
+    final normalized = ImportFormat.normalize(_value.importFormat);
+    if (normalized == _value.importFormat) return;
+    _value = _value.copyWith(inputImportFormat: normalized);
+    Hive.box<MiscSettings>(miscSettingsBoxName).put(miscSettingsKey, _value);
+  }
+
+  /// The stored import format, read without building a provider.
+  ///
+  /// `ClipFormatMigration` runs before the widget tree exists and needs the
+  /// user's format choice to pick its target; the box is already open by then.
+  /// Normalized on the way out for the same reason reads are elsewhere — a box
+  /// written before the SoLoud migration can still hold a retired ordinal.
+  static int storedImportFormat() => ImportFormat.normalize(
+        Hive.box<MiscSettings>(miscSettingsBoxName)
+                .get(miscSettingsKey)
+                ?.importFormat ??
+            ImportFormat.smart,
+      );
 
   bool get frequencyToolTip => _value.frequencyToolTip;
   int get importFormat => _value.importFormat;

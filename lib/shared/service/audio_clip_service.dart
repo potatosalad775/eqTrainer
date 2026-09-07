@@ -5,12 +5,15 @@ import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
+import 'package:eq_trainer/shared/service/clip_encoder.dart';
 
 class AudioClipService {
-  AudioClipService(this._repository, this._dirs);
+  AudioClipService(this._repository, this._dirs, {ClipEncoder? encoder})
+      : _encoder = encoder ?? ClipEncoder();
 
   final IAudioClipRepository _repository;
   final AppDirectories _dirs;
+  final ClipEncoder _encoder;
 
   /// Generate Audio Clip from Source File
   /// - sourcePath: Original File Path
@@ -21,14 +24,18 @@ class AudioClipService {
     required double startSec,
     required double endSec,
     required bool isTrimmed,
+    required int importFormat,
   }) async {
     // Prepare Paths
     final String fileBase = DateTime.now().microsecondsSinceEpoch.toString();
     final audioClipPath = await _dirs.getClipsPath();
     final sourceExt = p.extension(sourcePath).toLowerCase();
 
-    // trimAudio() only outputs .wav or .m4a — pick based on lossless/lossy
-    final String ext = isTrimmed ? trimOutputExt(sourceExt) : sourceExt;
+    // A trim always re-encodes, so its target follows the format setting
+    // rather than the source's container. An untrimmed clip is a byte copy,
+    // so it keeps whatever it already was.
+    final String ext =
+        isTrimmed ? trimOutputExt(sourceExt, importFormat) : sourceExt;
     final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
     // Generate Clip File
@@ -38,12 +45,31 @@ class AudioClipService {
       final end = Duration(milliseconds: (endSec * 1000).toInt());
       duration = endSec - startSec;
       try {
-        await AudioDecoder.trimAudio(
-          sourcePath,
-          destPath,
-          start,
-          end,
-        );
+        if (ext == '.wav') {
+          // trimAudio() writes WAV directly, so nothing else is needed.
+          await AudioDecoder.trimAudio(sourcePath, destPath, start, end);
+        } else {
+          // trimAudio() can only write .wav or .m4a, so a FLAC or Opus target
+          // trims to a temporary WAV first and encodes from that. The temp
+          // file is removed whether or not the encode succeeds.
+          final tempWav = '$destPath.trim.wav';
+          try {
+            await AudioDecoder.trimAudio(sourcePath, tempWav, start, end);
+            await _encoder.encodeWavBytes(
+              wavBytes: await File(tempWav).readAsBytes(),
+              destPath: destPath,
+            );
+          } finally {
+            final temp = File(tempWav);
+            if (temp.existsSync()) {
+              try {
+                temp.deleteSync();
+              } catch (_) {
+                // A leftover temp file is not worth failing the import over.
+              }
+            }
+          }
+        }
       } catch (e) {
         throw Exception('Audio trim failed: $e');
       }

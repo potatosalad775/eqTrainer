@@ -12,6 +12,8 @@ releases:
           platform: linux
           target: rpm
 
-# Run
-# flutter_distributor release --name=release --jobs=release-linux-deb
-# flutter_distributor release --name=release --jobs=release-linux-rpm
+# Run (both jobs; `rpm` must be on PATH for the rpm job)
+# fastforge release --name=release
+# ...or one at a time:
+# fastforge release --name=release --jobs=release-linux-deb
+# fastforge release --name=release --jobs=release-linux-rpm

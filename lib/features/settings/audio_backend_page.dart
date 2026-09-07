@@ -1,13 +1,20 @@
-import 'dart:io';
 import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:hive_ce/hive.dart';
-import 'package:coast_audio/coast_audio.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
 
+/// Picks the native backend the engine opens the Android output device with.
+///
+/// Android-only, and reached only from a card that is itself hidden elsewhere
+/// (see `audio_settings_page.dart`). Under coast_audio this page offered every
+/// platform's backends as a checklist because coast_audio required an explicit
+/// list; SoLoud chooses on its own everywhere except Android, where the choice
+/// genuinely matters — see [AndroidAudioBackend].
 class AudioBackendPage extends StatefulWidget {
   const AudioBackendPage({super.key});
 
@@ -15,83 +22,54 @@ class AudioBackendPage extends StatefulWidget {
   State<AudioBackendPage> createState() => _AudioBackendPageState();
 }
 
-String _backendName(AudioDeviceBackend backend) => switch (backend) {
-  AudioDeviceBackend.coreAudio  => 'Core Audio',
-  AudioDeviceBackend.aaudio     => 'AAudio',
-  AudioDeviceBackend.openSLES   => 'OpenSL ES',
-  AudioDeviceBackend.wasapi     => 'WASAPI',
-  AudioDeviceBackend.alsa       => 'ALSA',
-  AudioDeviceBackend.pulseAudio => 'PulseAudio',
-  AudioDeviceBackend.jack       => 'JACK',
-  AudioDeviceBackend.dummy      => 'Dummy',
+String _backendName(AndroidAudioBackend backend) => switch (backend) {
+  AndroidAudioBackend.auto     => 'AUDIO_SETTING_BACKEND_AUTO'.tr(),
+  AndroidAudioBackend.aaudio   => 'AAudio',
+  AndroidAudioBackend.openSles => 'OpenSL ES',
 };
 
-String _backendPlatform(AudioDeviceBackend backend) => switch (backend) {
-  AudioDeviceBackend.coreAudio  => 'macOS, iOS',
-  AudioDeviceBackend.aaudio     => 'Android 8+',
-  AudioDeviceBackend.openSLES   => 'Android 4.1+',
-  AudioDeviceBackend.wasapi     => 'Windows Vista+',
-  AudioDeviceBackend.alsa       => 'Linux',
-  AudioDeviceBackend.pulseAudio => 'Linux',
-  AudioDeviceBackend.jack       => 'Linux',
-  AudioDeviceBackend.dummy      => 'All platforms',
-};
-
-String _backendKey(AudioDeviceBackend backend) => switch (backend) {
-  AudioDeviceBackend.coreAudio  => 'coreAudio',
-  AudioDeviceBackend.aaudio     => 'aaudio',
-  AudioDeviceBackend.openSLES   => 'openSLES',
-  AudioDeviceBackend.wasapi     => 'wasapi',
-  AudioDeviceBackend.alsa       => 'alsa',
-  AudioDeviceBackend.pulseAudio => 'pulseAudio',
-  AudioDeviceBackend.jack       => 'jack',
-  AudioDeviceBackend.dummy      => 'dummy',
+String _backendDescription(AndroidAudioBackend backend) => switch (backend) {
+  AndroidAudioBackend.auto     => 'AUDIO_SETTING_BACKEND_AUTO_DESC'.tr(),
+  AndroidAudioBackend.aaudio   => 'AUDIO_SETTING_BACKEND_AAUDIO_DESC'.tr(),
+  AndroidAudioBackend.openSles => 'AUDIO_SETTING_BACKEND_OPENSLES_DESC'.tr(),
 };
 
 class _AudioBackendPageState extends State<AudioBackendPage> {
-  final backends = <AudioDeviceBackend, bool>{};
-  List<AudioDeviceBackend> supportedBackends = [];
+  late AndroidAudioBackend _selected;
 
   @override
   void initState() {
     super.initState();
-    if(Platform.isMacOS || Platform.isIOS) supportedBackends += [AudioDeviceBackend.coreAudio];
-    if(Platform.isAndroid) supportedBackends += [AudioDeviceBackend.aaudio, AudioDeviceBackend.openSLES];
-    if(Platform.isWindows) supportedBackends += [AudioDeviceBackend.wasapi];
-    if(Platform.isLinux) supportedBackends += [AudioDeviceBackend.alsa, AudioDeviceBackend.pulseAudio, AudioDeviceBackend.jack];
-    supportedBackends += [AudioDeviceBackend.dummy];
+    _selected = androidBackendFromSavedList(backendList);
+  }
 
-    if(backendList.isEmpty) {
-      for (final backend in supportedBackends) {
-        backends[backend] = switch (backend) {
-          AudioDeviceBackend.coreAudio => Platform.isMacOS || Platform.isIOS,
-          AudioDeviceBackend.aaudio => false,
-          AudioDeviceBackend.openSLES => Platform.isAndroid,
-          AudioDeviceBackend.wasapi => Platform.isWindows,
-          AudioDeviceBackend.alsa => Platform.isLinux,
-          AudioDeviceBackend.pulseAudio => Platform.isLinux,
-          AudioDeviceBackend.jack => Platform.isLinux,
-          // Not on by default: a real backend failing should surface as an
-          // error, not silently fall back to a context that plays silence.
-          AudioDeviceBackend.dummy => false,
-        };
-      }
-    } else {
-      for (final backend in supportedBackends) {
-        backends[backend] = switch (backend) {
-          AudioDeviceBackend.coreAudio => backendList.contains("coreAudio"),
-          AudioDeviceBackend.aaudio => backendList.contains("aaudio"),
-          AudioDeviceBackend.openSLES => backendList.contains("openSLES"),
-          AudioDeviceBackend.wasapi => backendList.contains("wasapi"),
-          AudioDeviceBackend.alsa => backendList.contains("alsa"),
-          AudioDeviceBackend.pulseAudio => backendList.contains("pulseAudio"),
-          AudioDeviceBackend.jack => backendList.contains("jack"),
-          // Was hardcoded true regardless of the saved list, so unchecking
-          // Dummy and saving didn't stick — it came back checked next visit.
-          AudioDeviceBackend.dummy => backendList.contains("dummy"),
-        };
-      }
-    }
+  Future<void> _apply() async {
+    // Keep whatever output device is in effect: this page only changes which
+    // API opens it, and dropping the selection here would silently undo the
+    // user's choice in the device dropdown.
+    final outputDevice = context.read<AudioState>().outputDevice;
+    final saved = savedListForAndroidBackend(_selected);
+    final backendBox = await Hive.openBox<BackendData>(backendBoxName);
+    await backendBox.put(backendKey, BackendData(saved));
+
+    if (!mounted) return;
+    // The engine reads the backend at init only, so a change taken now would
+    // not reach an already-running engine. Say so rather than implying the
+    // switch happened.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
+          namedArgs: {"_BACKEND": _backendName(_selected)},
+        ),
+      ),
+    );
+    App.of(context).applyAudioState(
+      AudioState(
+        androidBackend: _selected,
+        outputDevice: outputDevice,
+      ),
+      savedBackendList: saved,
+    );
   }
 
   @override
@@ -103,91 +81,37 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: AppDimens.maxWidgetWidth),
-          child: ListView.builder(
-            shrinkWrap: false,
-            itemCount: supportedBackends.length + 1,
-            itemBuilder: (context, index) {
-              if(index != supportedBackends.length) {
-                final backend = supportedBackends[index];
-                return CheckboxListTile.adaptive(
-                  value: backends[backend],
-                  title: Text(_backendName(backend)),
-                  subtitle: Text(_backendPlatform(backend)),
-                  onChanged: (isChecked) {
-                    setState(() {
-                      backends[backend] = isChecked!;
-                    });
-                  },
-                );
-              } else {
-                return Container(height: 80);
-              }
-            },
+          child: ListView(
+            children: [
+              RadioGroup<AndroidAudioBackend>(
+                groupValue: _selected,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _selected = value);
+                },
+                child: Column(
+                  children: [
+                    for (final backend in AndroidAudioBackend.values)
+                      RadioListTile<AndroidAudioBackend>.adaptive(
+                        value: backend,
+                        title: Text(_backendName(backend)),
+                        subtitle: Text(_backendDescription(backend)),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppDimens.padding),
+                child: const Text("AUDIO_SETTING_BACKEND_RESTART_NOTE").tr(),
+              ),
+              Container(height: 80),
+            ],
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: backends.values.any((v) => v)
-          ? () async {
-            // Apply Audio Backend API
-            final AudioDeviceContext deviceContext;
-            try {
-              deviceContext = AudioDeviceContext(
-                backends: backends.entries.where((e) => e.value).map((e) => e.key).toList(),
-              );
-            } on MaException catch (e) {
-              switch (e.result) {
-                case MaResult.noBackend:
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_ERROR").tr(),
-                    ),
-                  );
-                default:
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-              }
-              return;
-            }
-            // Save Backend List
-            final selectedBackendList = backends.entries
-                .where((e) => e.value)
-                .map((e) => _backendKey(e.key))
-                .toList();
-            final backendBox = await Hive.openBox<BackendData>(backendBoxName);
-            await backendBox.put(backendKey, BackendData(selectedBackendList));
-            // Read everything needed off the probe context, then dispose it
-            // immediately. Keeping it alive leaks a native ma_context and can
-            // interfere with the playback context created later in the audio
-            // isolate — on AAudio/Android multiple contexts on the same backend
-            // cause start-up failures (see AudioState.initialize).
-            final activeBackend = deviceContext.activeBackend;
-            final defaultDevice = deviceContext
-                .getDevices(AudioDeviceType.playback)
-                .where((d) => d.isDefault)
-                .firstOrNull;
-            AudioResourceManager.dispose(deviceContext.resourceId);
-
-            if (!context.mounted) return;
-            // Notify
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
-                  namedArgs: {
-                    "_BACKEND": '\'${_backendName(activeBackend)}\''
-                  }
-                ),
-              ),
-            );
-            App.of(context).applyAudioState(
-              AudioState(
-                backend: activeBackend,
-                outputDevice: defaultDevice,
-              ),
-              savedBackendList: selectedBackendList,
-            );
-          }
-          : null,
-            child: const Icon(Icons.check),
+        onPressed: _apply,
+        child: const Icon(Icons.check),
       ),
     );
   }

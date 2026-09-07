@@ -14,6 +14,9 @@ abstract class IAudioClipRepository {
   // if the box changes in the meantime, silently acting on the wrong record.
   Future<void> deleteByKey(dynamic key);
   Future<void> toggleEnabledByKey(dynamic key);
+  // Repoint a record at a different backing file, keeping everything else.
+  // Used by ClipFormatMigration when it rewrites a clip to another format.
+  Future<void> updateFileNameByKey(dynamic key, String fileName);
   // Move the clip at [oldIndex] to [newIndex] in a single batched write.
   Future<void> reorder(int oldIndex, int newIndex);
 }
@@ -58,6 +61,14 @@ class AudioClipRepository implements IAudioClipRepository {
   }
 
   @override
+  Future<void> updateFileNameByKey(dynamic key, String fileName) async {
+    final clip = _box.get(key);
+    if (clip == null) return;
+    clip.fileName = fileName;
+    await _box.put(key, clip);
+  }
+
+  @override
   Future<void> reorder(int oldIndex, int newIndex) async {
     final values = _box.values.toList();
     if (oldIndex < 0 || oldIndex >= values.length) return;
@@ -78,7 +89,13 @@ class AudioClipRepository implements IAudioClipRepository {
     final hi = oldIndex < target ? target : oldIndex;
     final updates = <dynamic, AudioClip>{};
     for (var i = lo; i <= hi; i++) {
-      updates[keys[i]] = values[i];
+      // Every entry in the range lands under a key other than the one it was
+      // read from, and Hive refuses to store a bound HiveObject under a second
+      // key. So write copies: readers take their instances from Box.values
+      // after the event anyway, never from the list passed in here.
+      final v = values[i];
+      updates[keys[i]] =
+          AudioClip(v.fileName, v.ogAudioName, v.duration, v.isEnabled);
     }
     await _box.putAll(updates);
   }

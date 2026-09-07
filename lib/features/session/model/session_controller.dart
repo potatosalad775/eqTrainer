@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:eq_trainer/shared/model/audio_state.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/session_state.dart';
@@ -38,12 +38,12 @@ class SessionController {
   double get answerCenterFreq => _answerCenterFreq;
 
   /// Toggle peaking EQ on the player via controller to keep UI logic thin.
-  Future<void> setEqEnabled(PlayerIsolate player, bool enabled) async {
-    await player.setEQ(enabled);
+  void setEqEnabled(PlayerService player, bool enabled) {
+    player.setEQ(enabled);
   }
 
   Future<void> launchSession(
-    PlayerIsolate player, {
+    PlayerService player, {
     required AudioState audioState,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
@@ -81,14 +81,14 @@ class SessionController {
       if (sessionStore.playlistPaths.isNotEmpty) {
         // Open First AudioClip
         await player.launch(
-          backend: audioState.backend,
-          outputDeviceId: audioState.outputDevice?.id,
+          androidBackend: audioState.androidBackend,
+          outputDevice: audioState.outputDevice,
           path: sessionStore.playlistPaths[0],
           volumeCompensation: volumeCompensation,
         );
-        // Apply the session's EQ bandwidth once on the fresh player.
-        await player.setEQQ(_qFactor);
         if (!active()) return;
+        // Apply the session's EQ bandwidth once on the fresh player.
+        player.setEQQ(_qFactor);
       } else {
         // ... else notify the playlist is empty.
         if (active()) sessionStore.setSessionState(SessionState.playlistEmpty);
@@ -117,7 +117,7 @@ class SessionController {
 
   // Collective Function for initializing a round.
   Future<void> initSession(
-    PlayerIsolate player, {
+    PlayerService player, {
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
   }) async {
@@ -149,8 +149,10 @@ class SessionController {
       _answerGain = sessionParameter.gain.toDouble();
     }
 
-    // Disable EQ and set new freq/gain in a single isolate round-trip.
-    // (Q is session-constant and applied at launch, not per round.)
+    // Take the band out, wait for it to actually leave the signal, then
+    // retune it — [PlayerService.setEQParams] owns that ordering, and it is
+    // the one EQ call that genuinely awaits. (Q is session-constant and
+    // applied at launch, not per round.)
     await player.setEQParams(
       enableEQ: false,
       frequency: _answerCenterFreq,
@@ -158,20 +160,23 @@ class SessionController {
     );
   }
 
-  /// Re-applies the current answer's EQ parameters to the player (e.g. after
-  /// a track switch, which launches a fresh player at the default Q and with
-  /// EQ bypassed). [eqEnabled] should be the enabled state from before the
+  /// Re-applies the current answer's EQ parameters after a track switch.
+  ///
+  /// [PlayerService.launch] takes the band back out (the filter is global and
+  /// outlives the voice, so it has to), and the new voice starts at volume
+  /// 1.0 — so the gain has to be re-sent for its loudness compensation to
+  /// land on the new handle. [eqEnabled] is the enabled state from before the
   /// switch, so a manually-toggled "Filtered" view doesn't silently revert to
-  /// "Original" on the new player.
-  Future<void> updatePlayerState(PlayerIsolate player, {required bool eqEnabled}) async {
-    await player.setEQQ(_qFactor);
-    await player.setEQFreq(_answerCenterFreq);
-    await player.setEQGain(_answerGain);
-    await player.setEQ(eqEnabled);
+  /// "Original".
+  void updatePlayerState(PlayerService player, {required bool eqEnabled}) {
+    player.setEQQ(_qFactor);
+    player.setEQFreq(_answerCenterFreq);
+    player.setEQGain(_answerGain);
+    player.setEQ(eqEnabled);
   }
 
   Future<SessionSubmitResult?> submitAnswer({
-    required PlayerIsolate player,
+    required PlayerService player,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
     void Function(bool isCorrect, int correctIndex)? onResult,

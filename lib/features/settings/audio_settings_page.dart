@@ -1,21 +1,18 @@
+import 'dart:io';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dart';
+import 'package:eq_trainer/features/settings/widget/clip_recompress_card.dart';
 import 'package:eq_trainer/features/settings/audio_backend_page.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 import 'package:eq_trainer/features/settings/widget/volume_compensation_card.dart';
-import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
-import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/themes/app_dimens.dart';
-import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 class AudioSettingsPage extends StatelessWidget {
   const AudioSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final importFormat = context.watch<MiscSettingsProvider>().importFormat;
     return Scaffold(
       appBar: AppBar(
         title: Text("AUDIO_SETTING_APPBAR_TITLE".tr()),
@@ -29,37 +26,53 @@ class AudioSettingsPage extends StatelessWidget {
               const AudioImportFormatCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC".tr()),
+                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_1".tr()),
               ),
-              if (importFormat == ImportFormat.keepOriginal)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                  child: Text("AUDIO_SETTING_IMPORT_FORMAT_ORIGINAL_WARN".tr(), style: TextStyle(color: context.colors.error)),
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_2".tr()),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_3".tr()),
+              ),
+              const SizedBox(height: 12),
+              // Renders nothing when the library holds no WAV clips, so this
+              // costs an empty box rather than a dead button.
+              const ClipRecompressCard(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                child: Text("AUDIO_SETTING_RECOMPRESS_DESC".tr()),
+              ),
               const SizedBox(height: 12),
               const VolumeCompensationCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                 child: Text("AUDIO_SETTING_CARD_VOLUME_COMP_DESC".tr()),
               ),
-              const Divider(indent: 6, endIndent: 6, height: 32),
-              // Developer Settings
-              GestureDetector(
-                child: SettingsCard(
-                  icon: Icons.build,
-                  title: "AUDIO_SETTING_CARD_BACKEND_TITLE".tr(),
-                  trailing: const Icon(Icons.keyboard_arrow_right),
+              // Android only: SoLoud picks the backend itself on every other
+              // platform and gives Dart no way to override it (Windows and
+              // Linux never create an explicit miniaudio context at all), so
+              // there would be nothing behind this card to choose.
+              if (Platform.isAndroid) ...[
+                const Divider(indent: 6, endIndent: 6, height: 32),
+                GestureDetector(
+                  child: SettingsCard(
+                    icon: Icons.build,
+                    title: "AUDIO_SETTING_CARD_BACKEND_TITLE".tr(),
+                    trailing: const Icon(Icons.keyboard_arrow_right),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AudioBackendPage())
+                    );
+                  },
                 ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AudioBackendPage())
-                  );
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_CARD_BACKEND_DESC".tr()),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                  child: Text("AUDIO_SETTING_CARD_BACKEND_DESC".tr()),
+                ),
+              ],
             ],
           ),
         ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:coast_audio/coast_audio.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
@@ -13,16 +13,16 @@ class DeviceDropdown extends StatefulWidget {
 }
 
 class _DeviceDropdownState extends State<DeviceDropdown> {
-  List<AudioDeviceInfo> _devices = [];
-  AudioDeviceContext? _deviceContext;
+  List<PlaybackDevice> _devices = [];
 
+  // No cached device context to own any more: SoLoud enumerates devices
+  // without creating one, so the coast_audio dance of holding a context alive
+  // (and disposing it so it couldn't collide with the playback context) is
+  // gone along with it.
   void _refreshDeviceList() {
-    final audioState = Provider.of<AudioState>(context, listen: false);
     try {
-      _deviceContext ??= AudioDeviceContext(backends: [audioState.backend]);
-      _devices = _deviceContext!.getDevices(AudioDeviceType.playback);
+      _devices = SoLoud.instance.listPlaybackDevices();
     } catch (_) {
-      _deviceContext = null;
       // Keep existing list if enumeration fails.
     }
   }
@@ -31,15 +31,6 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _refreshDeviceList();
-  }
-
-  @override
-  void dispose() {
-    final ctx = _deviceContext;
-    if (ctx != null) {
-      AudioResourceManager.dispose(ctx.resourceId);
-    }
-    super.dispose();
   }
 
   @override
@@ -70,9 +61,9 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
             const SizedBox(width: 16),
             Expanded(
               child: RepaintBoundary(
-                child: DropdownButton<AudioDeviceId>(
+                child: DropdownButton<int>(
                   items: _devices.map((e) =>
-                    DropdownMenuItem<AudioDeviceId>(
+                    DropdownMenuItem<int>(
                       value: e.id,
                       child: Text(
                         e.name,

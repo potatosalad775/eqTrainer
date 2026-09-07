@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:eq_trainer/features/result/result_page.dart';
-import 'package:eq_trainer/shared/player/player_isolate.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
+import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
@@ -19,16 +20,25 @@ class SessionPage extends StatefulWidget {
 }
 
 class _SessionPageState extends State<SessionPage> {
-  final player = PlayerIsolate();
+  final player = PlayerService();
+
+  /// Captured in initState rather than read in dispose, where the element is
+  /// already detached from the tree.
+  late final ClipFormatMigration _clipFormatMigration;
 
   @override
   void initState() {
     super.initState();
+    // A decode-and-encode pass competing with playback is audible on a phone
+    // or a DAP, and the session is the one screen where that matters. The
+    // migration holds at its next clip boundary until this page is gone.
+    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
   @override
   void dispose() {
+    _clipFormatMigration.resume();
     player.dispose();
     super.dispose();
   }
@@ -62,7 +72,7 @@ class _SessionPageState extends State<SessionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<PlayerIsolate>.value(
+    return ChangeNotifierProvider<PlayerService>.value(
       value: player,
       builder: (context, child) => PopScope(
         canPop: false,

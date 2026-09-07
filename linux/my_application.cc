@@ -46,14 +46,24 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "eq_trainer");
+    gtk_header_bar_set_title(header_bar, "eqTrainer");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "eq_trainer");
+    gtk_window_set_title(window, "eqTrainer");
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+
+  // Minimum size, previously set from main.dart through the window_size
+  // plugin. It never changes at runtime, so it belongs here — same GTK call
+  // the plugin made, minus the plugin, the method channel and the frame of
+  // Dart startup before the constraint took effect.
+  GdkGeometry geometry;
+  geometry.min_width = 400;
+  geometry.min_height = 480;
+  gtk_window_set_geometry_hints(window, nullptr, &geometry, GDK_HINT_MIN_SIZE);
+
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();

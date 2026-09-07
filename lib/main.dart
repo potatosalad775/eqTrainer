@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:eq_trainer/shared/service/third_party_licenses.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
@@ -9,9 +10,7 @@ import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
-import 'package:window_size/window_size.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:easy_localization_loader/easy_localization_loader.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
@@ -20,6 +19,8 @@ import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/clip_format_migration.dart';
+import 'package:eq_trainer/shared/service/clip_recompress_service.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/shared/service/upgrader_service.dart';
@@ -53,10 +54,6 @@ Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    setWindowTitle('eqTrainer');
-    setWindowMinSize(const Size(400, 480));
-  }
 
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();
@@ -66,7 +63,10 @@ Future<void> main() async {
   Hive.registerAdapter(BackendDataAdapter());
   Hive.registerAdapter(MiscSettingsAdapter());
 
-  // Load Backend Setting value (opened and closed once — not needed after startup)
+  // Load Backend Setting value (opened and closed once — not needed after
+  // startup). Still the coast_audio-era list of backend names; the only thing
+  // read out of it now is the Android backend choice — see
+  // androidBackendFromSavedList.
   final backendBox = await _openBoxSafely<BackendData>(backendBoxName);
   backendList = backendBox.get(backendKey)?.backendList ?? [];
   await backendBox.close();
@@ -92,16 +92,32 @@ Future<void> main() async {
   // Prepare Upgrader
   final upgrader = await UpgraderService().getInstance();
 
+  // Convert any pre-SoLoud .m4a clips to whatever the user's import-format
+  // setting would produce for them today. Deliberately not awaited: it is a
+  // no-op scan on every launch but the first one after updating, and blocking
+  // startup behind a full library's worth of decode-and-encode would hold the
+  // app on a blank screen. It commits one clip at a time, so a clip the user
+  // reaches mid-run is either fully converted or untouched.
+  //
+  // Handed to the widget tree as well: the screens that play audio pause it
+  // while they are open, so the run never competes with playback for CPU.
+  final clipFormatMigration = ClipFormatMigration(
+    AudioClipRepository(),
+    AppDirectories(),
+    importFormat: MiscSettingsProvider.storedImportFormat(),
+  );
+  unawaited(clipFormatMigration.run());
+
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('en'), Locale('ko')],
       path: 'assets/translations',
       fallbackLocale: const Locale('en'),
       useOnlyLangCode: true,
-      assetLoader: const YamlAssetLoader(),
       child: ToastificationWrapper(
         child: App(
           upgrader: upgrader,
+          clipFormatMigration: clipFormatMigration,
         ),
       ),
     ),
@@ -109,9 +125,14 @@ Future<void> main() async {
 }
 
 class App extends StatefulWidget {
-  const App({super.key, required this.upgrader});
+  const App({
+    super.key,
+    required this.upgrader,
+    required this.clipFormatMigration,
+  });
 
   final Upgrader upgrader;
+  final ClipFormatMigration clipFormatMigration;
 
   static AppState of(BuildContext context) {
     return context.findAncestorStateOfType<AppState>()!;
@@ -204,7 +225,16 @@ class AppState extends State<App> with WidgetsBindingObserver {
           ctx.read<IAudioClipRepository>(),
           ctx.read<AppDirectories>(),
         )),
-        Provider<ImportWorkflowService>(create: (_) => const ImportWorkflowService()),
+        Provider<ImportWorkflowService>(create: (_) => ImportWorkflowService()),
+        // .value, not create: the run was started in main() before the tree
+        // existed, and main() owns it — the provider must not dispose it.
+        ChangeNotifierProvider<ClipFormatMigration>.value(
+          value: widget.clipFormatMigration,
+        ),
+        Provider<ClipRecompressService>(create: (ctx) => ClipRecompressService(
+          ctx.read<IAudioClipRepository>(),
+          ctx.read<AppDirectories>(),
+        )),
 
         // Session parameters and data notifiers
         ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),
@@ -256,5 +286,4 @@ const String audioClipBoxName = "audioClipBox";
 
 late Directory appSupportDir;
 
-//AndroidAudioBackend? androidAudioBackend;
 late List<String> backendList;
