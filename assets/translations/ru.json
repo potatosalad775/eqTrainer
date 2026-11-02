@@ -1,0 +1,173 @@
+{
+  "MAIN_APPBAR_TITLE_CONFIG_1": "Сессия",
+  "MAIN_APPBAR_TITLE_CONFIG_2": "Настройка",
+  "MAIN_APPBAR_TITLE_PLAYLIST_1": "Плейлист",
+  "MAIN_APPBAR_TITLE_PLAYLIST_2": "Настройка",
+  "MAIN_APPBAR_TITLE_SETTING_1": "eqTrainer",
+  "MAIN_APPBAR_TITLE_SETTING_2": "Настройки",
+  "MAIN_NAVBAR_MAIN": "Главная",
+  "MAIN_NAVBAR_PLAYLIST": "Плейлист",
+  "MAIN_NAVBAR_SETTINGS": "Настройки",
+
+  "CONFIG_CARD_TITLE_SB": "Начальная полоса",
+  "CONFIG_CARD_SUBTITLE_SB": "Количество центральных частот фильтра",
+  "CONFIG_CARD_TITLE_G": "Усиление",
+  "CONFIG_CARD_SUBTITLE_G": "Значение усиления фильтра",
+  "CONFIG_CARD_TITLE_QF": "Добротность",
+  "CONFIG_CARD_SUBTITLE_QF": "Полоса пропускания фильтра",
+  "CONFIG_CARD_TITLE_FT": "Тип фильтра",
+  "CONFIG_CARD_SUBTITLE_FT": "Вид фильтра",
+  "CONFIG_CARD_DDB_FT_P": "Пик",
+  "CONFIG_CARD_DDB_FT_D": "Провал",
+  "CONFIG_CARD_DDB_FT_PD": "Пик и провал",
+  "CONFIG_CARD_TITLE_T": "Порог",
+  "CONFIG_CARD_SUBTITLE_T": "Предел порога для сессии",
+  "CONFIG_BUTTON_START": "Начать сессию",
+
+  "SESSION_APPBAR_TITLE": "Сессия",
+  "SESSION_ALERT_ERROR_TITLE": "Ошибка",
+  "SESSION_ALERT_ERROR_CONTENT": "При выполнении сессии произошла ошибка. Пожалуйста, попробуйте ещё раз.",
+  "SESSION_ALERT_ERROR_BUTTON": "Хорошо",
+  "SESSION_ALERT_EMPTY_TITLE": "Плейлист пуст",
+  "SESSION_ALERT_EMPTY_CONTENT": "Пожалуйста, добавьте и включите хотя бы один аудиоклип перед началом сессии.",
+  "SESSION_ALERT_EMPTY_BUTTON": "Хорошо",
+  "SESSION_ALERT_EXIT_TITLE": "Внимание",
+  "SESSION_ALERT_EXIT_CONTENT": "Вы уверены, что хотите завершить и выйти из сессии?",
+  "SESSION_ALERT_EXIT_BUTTON_YES": "Да",
+  "SESSION_ALERT_EXIT_BUTTON_NO": "Нет",
+  "SESSION_BUTTON_ORIGINAL": "Оригинал",
+  "SESSION_BUTTON_EQ_FILTERED": "Изменённый",
+  "SESSION_BUTTON_SUBMIT": "Подтвердить",
+  "SESSION_SNACKBAR_CORRECT": "Верно!",
+  "SESSION_SNACKBAR_INCORRECT": "Неверно! Правильный ответ был {_INDEX}.",
+  "SESSION_DDBUTTON_DEVICE_DISCLAIMER": "Изменённое устройство вывода будет применено со следующего аудиоклипа.",
+
+  "RESULT_APPBAR_TITLE": "Результат",
+  "RESULT_BOTTOM_BAR_TITLE": "Результат",
+  "RESULT_BOTTOM_BAR_ZERO_RESULT": "Н/Д",
+
+  "RESULT_FREQ_SUB_BASS": "Саб-бас",
+  "RESULT_FREQ_MID_BASS": "Средний бас",
+  "RESULT_FREQ_LOWER_MIDRANGE": "Нижняя середина",
+  "RESULT_FREQ_CENTRE_MIDRANGE": "Центр среднечастотного диапазона",
+  "RESULT_FREQ_UPPER_MIDRANGE": "Верхняя середина",
+  "RESULT_FREQ_TREBLE": "Высокие частоты",
+  "RESULT_FREQ_UPPER_TREBLE": "Дальние высокие частоты",
+
+  "PLAYLIST_EMPTY_TEXT": "Аудиоклипы не найдены",
+  "PLAYLIST_FOOTER": "Вы можете изменить порядок плейлиста, перетаскивая круговой флажок.",
+  "PLAYLIST_AUDIO_ACTION_DELETE": "Удалить",
+  "PLAYLIST_AUDIO_ALERT_DELETE_TITLE": "Внимание",
+  "PLAYLIST_AUDIO_ALERT_DELETE_CONTENT": "Вы уверены, что хотите удалить аудиоклип?",
+  "PLAYLIST_AUDIO_ALERT_DELETE_YES": "Да",
+  "PLAYLIST_AUDIO_ALERT_DELETE_NO": "Нет",
+
+  "IMPORT_APPBAR_TITLE": "Импорт аудио",
+  "IMPORT_ALERT_EXIT_TITLE": "Внимание",
+  "IMPORT_ALERT_EXIT_CONTENT": "Вы уверены, что хотите выйти и отменить импорт аудиоклипа?",
+  "IMPORT_ALERT_EXIT_YES": "Да",
+  "IMPORT_ALERT_EXIT_NO": "Нет",
+  "IMPORT_ALERT_ERROR_TITLE": "Ошибка",
+  "IMPORT_ALERT_ERROR_CONTENT": "Произошла ошибка при загрузке аудиоклипа",
+  "IMPORT_ALERT_ERROR_BUTTON": "Хорошо",
+  "IMPORT_ALERT_ABORTED_CONTENT": "Импорт файла отменён",
+  "IMPORT_ALERT_ABORTED_BUTTON": "Хорошо",
+  "IMPORT_CONVERTING_1": "Пожалуйста, подождите...",
+  "IMPORT_CONVERTING_2": "Оптимизация аудиофайла для воспроизведения.",
+  "IMPORT_EDITOR_TIMESTAMP_START": "Начало аудио : {_TIME}",
+  "IMPORT_EDITOR_TIMESTAMP_END": "Конец аудио : {_TIME}",
+  "IMPORT_EDITOR_BUTTON_SET_START": "Установить начало",
+  "IMPORT_EDITOR_BUTTON_SET_END": "Установить конец",
+  "IMPORT_EDITOR_ALERT_START_CONTENT": "Время начала не может быть позже времени окончания",
+  "IMPORT_EDITOR_ALERT_END_CONTENT": "Время окончания не может быть раньше времени начала",
+  "IMPORT_EDITOR_ALERT_BUTTON": "Хорошо",
+  "IMPORT_EDITOR_BUTTON_DONE": "Готово",
+  "IMPORT_EDITOR_SAVE_ERROR": "Не удалось сохранить аудиоклип. Пожалуйста, попробуйте ещё раз.",
+
+  "SETTING_CARD_THEME_TITLE": "Тема",
+  "SETTING_CARD_LANG_TITLE": "Язык",
+  "SETTING_CARD_GITHUB_TITLE": "GitHub",
+  "SETTING_CARD_CONTACT_TITLE": "Связаться с разработчиком",
+  "SETTING_CARD_LICENSE_TITLE": "Лицензия открытого исходного кода",
+  "SETTING_CARD_AUDIO_SETTING_TITLE": "Настройки аудио",
+  "MISC_SETTING_CARD_TOOLTIP_TITLE": "Подсказка частоты на графике",
+
+  "AUDIO_SETTING_APPBAR_TITLE": "Настройки аудио",
+  "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE": "Формат импорта аудио",
+  "AUDIO_SETTING_IMPORT_FORMAT_SMART": "Умный",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_1":
+    "«Умный» режим оставляет файлы, которые eqTrainer уже умеет воспроизводить (WAV, MP3, FLAC, OGG, Opus), без изменений, а всё остальное конвертирует — во FLAC, если исходник был без потерь, или в Opus, если он уже был с потерями.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_2":
+    "Остальные варианты конвертируют всё в указанный формат.",
+  "AUDIO_SETTING_IMPORT_FORMAT_DESC_3":
+    "«FLAC» — кодек сжатия без потерь, обеспечивающий отличное качество звука при примерно вдвое меньшем размере, чем WAV. «Opus» — кодек сжатия с потерями, дающий хорошее качество для критического прослушивания, а «WAV» — несжатый кодек без потерь, обеспечивающий наилучшее качество звука, но большие размеры файлов.",
+  "AUDIO_SETTING_IMPORT_FORMAT_FLAC": "FLAC (без потерь)",
+  "AUDIO_SETTING_IMPORT_FORMAT_OPUS": "Opus (компактный)",
+  "AUDIO_SETTING_IMPORT_FORMAT_WAV": "WAV (без сжатия)",
+  "AUDIO_SETTING_RECOMPRESS_TITLE": "Пересжать библиотеку",
+  "AUDIO_SETTING_RECOMPRESS_ACTION": "Освободить до {_SIZE}",
+  "AUDIO_SETTING_RECOMPRESS_DESC":
+    "Перекодирует WAV-клипы в вашей библиотеке во FLAC. FLAC — формат без потерь, звук идентичен, а размер обычно примерно вдвое меньше. Клипы, импортированные как Opus или FLAC, не затрагиваются, и ничего никогда не перекодируется в формат с потерями.",
+  "AUDIO_SETTING_RECOMPRESS_CONFIRM": [
+    {
+      "declarations": ["input _COUNT", "local countPlural = _COUNT: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Пересжать {_COUNT} WAV-клип во FLAC?\n\nСейчас он занимает {_SIZE} и должен стать около {_AFTER}. Звук не изменится; это только освобождает место на диске.",
+        "countPlural=few": "Пересжать {_COUNT} WAV-клипа во FLAC?\n\nСейчас они занимают {_SIZE} и должны стать около {_AFTER}. Звук не изменится; это только освобождает место на диске.",
+        "countPlural=many": "Пересжать {_COUNT} WAV-клипов во FLAC?\n\nСейчас они занимают {_SIZE} и должны стать около {_AFTER}. Звук не изменится; это только освобождает место на диске.",
+        "countPlural=*": "Пересжать {_COUNT} WAV-клипов во FLAC?\n\nСейчас они занимают {_SIZE} и должны стать около {_AFTER}. Звук не изменится; это только освобождает место на диске."
+      }
+    }
+  ],
+  "AUDIO_SETTING_RECOMPRESS_START": "Пересжать",
+  "AUDIO_SETTING_RECOMPRESS_DONE": [
+    {
+      "declarations": ["input _COUNT", "local countPlural = _COUNT: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Пересжат {_COUNT} клип, освобождено {_SAVED}",
+        "countPlural=few": "Пересжато {_COUNT} клипа, освобождено {_SAVED}",
+        "countPlural=many": "Пересжато {_COUNT} клипов, освобождено {_SAVED}",
+        "countPlural=*": "Пересжато {_COUNT} клипов, освобождено {_SAVED}"
+      }
+    }
+  ],
+  "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS": [
+    {
+      "declarations": ["input _COUNT", "local countPlural = _COUNT: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Пересжат {_COUNT} клип, освобождено {_SAVED}. {_FAILED} не удалось конвертировать, он оставлен как есть.",
+        "countPlural=few": "Пересжато {_COUNT} клипа, освобождено {_SAVED}. {_FAILED} не удалось конвертировать, они оставлены как есть.",
+        "countPlural=many": "Пересжато {_COUNT} клипов, освобождено {_SAVED}. {_FAILED} не удалось конвертировать, они оставлены как есть.",
+        "countPlural=*": "Пересжато {_COUNT} клипов, освобождено {_SAVED}. {_FAILED} не удалось конвертировать, они оставлены как есть."
+      }
+    }
+  ],
+  "DIALOG_CANCEL": "Отмена",
+  "AUDIO_SETTING_CARD_VOLUME_COMP_TITLE": "Компенсация усиления",
+  "AUDIO_SETTING_CARD_VOLUME_COMP_DESC":
+    "Ослабляет громкость воспроизведения пропорционально усилению эквалайзера, чтобы предотвратить клиппинг. Отключение сохраняет постоянную громкость, но может вызвать клиппинг при высоких значениях усиления.",
+  "AUDIO_SETTING_CARD_BACKEND_TITLE": "Аудио API",
+  "AUDIO_SETTING_CARD_BACKEND_DESC":
+    "Если аудио воспроизводится не так, как ожидалось, попробуйте изменить аудио API бэкенда.",
+  "AUDIO_SETTING_BACKEND_APPBAR": "Настройки API аудио-бэкенда",
+  "AUDIO_SETTING_BACKEND_AUTO": "Автоматически",
+  "AUDIO_SETTING_BACKEND_AUTO_DESC": "Позволить аудиодвижку выбрать. Предпочитает AAudio на Android 11 и новее.",
+  "AUDIO_SETTING_BACKEND_AAUDIO_DESC": "Меньшая задержка, Android 8+. Переключается на OpenSL ES там, где AAudio недоступен.",
+  "AUDIO_SETTING_BACKEND_OPENSLES_DESC": "Наибольшая совместимость, Android 4.1+. Рекомендуется для цифровых аудиоплееров.",
+  "AUDIO_SETTING_BACKEND_RESTART_NOTE": "Аудио бэкенд выбирается при начале воспроизведения. Перезапустите eqTrainer, чтобы изменения вступили в силу.",
+  "AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY": "Выбран {_BACKEND}.",
+
+  "UPDATE_ALERT_MESSAGE_BODY": "Доступна новая версия eqTrainer!",
+  "UPDATE_ALERT_BUTTON_IGNORE": "Игнорировать",
+  "UPDATE_ALERT_BUTTON_LATER": "Позже",
+  "UPDATE_ALERT_BUTTON_UPDATE": "Обновить сейчас",
+  "UPDATE_ALERT_MESSAGE_PROMPT": "Хотите установить обновлённое приложение?",
+  "UPDATE_ALERT_RELEASE_NOTE": "Примечания к выпуску",
+  "UPDATE_ALERT_MESSAGE_TITLE": "Доступно обновление",
+
+  "ERROR_PLAYER_ALERT_CONTENT": "Произошла ошибка при воспроизведении аудио",
+  "ERROR_PLAYER_ALERT_EXIT_BUTTON": "Хорошо"
+}
