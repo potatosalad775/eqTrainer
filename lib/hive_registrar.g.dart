@@ -3,11 +3,13 @@
 // Check in to version control
 
 import 'package:hive_ce/hive_ce.dart';
+import 'package:eq_trainer/shared/model/legacy_audio_clip.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {
     registerAdapter(BackendDataAdapter());
+    registerAdapter(LegacyAudioClipAdapter());
     registerAdapter(MiscSettingsAdapter());
   }
 }
@@ -15,6 +17,7 @@ extension HiveRegistrar on HiveInterface {
 extension IsolatedHiveRegistrar on IsolatedHiveInterface {
   void registerAdapters() {
     registerAdapter(BackendDataAdapter());
+    registerAdapter(LegacyAudioClipAdapter());
     registerAdapter(MiscSettingsAdapter());
   }
 }

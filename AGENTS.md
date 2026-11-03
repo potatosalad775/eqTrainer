@@ -16,7 +16,7 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 ```
 eqTrainer/
 ├── lib/
-│   ├── main.dart              # App bootstrap, provider wiring, Hive init
+│   ├── main.dart              # App bootstrap, provider wiring, legacy data migrations
 │   ├── l10n/                  # ARB translations, context.l10n (generated/ is gitignored)
 │   ├── features/              # Feature-first UI modules
 │   │   ├── config/            # Session parameter configuration page
@@ -27,9 +27,9 @@ eqTrainer/
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
 │   └── shared/                # Cross-feature code
-│       ├── model/             # AudioClip, AudioState, BackendData/MiscSettings, MiscSettingsProvider
+│       ├── model/             # AudioClip, AudioState, MiscSettingsProvider, legacy Hive records
 │       ├── player/            # Audio engine: PlayerService (flutter_soloud)
-│       ├── repository/        # IAudioClipRepository + Hive implementation
+│       ├── repository/        # IAudioClipRepository + JSON file implementation
 │       ├── service/           # Business logic services
 │       ├── themes/            # AppColors, AppTheme, AppDimens
 │       └── widget/            # Reusable UI widgets
@@ -66,8 +66,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
 | `AudioState` | ChangeNotifier | Audio backend & output device selection |
 | `AppDirectories` | Provider | App support directory paths |
-| `AudioClipRepository` | Provider | Hive-backed clip storage |
-| `IAudioClipRepository` | Provider | Interface alias for DI flexibility |
+| `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `AudioClipService` | Provider | File import / clip management |
 | `PlaylistService` | Provider | Playlist operations & enabled-clip queries |
 | `ImportWorkflowService` | Provider | File-picker import flow |
@@ -91,10 +90,10 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 
 | Sub-directory | Content |
 |---|---|
-| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (legacy Hive records, read only by the settings migration), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`) |
+| `model/` | `AudioClip` (immutable, JSON), `AudioState` (backend/device), `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`) |
 | `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
-| `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `legacy_settings_migration.dart`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
+| `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl) |
+| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `legacy_settings_migration.dart`, `legacy_clip_migration.dart`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
 | `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
 | `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
@@ -228,13 +227,45 @@ Settings are in `shared_preferences`, through the legacy `SharedPreferences` API
 (see `LocaleProvider` for why). Its cache is in memory, so reads are synchronous
 once `main()` has loaded it.
 
-The clip library is in Hive CE, in the `audioClipBox` box.
+The clip library is `audio_clips.json` in the app support directory, loaded whole
+into `AudioClipRepository` and rewritten whole on every change. Things that are
+easy to break:
 
-`migrateLegacySettings` moves settings out of the old `backendBox` and
-`miscSettingsBox` once, then deletes them. It runs before anything reads a
-setting, which is why `main()` awaits it. It has to stay, along with the two
-`setting_data.dart` records, until dropping users on older versions is
-acceptable, since people can skip releases.
+- **Open exactly one repository.** Each instance keeps its own copy, so a second
+  would overwrite the first's changes. That includes `ClipFormatMigration`, which
+  gets the same instance as the widget tree.
+- **A finished write is on disk, and a failed one rolled back.** The rewrite
+  passes delete a clip's source file straight after repointing its record, so
+  this is what stops a record ever pointing at a file that is gone.
+- **Writes are atomic and queued**: a flushed temp file renamed over the real one,
+  strictly one at a time.
+
+A clip's `id` is what identifies it, not its position. For anything imported now
+it is the file's basename, which format rewrites preserve.
+
+Hive CE is only read now, to migrate what older versions stored. Both migrations
+run in `main()` before anything reads the data, and people can skip releases, so
+they stay until dropping users on older versions is acceptable.
+
+| Migration | Boxes | On an unreadable box | After success |
+|---|---|---|---|
+| `migrateLegacySettings` | `backendBox`, `miscSettingsBox` | Defaults, marked done | Deletes the boxes |
+| `migrateLegacyClips` | `audioClipBox` | Not marked done, retried next launch, and `PlaylistPage` tells the user | Keeps the box, as a backup and for downgrades |
+
+The difference is deliberate: a lost setting takes a moment to fix, but a lost
+library cannot be rebuilt, since files are named by timestamp. The clip migration
+merges rather than overwrites, so clips imported while the box was unreadable
+survive a later retry.
+
+**Hive's default on a damaged box is to cut the file at the first bad frame and
+open successfully**, so a plain `openBox` reads as a smaller library rather than
+an error. `migrateLegacyClips` opens with `crashRecovery: false` first; on failure
+it copies the file to `audioclipbox.hive.damaged`, repairs, migrates what survives
+and tells the user.
+
+Removing Hive means removing both migrations and the `legacy_audio_clip.dart` and
+`setting_data.dart` records, deleting `audioClipBox` from disk, and dropping
+`hive_ce`, `hive_ce_flutter`, `hive_ce_generator` and `build_runner`.
 
 - Adapters are generated with `hive_ce_generator` — run `fvm dart run build_runner build` after modifying `@HiveType` / `@HiveField` annotated models
 - Generated files (`*.g.dart`) are committed to source control
@@ -342,7 +373,6 @@ scaffolding is in `test/helpers/`:
 |---|---|
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
-| `hive_test_box.dart` | `HiveTestBox`: a throwaway `AudioClip` box. Anything that goes through `clip.key` needs clips added via a box: a bare `AudioClip(...)` has a **null** key, so two of them compare equal and a "was this record deleted?" check passes for the wrong reason. |
 
 Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
@@ -442,7 +472,7 @@ ref are cancelled when a newer commit lands.
 
 | File | Purpose |
 |---|---|
-| `lib/main.dart` | App entry, provider tree, Hive init |
+| `lib/main.dart` | App entry, provider tree, legacy data migrations |
 | `lib/features/session/model/session_controller.dart` | Session orchestration logic |
 | `lib/features/session/model/session_store.dart` | Session UI state (ChangeNotifier) |
 | `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
@@ -452,7 +482,8 @@ ref are cancelled when a newer commit lands.
 | `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
 | `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
 | `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
-| `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
+| `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
+| `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
 | `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
 | `lib/shared/model/audio_state.dart` | Output device + Android backend state |
 | `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
@@ -465,7 +496,7 @@ ref are cancelled when a newer commit lands.
 | Package | Role |
 |---|---|
 | `provider` | State management |
-| `hive_ce` + `hive_ce_flutter` | The clip library, and reading legacy settings |
+| `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
 | `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |

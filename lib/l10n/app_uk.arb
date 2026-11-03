@@ -59,6 +59,7 @@
 
   "playlistEmptyText": "Аудіокліпів не знайдено",
   "playlistFooter": "Ви можете змінити порядок плейлиста, перетягуючи круговий прапорець.",
+  "playlistLibraryUnreadable": "Не вдалося прочитати частину бібліотеки кліпів, тому деякі кліпи можуть бути відсутні в цьому списку. Ваші аудіофайли не видалено.",
   "playlistAudioActionDelete": "Видалити",
   "playlistAudioAlertDeleteTitle": "Увага",
   "playlistAudioAlertDeleteContent": "Ви впевнені, що хочете видалити аудіокліп?",

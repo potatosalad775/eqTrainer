@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
+import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/service/clip_format_migration.dart';
@@ -299,6 +300,51 @@ void main() {
       // updateFileNameById would have no-opped on the missing id, so
       // without the check this file would sit on disk unreferenced forever.
       expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isFalse);
+    });
+
+    group('against the real repository', () {
+      late File libraryFile;
+      late AudioClipRepository repo;
+
+      setUp(() async {
+        libraryFile = File(p.join(tmpClips.path, 'audio_clips.json'));
+        repo = await AudioClipRepository.open(libraryFile);
+        await File(p.join(tmpClips.path, '1000.m4a')).writeAsBytes([1, 2, 3, 4]);
+        await repo.addClip(AudioClip('1000.m4a', 'song.m4a', 12.5, false));
+      });
+
+      ClipFormatMigration migration() => ClipFormatMigration(
+            repo,
+            mockDirs,
+            importFormat: ImportFormat.smart,
+            encoder: FakeClipEncoder(),
+          );
+
+      test('the rewrite reaches the disk, keeping the rest of the record',
+          () async {
+        expect(await migration().run(), equals(1));
+
+        final saved = (await AudioClipRepository.open(libraryFile)).getAllClips();
+        expect(
+          saved,
+          equals([AudioClip('1000.opus', 'song.m4a', 12.5, false, id: '1000')]),
+        );
+        expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isFalse);
+      });
+
+      test('the original survives if the record cannot be saved', () async {
+        // A directory cannot be renamed over, so this is the save failing after
+        // the conversion succeeded: the moment a record could point at a file
+        // that is gone.
+        await libraryFile.delete();
+        await Directory(libraryFile.path).create();
+
+        expect(await migration().run(), equals(0));
+
+        expect(repo.getAllClips().single.fileName, equals('1000.m4a'));
+        expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isTrue);
+        expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isFalse);
+      });
     });
 
     group('pausing for playback', () {

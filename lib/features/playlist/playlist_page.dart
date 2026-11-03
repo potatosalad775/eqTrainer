@@ -25,7 +25,12 @@ class PlaylistPage extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 36),
-                child: Text(context.l10n.playlistEmptyText),
+                child: Text(
+                  repo.hasUnreadableData
+                      ? context.l10n.playlistLibraryUnreadable
+                      : context.l10n.playlistEmptyText,
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }
@@ -42,7 +47,21 @@ class PlaylistPage extends StatelessWidget {
             },
             footer: Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 84),
-              child: Center(child: Text(context.l10n.playlistFooter)),
+              child: Center(
+                child: Column(
+                  children: [
+                    if (repo.hasUnreadableData)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Text(
+                          context.l10n.playlistLibraryUnreadable,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    Text(context.l10n.playlistFooter),
+                  ],
+                ),
+              ),
             ),
             padding: const EdgeInsets.fromLTRB(13, 4, 13, 0),
             proxyDecorator: _tempProxyDecorator,

@@ -23,6 +23,7 @@ import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/service/clip_recompress_service.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
+import 'package:eq_trainer/shared/service/legacy_clip_migration.dart';
 import 'package:eq_trainer/shared/service/legacy_settings_migration.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/shared/service/upgrader_service.dart';
@@ -50,6 +51,7 @@ Future<void> main() async {
   final clipRepository = await AudioClipRepository.open(
     File(p.join(appSupportDir.path, audioClipFileName)),
   );
+  await migrateLegacyClips(clipRepository, prefs, boxDirectory: appSupportDir.path);
 
   // Set Android System UI Style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
