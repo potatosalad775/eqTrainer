@@ -14,7 +14,6 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/main_page.dart';
-import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/locale_provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
@@ -31,25 +30,6 @@ import 'package:eq_trainer/features/session/data/session_parameter.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 
-// Opens a Hive box, recreating it from scratch if it fails to open (e.g. a
-// corrupt file left by a crash mid-write) instead of crash-looping on every
-// launch. The corrupt file is copied aside first so it isn't silently lost.
-Future<Box<T>> _openBoxSafely<T>(String name) async {
-  try {
-    return await Hive.openBox<T>(name);
-  } catch (e) {
-    debugPrint('[Hive] Box "$name" failed to open ($e); recreating.');
-    final file = File(p.join(appSupportDir.path, '${name.toLowerCase()}.hive'));
-    if (await file.exists()) {
-      try {
-        await file.copy('${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
-      } catch (_) {}
-    }
-    await Hive.deleteBoxFromDisk(name);
-    return Hive.openBox<T>(name);
-  }
-}
-
 Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +37,7 @@ Future<void> main() async {
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();
 
-  // Load Hive - playlist database
+  // Load Hive - only ever read now, to migrate what older versions stored in it
   await Hive.initFlutter(appSupportDir.path);
 
   // Load Settings - older versions kept these in Hive, so move them first
@@ -66,9 +46,10 @@ Future<void> main() async {
   final localeProvider = await LocaleProvider.load();
   final miscSettings = await MiscSettingsProvider.load();
 
-  // Load Playlist Data
-  Hive.registerAdapter(AudioClipAdapter());
-  await _openBoxSafely<AudioClip>(audioClipBoxName);
+  // Load Playlist Data - the one instance everything shares, see AudioClipRepository
+  final clipRepository = await AudioClipRepository.open(
+    File(p.join(appSupportDir.path, audioClipFileName)),
+  );
 
   // Set Android System UI Style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -94,7 +75,7 @@ Future<void> main() async {
   // Handed to the widget tree as well: the screens that play audio pause it
   // while they are open, so the run never competes with playback for CPU.
   final clipFormatMigration = ClipFormatMigration(
-    AudioClipRepository(),
+    clipRepository,
     AppDirectories(),
     importFormat: miscSettings.importFormat,
   );
@@ -108,6 +89,7 @@ Future<void> main() async {
         localeProvider: localeProvider,
         miscSettings: miscSettings,
         androidBackend: readAndroidBackend(prefs),
+        clipRepository: clipRepository,
       ),
     ),
   );
@@ -121,6 +103,7 @@ class App extends StatefulWidget {
     required this.localeProvider,
     required this.miscSettings,
     required this.androidBackend,
+    required this.clipRepository,
   });
 
   final Upgrader upgrader;
@@ -128,6 +111,7 @@ class App extends StatefulWidget {
   final LocaleProvider localeProvider;
   final MiscSettingsProvider miscSettings;
   final AndroidAudioBackend androidBackend;
+  final AudioClipRepository clipRepository;
 
   static AppState of(BuildContext context) {
     return context.findAncestorStateOfType<AppState>()!;
@@ -208,9 +192,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
         Provider<AppDirectories>(create: (_) => AppDirectories()),
 
         // Repository
-        Provider<AudioClipRepository>(create: (_) => AudioClipRepository()),
-        // Expose as interface as well for flexible injection
-        Provider<IAudioClipRepository>(create: (ctx) => ctx.read<AudioClipRepository>()),
+        Provider<IAudioClipRepository>.value(value: widget.clipRepository),
 
         // Services
         Provider<AudioClipService>(create: (ctx) => AudioClipService(
@@ -273,6 +255,6 @@ class AppState extends State<App> with WidgetsBindingObserver {
   }
 }
 
-const String audioClipBoxName = "audioClipBox";
+const String audioClipFileName = "audio_clips.json";
 
 late Directory appSupportDir;

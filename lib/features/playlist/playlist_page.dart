@@ -33,7 +33,7 @@ class PlaylistPage extends StatelessWidget {
             buildDefaultDragHandles: false,
             itemCount: clips.length,
             itemBuilder: (context, index) => PlaylistItemTile(
-              key: ValueKey('${clips[index].fileName}_${clips[index].ogAudioName}'),
+              key: ValueKey(clips[index].id),
               index: index,
               currentClip: clips[index],
             ),

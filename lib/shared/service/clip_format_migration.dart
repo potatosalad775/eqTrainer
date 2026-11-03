@@ -225,9 +225,9 @@ class ClipFormatMigration extends ChangeNotifier {
       }
 
       // The clip can be deleted from the playlist while we are converting it.
-      // updateFileNameByKey no-ops on a key that is gone, so without this the
+      // updateFileNameById no-ops on an id that is gone, so without this the
       // file we just wrote would stay on disk with no record pointing at it.
-      if (!_repository.getAllClips().any((c) => c.key == clip.key)) {
+      if (!_repository.getAllClips().any((c) => c.id == clip.id)) {
         await dest.delete();
         return false;
       }
@@ -235,7 +235,7 @@ class ClipFormatMigration extends ChangeNotifier {
       // Commit before deleting: if the process dies here the worst case is
       // an orphaned .m4a next to a working clip, never a record pointing at
       // a file that no longer exists.
-      await _repository.updateFileNameByKey(clip.key, destName);
+      await _repository.updateFileNameById(clip.id, destName);
 
       try {
         await source.delete();

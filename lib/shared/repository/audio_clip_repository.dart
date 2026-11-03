@@ -1,102 +1,177 @@
-import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
-import 'package:eq_trainer/main.dart';
 
 // Define repository abstraction in repository layer to avoid cyclic deps
 abstract class IAudioClipRepository {
+  /// True when part of the library could not be read this launch, so the list
+  /// may be incomplete.
+  bool get hasUnreadableData;
   Future<void> addClip(AudioClip clip);
   // Return all clips (synchronous). PlaylistService will filter/map.
   List<AudioClip> getAllClips();
   // Subscribe to changes as a stream, including initial snapshot.
   Stream<List<AudioClip>> watchClips();
-  // Delete/toggle by Hive key rather than list index: the index a widget was
+  // Delete/toggle by id rather than list index: the index a widget was
   // built with can go stale across an `await` (e.g. a confirmation dialog)
-  // if the box changes in the meantime, silently acting on the wrong record.
-  Future<void> deleteByKey(dynamic key);
-  Future<void> toggleEnabledByKey(dynamic key);
+  // if the library changes in the meantime, silently acting on the wrong record.
+  Future<void> deleteById(String id);
+  Future<void> toggleEnabledById(String id);
   // Repoint a record at a different backing file, keeping everything else.
   // Used by ClipFormatMigration when it rewrites a clip to another format.
-  Future<void> updateFileNameByKey(dynamic key, String fileName);
-  // Move the clip at [oldIndex] to [newIndex] in a single batched write.
+  Future<void> updateFileNameById(String id, String fileName);
+  // Move the clip at [oldIndex] to [newIndex].
   Future<void> reorder(int oldIndex, int newIndex);
 }
 
+/// The clip library, held in memory and saved whole to one JSON file.
+///
+/// A library is small enough that rewriting it on every change costs nothing,
+/// and one list makes order trivial. Open exactly one per file: each instance
+/// keeps its own copy, so a second would overwrite the first one's changes.
+///
+/// Readers see a change immediately, while its save is in flight, so a dragged
+/// clip does not snap back for a frame. A completed write means the change is
+/// on disk, which is what lets [ClipFormatMigration] delete a source file right
+/// after repointing its record. A failed write throws and rolls the change back.
 class AudioClipRepository implements IAudioClipRepository {
-  AudioClipRepository({Box<AudioClip>? box})
-      : _box = box ?? Hive.box<AudioClip>(audioClipBoxName);
+  AudioClipRepository._(this._file, this._clips, this._hasUnreadableData);
 
-  final Box<AudioClip> _box;
-
-  @override
-  Future<void> addClip(AudioClip clip) async {
-    await _box.add(clip);
-  }
-
-  @override
-  List<AudioClip> getAllClips() {
-    return _box.values.toList(growable: false);
-  }
-
-  @override
-  Stream<List<AudioClip>> watchClips() async* {
-    // 최초 스냅샷
-    yield _box.values.toList(growable: false);
-    // 변경 이벤트 발생 시 전체 목록을 다시 방출
-    await for (final _ in _box.watch()) {
-      yield _box.values.toList(growable: false);
+  /// Loads [file]. A missing file is an empty library.
+  ///
+  /// An unreadable one is copied aside before the next save can replace it, and
+  /// the library starts empty so the app still opens. Saves are atomic, so this
+  /// takes outside damage rather than a crash.
+  static Future<AudioClipRepository> open(File file) async {
+    try {
+      final clips = await file.exists() ? await _read(file) : const <AudioClip>[];
+      return AudioClipRepository._(file, clips, false);
+    } catch (e) {
+      debugPrint('[AudioClipRepository] "${file.path}" is unreadable ($e).');
+      try {
+        await file.copy('${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
+      } catch (_) {}
+      return AudioClipRepository._(file, const [], true);
     }
   }
 
-  @override
-  Future<void> deleteByKey(dynamic key) async {
-    await _box.delete(key);
+  final File _file;
+  final _changes = StreamController<List<AudioClip>>.broadcast(sync: true);
+  List<AudioClip> _clips;
+  bool _hasUnreadableData;
+
+  // Writes run strictly one at a time, so each sees the result of the last and
+  // two saves never share the temp file.
+  Future<void> _tail = Future.value();
+
+  static Future<List<AudioClip>> _read(File file) async {
+    final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    return List.unmodifiable([
+      for (final clip in json['clips'] as List<dynamic>)
+        AudioClip.fromJson(clip as Map<String, dynamic>),
+    ]);
   }
 
-  @override
-  Future<void> toggleEnabledByKey(dynamic key) async {
-    final clip = _box.get(key);
-    if (clip == null) return;
-    clip.isEnabled = !clip.isEnabled;
-    await _box.put(key, clip);
-  }
+  /// Flags the library as incomplete, for a problem found outside this class.
+  void markUnreadable() => _hasUnreadableData = true;
 
   @override
-  Future<void> updateFileNameByKey(dynamic key, String fileName) async {
-    final clip = _box.get(key);
-    if (clip == null) return;
-    clip.fileName = fileName;
-    await _box.put(key, clip);
-  }
+  bool get hasUnreadableData => _hasUnreadableData;
 
   @override
-  Future<void> reorder(int oldIndex, int newIndex) async {
-    final values = _box.values.toList();
-    if (oldIndex < 0 || oldIndex >= values.length) return;
-    final target = newIndex.clamp(0, values.length - 1);
-    if (oldIndex == target) return;
+  List<AudioClip> getAllClips() => _clips;
 
-    // Compute the fully reordered list, then rewrite the affected contiguous
-    // range in a single putAll. Doing it as one batched write (rather than two
-    // sequential putAt calls with an await between them) means watchers only
-    // ever observe the final ordering — never an intermediate state where the
-    // moved clip occupies two indices, which produced duplicate ReorderableList
-    // keys and crashed the list.
-    final keys = _box.keys.toList();
-    final item = values.removeAt(oldIndex);
-    values.insert(target, item);
+  @override
+  Stream<List<AudioClip>> watchClips() => Stream.multi((controller) {
+        controller.add(_clips);
+        final sub = _changes.stream.listen(controller.add);
+        controller.onCancel = sub.cancel;
+      });
 
-    final lo = oldIndex < target ? oldIndex : target;
-    final hi = oldIndex < target ? target : oldIndex;
-    final updates = <dynamic, AudioClip>{};
-    for (var i = lo; i <= hi; i++) {
-      // Every entry in the range lands under a key other than the one it was
-      // read from, and Hive refuses to store a bound HiveObject under a second
-      // key. So write copies: readers take their instances from Box.values
-      // after the event anyway, never from the list passed in here.
-      final v = values[i];
-      updates[keys[i]] =
-          AudioClip(v.fileName, v.ogAudioName, v.duration, v.isEnabled);
+  @override
+  Future<void> addClip(AudioClip clip) => _commit((clips) => [...clips, clip]);
+
+  @override
+  Future<void> deleteById(String id) => _commit((clips) =>
+      clips.any((c) => c.id == id) ? clips.where((c) => c.id != id).toList() : null);
+
+  @override
+  Future<void> toggleEnabledById(String id) =>
+      _replace(id, (clip) => clip.copyWith(isEnabled: !clip.isEnabled));
+
+  @override
+  Future<void> updateFileNameById(String id, String fileName) =>
+      _replace(id, (clip) => clip.copyWith(fileName: fileName));
+
+  @override
+  Future<void> reorder(int oldIndex, int newIndex) => _commit((clips) {
+        if (oldIndex < 0 || oldIndex >= clips.length) return null;
+        final target = newIndex.clamp(0, clips.length - 1);
+        if (oldIndex == target) return null;
+        final moved = [...clips];
+        moved.insert(target, moved.removeAt(oldIndex));
+        return moved;
+      });
+
+  /// Merges clips read from the old Hive box into the library, then proves the
+  /// result reached the disk.
+  ///
+  /// Safe to repeat. A clip already here wins over its old record, since it may
+  /// have been converted since, and a clip only here (imported while the old box
+  /// was unreadable) is kept.
+  Future<void> mergeLegacy(List<AudioClip> legacy) async {
+    await _commit((clips) {
+      final current = {for (final clip in clips) clip.id: clip};
+      final legacyIds = {for (final clip in legacy) clip.id};
+      return [
+        for (final clip in legacy) current[clip.id] ?? clip,
+        ...clips.where((clip) => !legacyIds.contains(clip.id)),
+      ];
+    });
+    if (!listEquals(await _read(_file), _clips)) {
+      throw const FileSystemException('saved library does not match');
     }
-    await _box.putAll(updates);
+  }
+
+  Future<void> _replace(String id, AudioClip Function(AudioClip) change) =>
+      _commit((clips) => clips.any((c) => c.id == id)
+          ? [for (final clip in clips) clip.id == id ? change(clip) : clip]
+          : null);
+
+  /// Queues [change], which returns the new list, or null if nothing changed.
+  Future<void> _commit(List<AudioClip>? Function(List<AudioClip>) change) {
+    final result = _tail.then((_) async {
+      final previous = _clips;
+      final next = change(previous);
+      if (next == null) return;
+      _publish(List.unmodifiable(next));
+      try {
+        await _save();
+      } catch (_) {
+        _publish(previous);
+        rethrow;
+      }
+    });
+    // A failed write fails its own caller, not the writes queued behind it.
+    _tail = result.catchError((_) {});
+    return result;
+  }
+
+  void _publish(List<AudioClip> clips) {
+    _clips = clips;
+    _changes.add(clips);
+  }
+
+  /// Writes to a temp file and renames it over the real one, so a crash leaves
+  /// either the old library or the new one, never half of either.
+  Future<void> _save() async {
+    final temp = File('${_file.path}.tmp');
+    await temp.writeAsString(
+      jsonEncode({'clips': _clips}),
+      flush: true,
+    );
+    await temp.rename(_file.path);
   }
 }

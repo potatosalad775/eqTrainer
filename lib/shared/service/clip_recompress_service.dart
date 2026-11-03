@@ -142,7 +142,7 @@ class ClipRecompressService {
         // Commit before deleting: if the process dies here the worst case is
         // an orphaned .wav beside a working .flac, never a record pointing at
         // a file that is gone.
-        await _repository.updateFileNameByKey(clip.key, destName);
+        await _repository.updateFileNameById(clip.id, destName);
         converted++;
         saved += sourceBytes - destBytes;
 
