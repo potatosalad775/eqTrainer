@@ -225,7 +225,7 @@ SessionController.submitAnswer()
 ### Persistence (Hive CE)
 
 - Boxes: `backendBox`, `miscSettingsBox`, `audioClipBox`
-- Adapters are generated with `hive_ce_generator` — run `dart run build_runner build` after modifying `@HiveType` / `@HiveField` annotated models
+- Adapters are generated with `hive_ce_generator` — run `fvm dart run build_runner build` after modifying `@HiveType` / `@HiveField` annotated models
 - Generated files (`*.g.dart`) are committed to source control
 
 ### Localization
@@ -309,12 +309,12 @@ checkout, `fvm install` fetches the pinned version.
 After modifying Hive models (`@HiveType`/`@HiveField`):
 
 ```bash
-dart run build_runner build --delete-conflicting-outputs
+fvm dart run build_runner build --delete-conflicting-outputs
 ```
 
 ### Linting
 
-`flutter analyze`. `flutter_lints` ^6.0.0 plus five rules turned on explicitly
+`fvm flutter analyze`. `flutter_lints` ^6.0.0 plus five rules turned on explicitly
 in `analysis_options.yaml`: `prefer_const_constructors`,
 `prefer_const_literals_to_create_immutables`, `use_build_context_synchronously`,
 `avoid_empty_else`, `unawaited_futures`. The platform runner directories are
@@ -345,8 +345,8 @@ calls `context.l10n` needs `AppLocalizations.localizationsDelegates` on its
 `MaterialApp`; see `settings_page_test.dart`.
 
 ```bash
-flutter test test/              # unit tests — headless, this is what CI runs
-flutter test integration_test/  # integration tests — local only, see below
+fvm flutter test test/              # unit tests — headless, this is what CI runs
+fvm flutter test integration_test/  # integration tests — local only, see below
 ```
 
 **Integration tests are not run in CI, and are not meant to be.** The suites in
@@ -369,7 +369,7 @@ ships in every release build.
 
 GitHub-hosted runners have no audio hardware, so an engine that comes up there
 proves nothing about the environment users are in. Run these on a real machine
-(`flutter test integration_test/ --device-id windows|macos|linux`, or a
+(`fvm flutter test integration_test/ --device-id windows|macos|linux`, or a
 connected phone) before landing player changes.
 
 **The directory form fails on an unpatched SDK — it is a `flutter_tools` bug,
@@ -386,7 +386,7 @@ desktop device, not just Windows.
 
 Two ways out:
 
-- Run the files one at a time (`flutter test integration_test/<one>_test.dart -d windows`).
+- Run the files one at a time (`fvm flutter test integration_test/<one>_test.dart -d windows`).
 - Patch the SDK — in `packages/flutter_tools/lib/src/desktop_device.dart`, make
   `DesktopLogReader._inputController` non-`final` and re-create it at the top of
   `initializeProcess` when `isClosed`. Delete `bin/cache/flutter_tools.stamp`
