@@ -233,7 +233,8 @@ easy to break:
 
 - **Open exactly one repository.** Each instance keeps its own copy, so a second
   would overwrite the first's changes. That includes `ClipFormatMigration`, which
-  gets the same instance as the widget tree.
+  gets the same instance as the widget tree. It is also why only one copy of the
+  app may run: see [the desktop runners](#dependencies-worth-knowing).
 - **A finished write is on disk, and a failed one rolled back.** The rewrite
   passes delete a clip's source file straight after repointing its record, so
   this is what stops a record ever pointing at a file that is gone.
@@ -528,6 +529,20 @@ Flutter is moving to require.
 | macOS | `NSWindow.minSize` in `macos/Runner/MainFlutterWindow.swift` | `PRODUCT_DISPLAY_NAME` in `macos/Runner/Configs/AppInfo.xcconfig` |
 | Windows | `WM_GETMINMAXINFO` in `windows/runner/win32_window.cpp` | `window.Create` in `windows/runner/main.cpp` |
 | Linux | `gtk_window_set_geometry_hints` in `linux/my_application.cc` | same file, both titlebar branches |
+
+Only one copy of the app may run, because each would keep its own clip library in
+memory and overwrite the other's saves. A second launch shows the running window
+and exits, before Dart starts.
+
+| Platform | How |
+|---|---|
+| Windows | A named mutex at the top of `wWinMain` in `windows/runner/main.cpp` |
+| Linux | `GApplication` uniqueness in `linux/my_application.cc`. It works through the session bus, so with no bus there is no guard |
+| macOS | Launch Services reuses the running app. `open -n` or running the binary directly gets past it |
+| Android, iOS | One process per app |
+
+The Windows and Linux guards are release-only, so `flutter run` and integration
+tests work with the app open.
 
 On macOS the title is deliberately *not* set from `MainFlutterWindow`.
 Assigning `NSWindow.title` in `awakeFromNib` does not survive — AppKit
