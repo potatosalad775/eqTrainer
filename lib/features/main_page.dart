@@ -2,7 +2,7 @@ import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/config/config_page.dart';
 import 'package:eq_trainer/features/playlist/playlist_page.dart';
 import 'package:eq_trainer/features/settings/settings_page.dart';
@@ -15,15 +15,15 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  static const List<List<String>> _pageTitle = [
-    ["MAIN_APPBAR_TITLE_CONFIG_1", "MAIN_APPBAR_TITLE_CONFIG_2"],
-    ["MAIN_APPBAR_TITLE_PLAYLIST_1", "MAIN_APPBAR_TITLE_PLAYLIST_2"],
-    ["MAIN_APPBAR_TITLE_SETTING_1", "MAIN_APPBAR_TITLE_SETTING_2"],
-  ];
-
   @override
   Widget build(BuildContext context) {
     final navBarProvider = Provider.of<NavBarProvider>(context);
+    final l10n = context.l10n;
+    final (titleStart, titleEnd) = switch (navBarProvider.currentIndex) {
+      0 => (l10n.mainAppbarTitleConfig1, l10n.mainAppbarTitleConfig2),
+      1 => (l10n.mainAppbarTitlePlaylist1, l10n.mainAppbarTitlePlaylist2),
+      _ => (l10n.mainAppbarTitleSetting1, l10n.mainAppbarTitleSetting2),
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -39,10 +39,10 @@ class _MainPageState extends State<MainPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  tr(_pageTitle[navBarProvider.currentIndex][0], context: context),
+                  titleStart,
                 ),
                 Text(
-                  tr(_pageTitle[navBarProvider.currentIndex][1], context: context),
+                  titleEnd,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
@@ -70,13 +70,13 @@ class _MainPageState extends State<MainPage> {
         },
         destinations: [
           NavigationDestination(
-              icon: const Icon(Icons.home), label: "MAIN_NAVBAR_MAIN".tr()),
+              icon: const Icon(Icons.home), label: context.l10n.mainNavbarMain),
           NavigationDestination(
               icon: const Icon(Icons.music_note),
-              label: "MAIN_NAVBAR_PLAYLIST".tr()),
+              label: context.l10n.mainNavbarPlaylist),
           NavigationDestination(
               icon: const Icon(Icons.settings),
-              label: "MAIN_NAVBAR_SETTINGS".tr()),
+              label: context.l10n.mainNavbarSettings),
         ],
         backgroundColor: context.colors.surfaceContainerHigh,
       ),

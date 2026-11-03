@@ -1,7 +1,8 @@
 import 'package:eq_trainer/features/settings/audio_settings_page.dart';
+import 'package:eq_trainer/shared/model/locale_provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -26,31 +27,30 @@ class _SettingsPageState extends State<SettingsPage> {
         // Language Drop Down Menu
         SettingsCard(
           icon: Icons.language,
-          title: "SETTING_CARD_LANG_TITLE".tr(),
-          trailing: DropdownButton(
+          title: context.l10n.settingCardLangTitle,
+          trailing: DropdownButton<Locale>(
             alignment: Alignment.centerRight,
             isDense: true,
-            value: context.locale.toStringWithSeparator(),
+            // The resolved locale, not the saved one: it is always one of the
+            // items, even on a device language the app has no translation for.
+            value: Localizations.localeOf(context),
             menuMaxHeight: 400,
-            items: <String>['en', 'ko'].map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                  value: value,
-                  child: (value == 'en') ? const Text("English")
-                      : (value == 'ko') ? const Text("한국어")
-                      : const Text('')
-              );
-            }).toList(),
-            onChanged: (String? value) {
-              setState(() {
-                context.setLocale(value!.toLocale());
-              });
+            items: [
+              for (final locale in AppLocalizations.supportedLocales)
+                DropdownMenuItem(
+                  value: locale,
+                  child: Text(lookupAppLocalizations(locale).languageName),
+                ),
+            ],
+            onChanged: (Locale? value) {
+              context.read<LocaleProvider>().setLocale(value!);
             },
           ),
         ),
         // Dark Mode Button
         SettingsCard(
             icon: Icons.dark_mode,
-            title: "SETTING_CARD_THEME_TITLE".tr(),
+            title: context.l10n.settingCardThemeTitle,
             trailing: IconButton(
               padding: EdgeInsets.zero,
               icon: Icon(
@@ -75,7 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
         GestureDetector(
           child: SettingsCard(
             icon: Icons.build,
-            title: "SETTING_CARD_AUDIO_SETTING_TITLE".tr(),
+            title: context.l10n.settingCardAudioSettingTitle,
             trailing: const Icon(Icons.keyboard_arrow_right),
           ),
           onTap: () {
@@ -91,7 +91,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // Github Project Button
         SettingsCard(
           icon: FontAwesomeIcons.github,
-          title: "SETTING_CARD_GITHUB_TITLE".tr(),
+          title: context.l10n.settingCardGithubTitle,
           trailing: IconButton(
             icon: const Icon(Icons.launch),
             onPressed: () async {
@@ -102,7 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // Contact Dev
         SettingsCard(
           icon: Icons.person,
-          title: "SETTING_CARD_CONTACT_TITLE".tr(),
+          title: context.l10n.settingCardContactTitle,
           trailing: Wrap(
             children: [
               IconButton(
@@ -117,7 +117,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // Open Source License Card
         SettingsCard(
           icon: Icons.code,
-          title: "SETTING_CARD_LICENSE_TITLE".tr(),
+          title: context.l10n.settingCardLicenseTitle,
           trailing: IconButton(
             icon: const Icon(Icons.launch),
             onPressed: () {

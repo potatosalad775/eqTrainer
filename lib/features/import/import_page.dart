@@ -8,7 +8,7 @@ import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
@@ -76,7 +76,7 @@ class _ImportPageState extends State<ImportPage> {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: Text("IMPORT_APPBAR_TITLE".tr()),
+            title: Text(context.l10n.importAppbarTitle),
           ),
           body: SafeArea(
             child: Center(
@@ -88,27 +88,27 @@ class _ImportPageState extends State<ImportPage> {
                     if (value == ImportPageState.error ||
                         value == ImportPageState.timeout) {
                       return AlertDialog(
-                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                        content: Text("IMPORT_ALERT_ERROR_CONTENT".tr()),
+                        title: Text(context.l10n.importAlertErrorTitle),
+                        content: Text(context.l10n.importAlertErrorContent),
                         actions: [
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).pop();
                             },
-                            child: Text("IMPORT_ALERT_ERROR_BUTTON".tr()),
+                            child: Text(context.l10n.importAlertErrorButton),
                           )
                         ],
                       );
                     } else if (value == ImportPageState.aborted) {
                       return AlertDialog(
-                        title: Text("IMPORT_ALERT_ERROR_TITLE".tr()),
-                        content: Text("IMPORT_ALERT_ABORTED_CONTENT".tr()),
+                        title: Text(context.l10n.importAlertErrorTitle),
+                        content: Text(context.l10n.importAlertAbortedContent),
                         actions: [
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).pop();
                             },
-                            child: Text("IMPORT_ALERT_ABORTED_BUTTON".tr()),
+                            child: Text(context.l10n.importAlertAbortedButton),
                           )
                         ],
                       );
@@ -119,8 +119,8 @@ class _ImportPageState extends State<ImportPage> {
                           children: [
                             const CircularProgressIndicator(),
                             const SizedBox(height: 20),
-                            const Text("IMPORT_CONVERTING_1").tr(),
-                            const Text("IMPORT_CONVERTING_2").tr(),
+                            Text(context.l10n.importConverting1),
+                            Text(context.l10n.importConverting2),
                           ],
                         ),
                       );
@@ -243,21 +243,21 @@ class _ImportPageState extends State<ImportPage> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Text("IMPORT_ALERT_EXIT_TITLE".tr()),
-        content: Text("IMPORT_ALERT_EXIT_CONTENT".tr()),
+        title: Text(context.l10n.importAlertExitTitle),
+        content: Text(context.l10n.importAlertExitContent),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop(false);
             },
-            child: Text("IMPORT_ALERT_EXIT_NO".tr()),
+            child: Text(context.l10n.importAlertExitNo),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop(true);
               Navigator.of(context).pop();
             },
-            child: Text("IMPORT_ALERT_EXIT_YES".tr()),
+            child: Text(context.l10n.importAlertExitYes),
           ),
         ],
       ),

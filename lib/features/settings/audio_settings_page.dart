@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/settings/widget/audio_import_format_card.dart';
 import 'package:eq_trainer/features/settings/widget/clip_recompress_card.dart';
 import 'package:eq_trainer/features/settings/audio_backend_page.dart';
@@ -15,7 +15,7 @@ class AudioSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("AUDIO_SETTING_APPBAR_TITLE".tr()),
+        title: Text(context.l10n.audioSettingAppbarTitle),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -26,15 +26,15 @@ class AudioSettingsPage extends StatelessWidget {
               const AudioImportFormatCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_1".tr()),
+                child: Text(context.l10n.audioSettingImportFormatDesc1),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_2".tr()),
+                child: Text(context.l10n.audioSettingImportFormatDesc2),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_IMPORT_FORMAT_DESC_3".tr()),
+                child: Text(context.l10n.audioSettingImportFormatDesc3),
               ),
               const SizedBox(height: 12),
               // Renders nothing when the library holds no WAV clips, so this
@@ -42,13 +42,13 @@ class AudioSettingsPage extends StatelessWidget {
               const ClipRecompressCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_RECOMPRESS_DESC".tr()),
+                child: Text(context.l10n.audioSettingRecompressDesc),
               ),
               const SizedBox(height: 12),
               const VolumeCompensationCard(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text("AUDIO_SETTING_CARD_VOLUME_COMP_DESC".tr()),
+                child: Text(context.l10n.audioSettingCardVolumeCompDesc),
               ),
               // Android only: SoLoud picks the backend itself on every other
               // platform and gives Dart no way to override it (Windows and
@@ -59,7 +59,7 @@ class AudioSettingsPage extends StatelessWidget {
                 GestureDetector(
                   child: SettingsCard(
                     icon: Icons.build,
-                    title: "AUDIO_SETTING_CARD_BACKEND_TITLE".tr(),
+                    title: context.l10n.audioSettingCardBackendTitle,
                     trailing: const Icon(Icons.keyboard_arrow_right),
                   ),
                   onTap: () {
@@ -70,7 +70,7 @@ class AudioSettingsPage extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                  child: Text("AUDIO_SETTING_CARD_BACKEND_DESC".tr()),
+                  child: Text(context.l10n.audioSettingCardBackendDesc),
                 ),
               ],
             ],

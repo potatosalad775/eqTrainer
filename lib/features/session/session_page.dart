@@ -1,7 +1,7 @@
 import 'package:eq_trainer/features/session/widgets/session_page_content.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/result/result_page.dart';
 import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
@@ -82,7 +82,7 @@ class _SessionPageState extends State<SessionPage> {
         child: Scaffold(
           appBar: AppBar(
             title: Text(
-              "SESSION_APPBAR_TITLE".tr()
+              context.l10n.sessionAppbarTitle
             ),
             actions: [
               Selector<SessionStore, (int, int)>(
@@ -125,14 +125,14 @@ class _SessionPageState extends State<SessionPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("SESSION_ALERT_EXIT_TITLE".tr()),
-        content: Text("SESSION_ALERT_EXIT_CONTENT".tr()),
+        title: Text(context.l10n.sessionAlertExitTitle),
+        content: Text(context.l10n.sessionAlertExitContent),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop(false);
             },
-            child: Text("SESSION_ALERT_EXIT_BUTTON_NO".tr()),
+            child: Text(context.l10n.sessionAlertExitButtonNo),
           ),
           TextButton(
             onPressed: () {
@@ -142,7 +142,7 @@ class _SessionPageState extends State<SessionPage> {
                 MaterialPageRoute(builder: (context) => const ResultPage())
               );
             },
-            child: Text("SESSION_ALERT_EXIT_BUTTON_YES".tr()),
+            child: Text(context.l10n.sessionAlertExitButtonYes),
           ),
         ],
       )

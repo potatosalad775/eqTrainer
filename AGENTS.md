@@ -17,6 +17,7 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 eqTrainer/
 ├── lib/
 │   ├── main.dart              # App bootstrap, provider wiring, Hive init
+│   ├── l10n/                  # ARB translations, context.l10n (generated/ is gitignored)
 │   ├── features/              # Feature-first UI modules
 │   │   ├── config/            # Session parameter configuration page
 │   │   ├── import/            # Audio file import workflow
@@ -34,8 +35,7 @@ eqTrainer/
 │       └── widget/            # Reusable UI widgets
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
-│   ├── icon/                  # App icon
-│   └── translations/          # en.json, ko.json (easy_localization)
+│   └── icon/                  # App icon
 ├── test/                      # Unit tests, mirroring lib/ (+ helpers/)
 ├── integration_test/          # Real-engine tests — local only, never CI
 ├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners
@@ -44,6 +44,7 @@ eqTrainer/
 │   └── test.yml               # Unit tests, every push
 ├── distribute_options.yaml    # fastforge jobs: Linux deb + rpm
 ├── appcast.xml                # `upgrader` feed
+├── l10n.yaml                  # gen-l10n config
 ├── pubspec.yaml
 ├── analysis_options.yaml
 ├── CONTRIBUTING.md
@@ -62,6 +63,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 |---|---|---|
 | `NavBarProvider` | ChangeNotifier | Bottom nav state |
 | `MiscSettingsProvider` | ChangeNotifier | Hive-backed misc settings: theme mode, frequency tooltip, import format, volume compensation |
+| `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
 | `AudioState` | ChangeNotifier | Audio backend & output device selection |
 | `AppDirectories` | Provider | App support directory paths |
 | `AudioClipRepository` | Provider | Hive-backed clip storage |
@@ -83,13 +85,13 @@ Each feature is a self-contained module with:
 - `data/` — local state/data classes (if any)
 - `model/` — feature-specific models (if any)
 
-There are **no barrel files.** Import the specific `package:eq_trainer/...` path.
+There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Localization](#localization)). Import the specific `package:eq_trainer/...` path.
 
 ### Shared Layer (`lib/shared/`)
 
 | Sub-directory | Content |
 |---|---|
-| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (the two Hive records, both in `setting_data.dart`), `MiscSettingsProvider` (ChangeNotifier over `MiscSettings`) |
+| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (the two Hive records, both in `setting_data.dart`), `MiscSettingsProvider` (ChangeNotifier over `MiscSettings`), `LocaleProvider` (ChangeNotifier over `shared_preferences`) |
 | `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
 | `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
@@ -228,19 +230,52 @@ SessionController.submitAnswer()
 
 ### Localization
 
-- `easy_localization` with **JSON** files in `assets/translations/` (`en.json`, `ko.json`)
-- Keys are SCREAMING_SNAKE_CASE strings (e.g. `"SESSION_SNACKBAR_CORRECT"`)
-- Access via `.tr()` extension: `"MY_KEY".tr(namedArgs: {'_VAR': value})`
-- Supported locales: `en`, `ko`
+Flutter's own `gen-l10n`, configured in `l10n.yaml`. Translations are ARB files in
+`lib/l10n/`, with `app_en.arb` as the template. Supported locales: `en`, `ko`,
+`ru`, `uk`.
 
-JSON, not YAML, because it is what easy_localization's built-in
-`RootBundleAssetLoader` reads. The YAML that used to live here needed
-`easy_localization_loader`, which drags in `connectivity_plus` — a **native
-plugin on all five platforms** — purely for a network loader the app never
-calls. Do not reintroduce it; a custom `AssetLoader` is the cheaper way back to
-YAML if the section comments are ever worth it. Chosen locale persists through
-`shared_preferences` (easy_localization's own storage, not the Hive boxes), so
-tests that boot it must stub that channel — see `l10n_asset_smoke_test.dart`.
+- Import `package:eq_trainer/l10n/l10n.dart`, which adds `context.l10n` and
+  re-exports `AppLocalizations`.
+- Keys are lowerCamelCase and become members, so a mistyped key does not compile:
+  `context.l10n.sessionSnackbarCorrect`.
+- Placeholders are named arguments (`use-named-parameters`), because several
+  messages take more than one string and positional ones could be swapped
+  unnoticed: `l10n.audioSettingRecompressConfirm(count: 3, size: a, after: b)`.
+- Declare placeholder types in the template's `@key` metadata, not in the
+  translations.
+- `lib/l10n/generated/` is **gitignored**, unlike the `*.g.dart` files, so a
+  translation PR stays one file. `pub get`, `run` and `build` regenerate it.
+
+**Adding a language** takes two steps:
+
+1. Add `lib/l10n/app_xx.arb`, including `languageName`: the language's name in
+   itself, which is what the settings picker shows.
+2. Add the code to `CFBundleLocalizations` in `ios/Runner/Info.plist`.
+
+`supportedLocales` and the picker follow from the ARB files. Nothing generates the
+plist, so `l10n_test.dart` fails if it falls out of step.
+
+**Plurals are ICU, wrapping whole sentences**, because verbs and pronouns change
+with the count, not just the noun:
+`{count, plural, one{...} few{...} many{...} other{...}}`. The placeholder must be
+`int`. Russian and Ukrainian use all four forms, and `one` also matches 21 and 31,
+so keep `{count}` in the branch rather than writing a literal "1". Korean has no
+plural forms and takes the count directly.
+
+gen-l10n fills a missing message in from the template and only warns, so a
+half-translated file still builds. `l10n_test.dart` is what catches it.
+
+**Code with no `BuildContext` takes the strings as a parameter**, as
+`ConfigCardType.title(l10n)` does. Do not add a global lookup. `Upgrader` is built
+before the widget tree exists, so `_LocalizedUpgrader` overrides
+`determineMessages(context)` to read them when the alert shows. Capture `l10n`
+before an `await` if the widget may be gone after it.
+
+The chosen language is in `shared_preferences`, not Hive, under the key
+easy_localization used, so the migration kept existing users' choices. `null`
+means follow the device. The picker's value is `Localizations.localeOf(context)`
+rather than the saved value, since only the resolved locale is guaranteed to be
+one of its items.
 
 ### Theming
 
@@ -290,14 +325,16 @@ scaffolding is in `test/helpers/`:
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
 | `hive_test_box.dart` | `HiveTestBox`: a throwaway `AudioClip` box. Anything that goes through `clip.key` needs clips added via a box: a bare `AudioClip(...)` has a **null** key, so two of them compare equal and a "was this record deleted?" check passes for the wrong reason. |
 
-Platform channels (`audio_decoder`, `path_provider`, `shared_preferences`) are
-stubbed per test with `setMockMethodCallHandler` rather than by depending on the
-plugin; see `import_workflow_service_test.dart`.
+Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
+`setMockMethodCallHandler` rather than by depending on the plugin; see
+`import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
+so use its `setMockInitialValues`.
 
-`l10n_asset_smoke_test.dart` boots a real `EasyLocalization` and asserts both
-locales resolve out of the bundle. It exists because nothing else catches a
-broken translation asset: rename a file or drop the `assets:` entry and every
-string silently falls back to rendering its own raw key.
+`l10n_test.dart` covers what the compiler cannot: every ARB file has every message
+and placeholder, the iOS plist matches `supportedLocales`, and the plural forms
+come out right for the counts that separate the languages' rules. A widget that
+calls `context.l10n` needs `AppLocalizations.localizationsDelegates` on its
+`MaterialApp`; see `settings_page_test.dart`.
 
 ```bash
 flutter test test/              # unit tests — headless, this is what CI runs
@@ -399,8 +436,8 @@ ref are cancelled when a newer commit lands.
 | `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
 | `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
 | `lib/shared/model/audio_state.dart` | Output device + Android backend state |
-| `assets/translations/en.json` | English strings |
-| `assets/translations/ko.json` | Korean strings |
+| `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
+| `lib/shared/model/locale_provider.dart` | The language picked in settings |
 
 ---
 
@@ -412,7 +449,8 @@ ref are cancelled when a newer commit lands.
 | `hive_ce` + `hive_ce_flutter` | Local persistence |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
 | `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
-| `easy_localization` | i18n. Default `RootBundleAssetLoader` only — no `easy_localization_loader`, see [Localization](#localization) |
+| `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
+| `shared_preferences` | The chosen language |
 | `fl_chart` | EQ frequency graph visualization |
 | `toastification` | In-session answer feedback toasts |
 | `upgrader` | In-app update prompts |

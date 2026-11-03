@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
@@ -8,13 +8,13 @@ import 'package:eq_trainer/features/settings/widget/settings_card.dart';
 class AudioImportFormatCard extends StatelessWidget {
   const AudioImportFormatCard({super.key});
 
-  /// Label key for each offered format. Kept beside [ImportFormat.selectable]
+  /// Label for each offered format. Kept beside [ImportFormat.selectable]
   /// so a value can never be offered without a string to show for it.
-  static const _labelKeys = {
-    ImportFormat.smart: "AUDIO_SETTING_IMPORT_FORMAT_SMART",
-    ImportFormat.allFlac: "AUDIO_SETTING_IMPORT_FORMAT_FLAC",
-    ImportFormat.allOpus: "AUDIO_SETTING_IMPORT_FORMAT_OPUS",
-    ImportFormat.allWav: "AUDIO_SETTING_IMPORT_FORMAT_WAV",
+  static final _labels = <int, String Function(AppLocalizations)>{
+    ImportFormat.smart: (l10n) => l10n.audioSettingImportFormatSmart,
+    ImportFormat.allFlac: (l10n) => l10n.audioSettingImportFormatFlac,
+    ImportFormat.allOpus: (l10n) => l10n.audioSettingImportFormatOpus,
+    ImportFormat.allWav: (l10n) => l10n.audioSettingImportFormatWav,
   };
 
   @override
@@ -27,7 +27,7 @@ class AudioImportFormatCard extends StatelessWidget {
 
     return SettingsCard(
       icon: Icons.audio_file,
-      title: "AUDIO_SETTING_CARD_IMPORT_FORMAT_TITLE".tr(),
+      title: context.l10n.audioSettingCardImportFormatTitle,
       trailing: DropdownButton<int>(
         alignment: Alignment.centerRight,
         isDense: true,
@@ -36,7 +36,7 @@ class AudioImportFormatCard extends StatelessWidget {
           for (final format in ImportFormat.selectable)
             DropdownMenuItem(
               value: format,
-              child: Text(_labelKeys[format]!.tr()),
+              child: Text(_labels[format]!(context.l10n)),
             ),
         ],
         onChanged: (int? value) {

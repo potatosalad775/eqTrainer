@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 class PlaylistDeleteDialog extends StatelessWidget {
@@ -7,16 +7,16 @@ class PlaylistDeleteDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text("PLAYLIST_AUDIO_ALERT_DELETE_TITLE".tr()),
-      content: Text("PLAYLIST_AUDIO_ALERT_DELETE_CONTENT".tr()),
+      title: Text(context.l10n.playlistAudioAlertDeleteTitle),
+      content: Text(context.l10n.playlistAudioAlertDeleteContent),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: Text("PLAYLIST_AUDIO_ALERT_DELETE_NO".tr()),
+          child: Text(context.l10n.playlistAudioAlertDeleteNo),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: Text("PLAYLIST_AUDIO_ALERT_DELETE_YES".tr()),
+          child: Text(context.l10n.playlistAudioAlertDeleteYes),
         ),
       ],
     );

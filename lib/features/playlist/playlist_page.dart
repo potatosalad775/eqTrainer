@@ -1,6 +1,6 @@
 import 'package:eq_trainer/features/playlist/widget/playlist_item_tile.dart';
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/features/import/import_page.dart';
 import 'package:provider/provider.dart';
@@ -25,7 +25,7 @@ class PlaylistPage extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 36),
-                child: Text("PLAYLIST_EMPTY_TEXT".tr()),
+                child: Text(context.l10n.playlistEmptyText),
               ),
             );
           }
@@ -42,7 +42,7 @@ class PlaylistPage extends StatelessWidget {
             },
             footer: Padding(
               padding: const EdgeInsets.fromLTRB(14, 0, 14, 84),
-              child: Center(child: const Text("PLAYLIST_FOOTER").tr()),
+              child: Center(child: Text(context.l10n.playlistFooter)),
             ),
             padding: const EdgeInsets.fromLTRB(13, 4, 13, 0),
             proxyDecorator: _tempProxyDecorator,

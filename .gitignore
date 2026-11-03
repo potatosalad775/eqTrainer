@@ -162,6 +162,7 @@ xcuserdata/
 *.class
 
 # Generated files
+lib/l10n/generated/
 bin/
 gen/
 out/

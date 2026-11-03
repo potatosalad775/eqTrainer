@@ -1,0 +1,185 @@
+{
+  "@@locale": "en",
+
+  "languageName": "English",
+  "@languageName": {
+    "description": "This language's name written in the language itself, shown in the language picker. Not a translation of the word English."
+  },
+  "mainAppbarTitleConfig1": "Session",
+  "mainAppbarTitleConfig2": "Configuration",
+  "mainAppbarTitlePlaylist1": "Playlist",
+  "mainAppbarTitlePlaylist2": "Configuration",
+  "mainAppbarTitleSetting1": "eqTrainer",
+  "mainAppbarTitleSetting2": "Settings",
+  "mainNavbarMain": "Main",
+  "mainNavbarPlaylist": "Playlist",
+  "mainNavbarSettings": "Settings",
+
+  "configCardTitleSb": "Starting Band",
+  "configCardSubtitleSb": "Number of Center Frequencies for Filter",
+  "configCardTitleG": "Gain",
+  "configCardSubtitleG": "Gain Value of Filter",
+  "configCardTitleQf": "Q Factor",
+  "configCardSubtitleQf": "Bandwidth of Filter",
+  "configCardTitleFt": "Filter Type",
+  "configCardSubtitleFt": "Appearance of Filter",
+  "configCardDdbFtP": "Peak",
+  "configCardDdbFtD": "Dip",
+  "configCardDdbFtPd": "Peak & Dip",
+  "configCardTitleT": "Threshold",
+  "configCardSubtitleT": "Threshold Limit for Session",
+  "configButtonStart": "Start Session",
+
+  "sessionAppbarTitle": "Session",
+  "sessionAlertErrorTitle": "Error",
+  "sessionAlertErrorContent": "There was an error executing session. Please Try Again.",
+  "sessionAlertErrorButton": "Okay",
+  "sessionAlertEmptyTitle": "Playlist Empty",
+  "sessionAlertEmptyContent": "Please Add and Enable at least one Audio Clip before starting Session.",
+  "sessionAlertEmptyButton": "Okay",
+  "sessionAlertExitTitle": "Alert",
+  "sessionAlertExitContent": "Are you sure you wanna End and Exit Session?",
+  "sessionAlertExitButtonYes": "Yes",
+  "sessionAlertExitButtonNo": "No",
+  "sessionButtonOriginal": "Original",
+  "sessionButtonEqFiltered": "Modified",
+  "sessionButtonSubmit": "Submit",
+  "sessionSnackbarCorrect": "Correct!",
+  "sessionSnackbarIncorrect": "Incorrect! the correct answer was {index}.",
+  "@sessionSnackbarIncorrect": {
+    "placeholders": {
+      "index": { "type": "String" }
+    }
+  },
+  "sessionDdbuttonDeviceDisclaimer": "The changed output device will be applied from the next audio clip.",
+
+  "resultAppbarTitle": "Result",
+  "resultBottomBarTitle": "Result",
+  "resultBottomBarZeroResult": "N/A",
+
+  "resultFreqSubBass": "Sub-Bass",
+  "resultFreqMidBass": "Mid-Bass",
+  "resultFreqLowerMidrange": "Lower-Midrange",
+  "resultFreqCentreMidrange": "Centre-Midrange",
+  "resultFreqUpperMidrange": "Upper-Midrange",
+  "resultFreqTreble": "Treble",
+  "resultFreqUpperTreble": "Upper-Treble",
+
+  "playlistEmptyText": "No Audio Clip Found",
+  "playlistFooter": "You can re-order playlist by dragging circular checkbox.",
+  "playlistAudioActionDelete": "Delete",
+  "playlistAudioAlertDeleteTitle": "Alert",
+  "playlistAudioAlertDeleteContent": "Are you sure you wanna delete the audio clip?",
+  "playlistAudioAlertDeleteYes": "Yes",
+  "playlistAudioAlertDeleteNo": "No",
+
+  "importAppbarTitle": "Audio Import",
+  "importAlertExitTitle": "Alert",
+  "importAlertExitContent": "Are you sure you wanna exit and discard audio clip?",
+  "importAlertExitYes": "Yes",
+  "importAlertExitNo": "No",
+  "importAlertErrorTitle": "Error",
+  "importAlertErrorContent": "There was an error while trying to loading audio clip",
+  "importAlertErrorButton": "Okay",
+  "importAlertAbortedContent": "File import cancelled",
+  "importAlertAbortedButton": "Okay",
+  "importConverting1": "Please wait a moment...",
+  "importConverting2": "Optimizing audio file for playback.",
+  "importEditorTimestampStart": "Audio Start Time : {time}",
+  "@importEditorTimestampStart": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "importEditorTimestampEnd": "Audio End Time : {time}",
+  "@importEditorTimestampEnd": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "importEditorButtonSetStart": "Set Start Now",
+  "importEditorButtonSetEnd": "Set End Now",
+  "importEditorAlertStartContent": "You cannot set Start Time later than End Time",
+  "importEditorAlertEndContent": "You cannot set End Time earlier than Start Time",
+  "importEditorAlertButton": "Okay",
+  "importEditorButtonDone": "Done",
+  "importEditorSaveError": "Failed to save the audio clip. Please try again.",
+
+  "settingCardThemeTitle": "Theme",
+  "settingCardLangTitle": "Language",
+  "settingCardGithubTitle": "Github",
+  "settingCardContactTitle": "Contact Dev",
+  "settingCardLicenseTitle": "Open Source License",
+  "settingCardAudioSettingTitle": "Audio Settings",
+  "miscSettingCardTooltipTitle": "Graph Frequency Tooltip",
+
+  "audioSettingAppbarTitle": "Audio Settings",
+  "audioSettingCardImportFormatTitle": "Audio Import Format",
+  "audioSettingImportFormatSmart": "Smart",
+  "audioSettingImportFormatDesc1": "'Smart' keeps files eqTrainer can already play (WAV, MP3, FLAC, OGG, Opus) exactly as they are, and converts anything else — to FLAC if the original was lossless, or to Opus if it was already lossy.",
+  "audioSettingImportFormatDesc2": "The other options convert everything to the specified format.",
+  "audioSettingImportFormatDesc3": "'FLAC' is a lossless compression codec that provides excellent audio quality at about half the size of WAV files. 'Opus' is a lossy compression codec that offers good quality for critical listening, and 'WAV' is an uncompressed lossless codec that provides the best audio quality but results in large file sizes.",
+  "audioSettingImportFormatFlac": "FLAC (Lossless)",
+  "audioSettingImportFormatOpus": "Opus (Compact)",
+  "audioSettingImportFormatWav": "WAV (Uncompressed)",
+  "audioSettingRecompressTitle": "Recompress Library",
+  "audioSettingRecompressAction": "Free up to {size}",
+  "@audioSettingRecompressAction": {
+    "placeholders": {
+      "size": { "type": "String" }
+    }
+  },
+  "audioSettingRecompressDesc": "Re-encodes WAV clips in your library to FLAC. FLAC is lossless — the audio is identical — and usually about half the size. Clips imported as Opus or FLAC are left alone, and nothing is ever re-encoded into a lossy format.",
+  "audioSettingRecompressConfirm": "{count, plural, one{Recompress {count} WAV clip to FLAC?\n\nIt currently uses {size} and should end up near {after}. The audio is unchanged; this only reclaims disk space.} other{Recompress {count} WAV clips to FLAC?\n\nThey currently use {size} and should end up near {after}. The audio is unchanged; this only reclaims disk space.}}",
+  "@audioSettingRecompressConfirm": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "size": { "type": "String" },
+      "after": { "type": "String" }
+    }
+  },
+  "audioSettingRecompressStart": "Recompress",
+  "audioSettingRecompressDone": "{count, plural, one{Recompressed {count} clip, freeing {saved}} other{Recompressed {count} clips, freeing {saved}}}",
+  "@audioSettingRecompressDone": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "saved": { "type": "String" }
+    }
+  },
+  "audioSettingRecompressDoneWithErrors": "{count, plural, one{Recompressed {count} clip} other{Recompressed {count} clips}}, freeing {saved}. {failed, plural, one{{failed} clip could not be converted and was left as it is.} other{{failed} clips could not be converted and were left as they are.}}",
+  "@audioSettingRecompressDoneWithErrors": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "saved": { "type": "String" },
+      "failed": { "type": "int" }
+    }
+  },
+  "dialogCancel": "Cancel",
+  "audioSettingCardVolumeCompTitle": "Gain Volume Compensation",
+  "audioSettingCardVolumeCompDesc": "Attenuates playback volume proportionally to the EQ gain to prevent clipping. Disabling this keeps volume constant but may cause clipping at higher gain values.",
+  "audioSettingCardBackendTitle": "Audio API",
+  "audioSettingCardBackendDesc": "If audio is not playing as expected, Try changing audio backend API.",
+  "audioSettingBackendAppbar": "Audio Backend API Settings",
+  "audioSettingBackendAuto": "Automatic",
+  "audioSettingBackendAutoDesc": "Let the audio engine choose. Prefers AAudio on Android 11 and later.",
+  "audioSettingBackendAaudioDesc": "Lower latency, Android 8+. Falls back to OpenSL ES where AAudio is unavailable.",
+  "audioSettingBackendOpenslesDesc": "Most compatible, Android 4.1+. Recommended for digital audio players.",
+  "audioSettingBackendRestartNote": "The audio backend is selected when playback starts. Restart eqTrainer for the change to take effect.",
+  "audioSettingBackendSnackbarNotify": "{backend} Selected.",
+  "@audioSettingBackendSnackbarNotify": {
+    "placeholders": {
+      "backend": { "type": "String" }
+    }
+  },
+
+  "updateAlertMessageBody": "New version of eqTrainer is Available!",
+  "updateAlertButtonIgnore": "Ignore",
+  "updateAlertButtonLater": "Later",
+  "updateAlertButtonUpdate": "Update Now",
+  "updateAlertMessagePrompt": "Do you want to install the updated app?",
+  "updateAlertReleaseNote": "Release Note",
+  "updateAlertMessageTitle": "Update Available",
+
+  "errorPlayerAlertContent": "Error occurred while playing audio",
+  "errorPlayerAlertExitButton": "Okay"
+}

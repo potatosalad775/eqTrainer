@@ -1,7 +1,7 @@
 import 'package:eq_trainer/features/session/widgets/session_eq_button_row.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/shared/player/player_service.dart';
@@ -11,7 +11,7 @@ import 'package:toastification/toastification.dart';
 
 class SessionSelector extends StatelessWidget {
   const SessionSelector({
-    super.key, 
+    super.key,
     required this.isPortrait
   });
   final bool isPortrait;
@@ -19,6 +19,9 @@ class SessionSelector extends StatelessWidget {
   void onSubmit(BuildContext context) {
     final sessionController = context.read<SessionController>();
 
+    // Captured up front: the result arrives after an await, by which time this
+    // widget may be gone.
+    final l10n = context.l10n;
     sessionController.submitAnswer(
       player: context.read<PlayerService>(),
       sessionStore: context.read<SessionStore>(),
@@ -27,11 +30,9 @@ class SessionSelector extends StatelessWidget {
         toastification.show(
           type: isCorrect ? ToastificationType.success : ToastificationType.error,
           style: ToastificationStyle.flatColored,
-          description: Text(isCorrect 
-            ? "SESSION_SNACKBAR_CORRECT" 
-            : "SESSION_SNACKBAR_INCORRECT").tr(
-              namedArgs: {'_INDEX': correctIndex.toString()}
-            ),
+          description: Text(isCorrect
+            ? l10n.sessionSnackbarCorrect
+            : l10n.sessionSnackbarIncorrect(index: correctIndex.toString())),
           alignment: Alignment.topCenter,
           autoCloseDuration: const Duration(seconds: 3),
           animationDuration: const Duration(milliseconds: 300),
@@ -75,7 +76,7 @@ class SessionSelector extends StatelessWidget {
               minimumSize: const Size.fromHeight(64),
             ),
             icon: Icon(Icons.next_plan_outlined, color: context.colors.onTertiary),
-            label: Text("SESSION_BUTTON_SUBMIT".tr()),
+            label: Text(context.l10n.sessionButtonSubmit),
           ),
         ],
       );
