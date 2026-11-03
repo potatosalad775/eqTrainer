@@ -46,7 +46,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.2
+          flutter-version-file: .fvmrc
 
       # flutter_soloud ships a native build hook (hook/build.dart), so even a
       # pure-Dart `flutter test` compiles its C sources. On Linux that build

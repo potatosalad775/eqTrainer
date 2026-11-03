@@ -313,7 +313,6 @@ app.*.map.json
 
 # FVM related
 .fvm/
-.fvmrc
 
 # Agent related
 .claude/

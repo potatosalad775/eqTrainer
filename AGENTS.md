@@ -293,8 +293,16 @@ one of its items.
 
 ### Setup
 
-`flutter pub get`, then `flutter run`. CI pins Flutter stable **3.47.2**
-(every job in both workflows); match it locally when reproducing a CI failure.
+`fvm flutter pub get`, then `fvm flutter run`.
+
+**The Flutter SDK is managed with [fvm](https://fvm.app). Prefix every `flutter`
+and `dart` command with `fvm`, including the ones in this document.** A global
+`flutter` may be older and fail version solving against the pinned `flutter_soloud`.
+
+`.fvmrc` pins the version and is the only place it is set: every job in both
+workflows reads it through `flutter-version-file`, so local and CI builds use the
+same SDK. To upgrade, run `fvm use <version>` and commit the result. On a fresh
+checkout, `fvm install` fetches the pinned version.
 
 ### Code Generation
 
