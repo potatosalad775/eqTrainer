@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
@@ -22,16 +22,16 @@ class AudioBackendPage extends StatefulWidget {
   State<AudioBackendPage> createState() => _AudioBackendPageState();
 }
 
-String _backendName(AndroidAudioBackend backend) => switch (backend) {
-  AndroidAudioBackend.auto     => 'AUDIO_SETTING_BACKEND_AUTO'.tr(),
+String _backendName(AppLocalizations l10n, AndroidAudioBackend backend) => switch (backend) {
+  AndroidAudioBackend.auto     => l10n.audioSettingBackendAuto,
   AndroidAudioBackend.aaudio   => 'AAudio',
   AndroidAudioBackend.openSles => 'OpenSL ES',
 };
 
-String _backendDescription(AndroidAudioBackend backend) => switch (backend) {
-  AndroidAudioBackend.auto     => 'AUDIO_SETTING_BACKEND_AUTO_DESC'.tr(),
-  AndroidAudioBackend.aaudio   => 'AUDIO_SETTING_BACKEND_AAUDIO_DESC'.tr(),
-  AndroidAudioBackend.openSles => 'AUDIO_SETTING_BACKEND_OPENSLES_DESC'.tr(),
+String _backendDescription(AppLocalizations l10n, AndroidAudioBackend backend) => switch (backend) {
+  AndroidAudioBackend.auto     => l10n.audioSettingBackendAutoDesc,
+  AndroidAudioBackend.aaudio   => l10n.audioSettingBackendAaudioDesc,
+  AndroidAudioBackend.openSles => l10n.audioSettingBackendOpenslesDesc,
 };
 
 class _AudioBackendPageState extends State<AudioBackendPage> {
@@ -58,9 +58,9 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
     // switch happened.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text("AUDIO_SETTING_BACKEND_SNACKBAR_NOTIFY").tr(
-          namedArgs: {"_BACKEND": _backendName(_selected)},
-        ),
+        content: Text(context.l10n.audioSettingBackendSnackbarNotify(
+          backend: _backendName(context.l10n, _selected),
+        )),
       ),
     );
     App.of(context).applyAudioState(
@@ -76,7 +76,7 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("AUDIO_SETTING_BACKEND_APPBAR").tr(),
+        title: Text(context.l10n.audioSettingBackendAppbar),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -94,15 +94,15 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
                     for (final backend in AndroidAudioBackend.values)
                       RadioListTile<AndroidAudioBackend>.adaptive(
                         value: backend,
-                        title: Text(_backendName(backend)),
-                        subtitle: Text(_backendDescription(backend)),
+                        title: Text(_backendName(context.l10n, backend)),
+                        subtitle: Text(_backendDescription(context.l10n, backend)),
                       ),
                   ],
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.all(AppDimens.padding),
-                child: const Text("AUDIO_SETTING_BACKEND_RESTART_NOTE").tr(),
+                child: Text(context.l10n.audioSettingBackendRestartNote),
               ),
               Container(height: 80),
             ],

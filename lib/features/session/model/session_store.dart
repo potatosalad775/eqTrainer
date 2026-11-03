@@ -7,6 +7,21 @@ import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 /// SessionStore aggregates session-related UI state into a single source of truth.
 /// Holds frequency/graph data computed by the pure FrequencyCalculator.
+/// The bands results are grouped into, lowest first.
+enum ResultFrequencyBand {
+  subBass('20Hz ~ 80Hz'),
+  midBass('80Hz ~ 200Hz'),
+  lowerMidrange('200Hz ~ 800Hz'),
+  centreMidrange('800Hz ~ 1.5kHz'),
+  upperMidrange('1.5kHz ~ 5kHz'),
+  treble('5kHz ~ 10kHz'),
+  upperTreble('10kHz ~ 20kHz');
+
+  const ResultFrequencyBand(this.range);
+
+  final String range;
+}
+
 class SessionStore extends ChangeNotifier {
   SessionStore();
 
@@ -70,13 +85,13 @@ class SessionStore extends ChangeNotifier {
   int _elapsedSession = 0;
   int get elapsedSession => _elapsedSession;
 
-  List<int> _elapsedSessionPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
+  List<int> _elapsedSessionPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
   List<int> get elapsedSessionPerFreq => List<int>.from(_elapsedSessionPerFreq);
 
   int _resultCorrect = 0;
   int get resultCorrect => _resultCorrect;
 
-  List<int> _correctAnswerPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
+  List<int> _correctAnswerPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
   List<int> get correctAnswerPerFreq => List<int>.from(_correctAnswerPerFreq);
 
   int _resultIncorrect = 0;
@@ -85,9 +100,9 @@ class SessionStore extends ChangeNotifier {
   // Reset Session Results
   void resetResult() {
     _elapsedSession = 0;
-    _elapsedSessionPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
+    _elapsedSessionPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
     _resultCorrect = 0;
-    _correctAnswerPerFreq = List.filled(SessionStore.resultFrequencyLabelList.length, 0);
+    _correctAnswerPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
     _resultIncorrect = 0;
     notifyListeners();
   }
@@ -139,16 +154,6 @@ class SessionStore extends ChangeNotifier {
     }
   }
 
-  // Frequency band titles (static data from SessionResultData)
-  static const List<List<String>> resultFrequencyLabelList = [
-    ["RESULT_FREQ_SUB_BASS", "20Hz ~ 80Hz"],
-    ["RESULT_FREQ_MID_BASS", "80Hz ~ 200Hz"],
-    ["RESULT_FREQ_LOWER_MIDRANGE", "200Hz ~ 800Hz"],
-    ["RESULT_FREQ_CENTRE_MIDRANGE", "800Hz ~ 1.5kHz"],
-    ["RESULT_FREQ_UPPER_MIDRANGE", "1.5kHz ~ 5kHz"],
-    ["RESULT_FREQ_TREBLE", "5kHz ~ 10kHz"],
-    ["RESULT_FREQ_UPPER_TREBLE", "10kHz ~ 20kHz"],
-  ];
 
   // Playlist paths and index
   List<String> _playlistPaths = const [];

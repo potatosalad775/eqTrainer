@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/widgets/session_page_content_landscape.dart';
@@ -23,13 +23,13 @@ class SessionPageContent extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("SESSION_ALERT_EMPTY_TITLE".tr(), style: context.textTheme.titleLarge),
+                Text(context.l10n.sessionAlertEmptyTitle, style: context.textTheme.titleLarge),
                 const SizedBox(height: 12),
-                Text("SESSION_ALERT_EMPTY_CONTENT".tr()),
+                Text(context.l10n.sessionAlertEmptyContent),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text("SESSION_ALERT_EMPTY_BUTTON".tr()),
+                  child: Text(context.l10n.sessionAlertEmptyButton),
                 ),
               ],
             ),
@@ -39,13 +39,13 @@ class SessionPageContent extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("SESSION_ALERT_ERROR_TITLE".tr(), style: context.textTheme.titleLarge),
+                Text(context.l10n.sessionAlertErrorTitle, style: context.textTheme.titleLarge),
                 const SizedBox(height: 12),
-                Text("SESSION_ALERT_ERROR_CONTENT".tr()),
+                Text(context.l10n.sessionAlertErrorContent),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text("SESSION_ALERT_ERROR_BUTTON".tr()),
+                  child: Text(context.l10n.sessionAlertErrorButton),
                 ),
               ],
             ),

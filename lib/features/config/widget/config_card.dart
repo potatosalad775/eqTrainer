@@ -1,7 +1,7 @@
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
 
 class ConfigCard extends StatelessWidget {
@@ -36,14 +36,14 @@ class ConfigCard extends StatelessWidget {
           minVerticalPadding: 12,
           contentPadding: const EdgeInsets.fromLTRB(18, 0, 18, 0),
           title: Text(
-            cardType.title,
+            cardType.title(context.l10n),
             style: context.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: colors.onSurfaceVariant,
             ),
           ),
           subtitle: Text(
-            cardType.subtitle,
+            cardType.subtitle(context.l10n),
             style: context.textTheme.bodyMedium?.copyWith(
               color: colors.onSurfaceVariant,
             ),
@@ -72,9 +72,9 @@ class ConfigCard extends StatelessWidget {
                             return DropdownMenuItem<FilterType>(
                               value: item,
                               child: switch (item as FilterType) {
-                                FilterType.peak    => Text("CONFIG_CARD_DDB_FT_P".tr()),
-                                FilterType.dip     => Text("CONFIG_CARD_DDB_FT_D".tr()),
-                                FilterType.peakDip => Text("CONFIG_CARD_DDB_FT_PD".tr()),
+                                FilterType.peak    => Text(context.l10n.configCardDdbFtP),
+                                FilterType.dip     => Text(context.l10n.configCardDdbFtD),
+                                FilterType.peakDip => Text(context.l10n.configCardDdbFtPd),
                               },
                             );
                           }).toList()
@@ -99,22 +99,22 @@ class ConfigCard extends StatelessWidget {
 enum ConfigCardType { 
   startingBand, gain, qFactor, filterType, threshold;
   
-  String get title {
+  String title(AppLocalizations l10n) {
     switch(this) {
-      case ConfigCardType.startingBand: return "CONFIG_CARD_TITLE_SB".tr();
-      case ConfigCardType.gain: return "CONFIG_CARD_TITLE_G".tr();
-      case ConfigCardType.qFactor: return "CONFIG_CARD_TITLE_QF".tr();
-      case ConfigCardType.filterType: return "CONFIG_CARD_TITLE_FT".tr();
-      case ConfigCardType.threshold: return "CONFIG_CARD_TITLE_T".tr();
+      case ConfigCardType.startingBand: return l10n.configCardTitleSb;
+      case ConfigCardType.gain: return l10n.configCardTitleG;
+      case ConfigCardType.qFactor: return l10n.configCardTitleQf;
+      case ConfigCardType.filterType: return l10n.configCardTitleFt;
+      case ConfigCardType.threshold: return l10n.configCardTitleT;
     }
   }
-  String get subtitle {
+  String subtitle(AppLocalizations l10n) {
     switch(this) {
-      case ConfigCardType.startingBand: return "CONFIG_CARD_SUBTITLE_SB".tr();
-      case ConfigCardType.gain: return "CONFIG_CARD_SUBTITLE_G".tr();
-      case ConfigCardType.qFactor: return "CONFIG_CARD_SUBTITLE_QF".tr();
-      case ConfigCardType.filterType: return "CONFIG_CARD_SUBTITLE_FT".tr();
-      case ConfigCardType.threshold: return "CONFIG_CARD_SUBTITLE_T".tr();
+      case ConfigCardType.startingBand: return l10n.configCardSubtitleSb;
+      case ConfigCardType.gain: return l10n.configCardSubtitleG;
+      case ConfigCardType.qFactor: return l10n.configCardSubtitleQf;
+      case ConfigCardType.filterType: return l10n.configCardSubtitleFt;
+      case ConfigCardType.threshold: return l10n.configCardSubtitleT;
     }
   }
   List<dynamic> get valueList {

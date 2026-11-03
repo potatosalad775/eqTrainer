@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
@@ -26,11 +26,11 @@ class EditorClipButtonGroup extends StatelessWidget {
                 showDialog(
                   context: context,
                   builder: (_) => AlertDialog(
-                    content: const Text("IMPORT_EDITOR_ALERT_START_CONTENT").tr(),
+                    content: Text(context.l10n.importEditorAlertStartContent),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, 'OK'),
-                        child: const Text("IMPORT_EDITOR_ALERT_BUTTON").tr(),
+                        child: Text(context.l10n.importEditorAlertButton),
                       )
                     ],
                   ),
@@ -43,7 +43,7 @@ class EditorClipButtonGroup extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              child: const Text("IMPORT_EDITOR_BUTTON_SET_START").tr(),
+              child: Text(context.l10n.importEditorButtonSetStart),
             ),
           ),
         ),
@@ -56,11 +56,11 @@ class EditorClipButtonGroup extends StatelessWidget {
                 showDialog(
                   context: context,
                   builder: (_) => AlertDialog(
-                    content: const Text("IMPORT_EDITOR_ALERT_END_CONTENT").tr(),
+                    content: Text(context.l10n.importEditorAlertEndContent),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, 'OK'),
-                        child: const Text("IMPORT_EDITOR_ALERT_BUTTON").tr(),
+                        child: Text(context.l10n.importEditorAlertButton),
                       )
                     ],
                   ),
@@ -73,7 +73,7 @@ class EditorClipButtonGroup extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              child: const Text("IMPORT_EDITOR_BUTTON_SET_END").tr(),
+              child: Text(context.l10n.importEditorButtonSetEnd),
             ),
           ),
         ),

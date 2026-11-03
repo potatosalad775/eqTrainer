@@ -4,7 +4,7 @@ import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/data/graph_state.dart';
 
@@ -48,9 +48,9 @@ class SessionGraph extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text("SESSION_ALERT_ERROR_TITLE".tr(), style: context.textTheme.titleMedium),
+                Text(context.l10n.sessionAlertErrorTitle, style: context.textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text("SESSION_ALERT_ERROR_CONTENT".tr()),
+                Text(context.l10n.sessionAlertErrorContent),
               ],
             ),
           );

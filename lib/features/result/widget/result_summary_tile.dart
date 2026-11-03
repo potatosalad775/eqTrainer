@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +25,7 @@ class ResultSummaryTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           Text(
-            "RESULT_BOTTOM_BAR_TITLE".tr(),
+            context.l10n.resultBottomBarTitle,
             style: context.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: context.colors.onSecondary,
@@ -41,7 +41,7 @@ class ResultSummaryTile extends StatelessWidget {
             )
           else
             Text(
-              "RESULT_BOTTOM_BAR_ZERO_RESULT".tr(),
+              context.l10n.resultBottomBarZeroResult,
               style: context.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: context.colors.onSecondary,

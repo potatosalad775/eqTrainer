@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/widgets.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:version/version.dart';
@@ -21,8 +22,9 @@ class UpgraderService {
   Future<Upgrader> getInstance() async {
     final osVersion = await getOsVersion(UpgraderOS());
     final installationSource = await _getInstallationSource();
-    return Upgrader(
-      messages: CustomUpgraderMessages(),
+    return _LocalizedUpgrader(
+      // To test the dialog: fvm flutter run --dart-define=UPGRADER_DISPLAY_ALWAYS=true
+      debugDisplayAlways: const bool.fromEnvironment('UPGRADER_DISPLAY_ALWAYS'),
       storeController: UpgraderStoreController(
         onAndroid: () {
           // If the app was installed from the Play Store, use the Play Store upgrader.
@@ -89,25 +91,38 @@ class UpgraderService {
   }
 }
 
+/// The upgrader is built in main(), before there is a locale to read, so its
+/// strings are looked up from the context the alert is shown from.
+class _LocalizedUpgrader extends Upgrader {
+  _LocalizedUpgrader({super.debugDisplayAlways, super.storeController});
+
+  @override
+  UpgraderMessages determineMessages(BuildContext context) =>
+      CustomUpgraderMessages(context.l10n);
+}
+
 class CustomUpgraderMessages extends UpgraderMessages {
+  CustomUpgraderMessages(this._l10n) : super(code: _l10n.localeName);
+
+  final AppLocalizations _l10n;
+
   @override
   String? message(UpgraderMessage messageKey) {
-    super.message(messageKey);
     switch (messageKey) {
       case UpgraderMessage.body:
-        return "UPDATE_ALERT_MESSAGE_BODY".tr();
+        return _l10n.updateAlertMessageBody;
       case UpgraderMessage.buttonTitleIgnore:
-        return "UPDATE_ALERT_BUTTON_IGNORE".tr();
+        return _l10n.updateAlertButtonIgnore;
       case UpgraderMessage.buttonTitleLater:
-        return "UPDATE_ALERT_BUTTON_LATER".tr();
+        return _l10n.updateAlertButtonLater;
       case UpgraderMessage.buttonTitleUpdate:
-        return "UPDATE_ALERT_BUTTON_UPDATE".tr();
+        return _l10n.updateAlertButtonUpdate;
       case UpgraderMessage.prompt:
-        return "UPDATE_ALERT_MESSAGE_PROMPT".tr();
+        return _l10n.updateAlertMessagePrompt;
       case UpgraderMessage.releaseNotes:
-        return "UPDATE_ALERT_RELEASE_NOTE".tr();
+        return _l10n.updateAlertReleaseNote;
       case UpgraderMessage.title:
-        return "UPDATE_ALERT_MESSAGE_TITLE".tr();
+        return _l10n.updateAlertMessageTitle;
     }
   }
 }

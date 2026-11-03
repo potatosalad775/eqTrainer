@@ -162,6 +162,7 @@ xcuserdata/
 *.class
 
 # Generated files
+lib/l10n/generated/
 bin/
 gen/
 out/
@@ -312,7 +313,6 @@ app.*.map.json
 
 # FVM related
 .fvm/
-.fvmrc
 
 # Agent related
 .claude/

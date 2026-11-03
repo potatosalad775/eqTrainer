@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
@@ -34,6 +34,7 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
             final importFormat =
                 context.read<MiscSettingsProvider>().importFormat;
             final messenger = ScaffoldMessenger.of(context);
+            final l10n = context.l10n;
             // Non-null whenever the editor is reachable — the button only
             // renders after loadAudioFile() succeeded. Handled rather than
             // forced so a torn-down player surfaces the save error instead of
@@ -59,7 +60,7 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
               if (mounted) {
                 setState(() => _isProcessing = false);
                 messenger.showSnackBar(
-                  SnackBar(content: const Text("IMPORT_EDITOR_SAVE_ERROR").tr()),
+                  SnackBar(content: Text(l10n.importEditorSaveError)),
                 );
               }
               return;
@@ -73,10 +74,10 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        child: const Text(
-          "IMPORT_EDITOR_BUTTON_DONE",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ).tr(),
+        child: Text(
+          context.l10n.importEditorButtonDone,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }

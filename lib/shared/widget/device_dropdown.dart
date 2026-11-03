@@ -3,7 +3,7 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 
 class DeviceDropdown extends StatefulWidget {
   const DeviceDropdown({super.key});
@@ -90,7 +90,7 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
             ),
           ],
         ),
-        const Text("SESSION_DDBUTTON_DEVICE_DISCLAIMER").tr()
+        Text(context.l10n.sessionDdbuttonDeviceDisclaimer)
       ],
     );
   }

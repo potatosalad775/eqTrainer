@@ -1,7 +1,7 @@
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/features/config/widget/config_card.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:eq_trainer/features/session/session_page.dart';
 
@@ -71,7 +71,7 @@ class ConfigPage extends StatelessWidget {
                       color: context.colors.onPrimary,
                     ),
                     label: Text(
-                      "CONFIG_BUTTON_START".tr(),
+                      context.l10n.configButtonStart,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

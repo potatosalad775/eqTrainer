@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/features/settings/widget/settings_card.dart';
@@ -13,7 +13,7 @@ class FrequencyTooltipCard extends StatelessWidget {
     final frequencyToolTip = context.watch<MiscSettingsProvider>().frequencyToolTip;
     return SettingsCard(
       icon: FontAwesomeIcons.message,
-      title: "MISC_SETTING_CARD_TOOLTIP_TITLE".tr(),
+      title: context.l10n.miscSettingCardTooltipTitle,
       trailing: Switch(
         value: frequencyToolTip,
         onChanged: (bool value) {

@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any # version pinned by flutter_localizations
   audio_decoder: ^0.8.1
   cupertino_icons: ^1.0.2
   file_picker: ^12.0.0-beta.7
@@ -41,7 +44,7 @@ dependencies:
   path_provider: ^2.0.15
   path: ^1.9.0
   fl_chart: ^1.0.0
-  easy_localization: ^3.0.2
+  shared_preferences: ^2.5.3
   toastification: ^3.0.3
   upgrader: ^13.5.0
   audio_video_progress_bar: ^2.0.0
@@ -99,6 +102,9 @@ msix_config:
 # The following section is specific to Flutter packages.
 flutter:
 
+  # Runs gen-l10n (see l10n.yaml) on pub get, run and build.
+  generate: true
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -114,9 +120,6 @@ flutter:
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/assets-and-images/#from-packages
-
-  assets:
-    - assets/translations/
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

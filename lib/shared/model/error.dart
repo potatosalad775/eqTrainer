@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/main.dart';
 
 Future<void> logError(String failLog) async {
@@ -12,7 +12,7 @@ Future<void> showPlayerErrorDialog(BuildContext context, { Function? action, Obj
   return showDialog(
     context: context,
     builder: (BuildContext context) => AlertDialog(
-      content: Text("${"ERROR_PLAYER_ALERT_CONTENT".tr()} : $error"),
+      content: Text("${context.l10n.errorPlayerAlertContent} : $error"),
       actions: [
         TextButton(
           onPressed: () {
@@ -20,7 +20,7 @@ Future<void> showPlayerErrorDialog(BuildContext context, { Function? action, Obj
               action();
             }
           },
-          child: Text("ERROR_PLAYER_ALERT_EXIT_BUTTON".tr()),
+          child: Text(context.l10n.errorPlayerAlertExitButton),
         ),
       ],
     )

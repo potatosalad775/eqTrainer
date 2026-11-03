@@ -10,11 +10,12 @@ import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/model/setting_data.dart';
+import 'package:eq_trainer/shared/model/locale_provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
@@ -53,7 +54,7 @@ Future<Box<T>> _openBoxSafely<T>(String name, {bool backupOnCorruption = false})
 Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
-  await EasyLocalization.ensureInitialized();
+  final localeProvider = await LocaleProvider.load();
 
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();
@@ -109,16 +110,11 @@ Future<void> main() async {
   unawaited(clipFormatMigration.run());
 
   runApp(
-    EasyLocalization(
-      supportedLocales: const [Locale('en'), Locale('ko')],
-      path: 'assets/translations',
-      fallbackLocale: const Locale('en'),
-      useOnlyLangCode: true,
-      child: ToastificationWrapper(
-        child: App(
-          upgrader: upgrader,
-          clipFormatMigration: clipFormatMigration,
-        ),
+    ToastificationWrapper(
+      child: App(
+        upgrader: upgrader,
+        clipFormatMigration: clipFormatMigration,
+        localeProvider: localeProvider,
       ),
     ),
   );
@@ -129,10 +125,12 @@ class App extends StatefulWidget {
     super.key,
     required this.upgrader,
     required this.clipFormatMigration,
+    required this.localeProvider,
   });
 
   final Upgrader upgrader;
   final ClipFormatMigration clipFormatMigration;
+  final LocaleProvider localeProvider;
 
   static AppState of(BuildContext context) {
     return context.findAncestorStateOfType<AppState>()!;
@@ -203,6 +201,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<MiscSettingsProvider>(create: (_) => MiscSettingsProvider()),
+        ChangeNotifierProvider<LocaleProvider>.value(value: widget.localeProvider),
 
         // UI-level
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
@@ -252,9 +251,9 @@ class AppState extends State<App> with WidgetsBindingObserver {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: context.watch<MiscSettingsProvider>().themeMode,
-        localizationsDelegates: context.localizationDelegates,
-        supportedLocales: context.supportedLocales,
-        locale: context.locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: context.watch<LocaleProvider>().locale,
         home: UpgradeAlert(
           upgrader: widget.upgrader,
           child: const MainPage()

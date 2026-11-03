@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -74,15 +74,15 @@ class _ClipRecompressCardState extends State<ClipRecompressCard> {
       SnackBar(
         content: Text(
           result.failed == 0
-              ? "AUDIO_SETTING_RECOMPRESS_DONE".tr(namedArgs: {
-                  '_COUNT': '${result.converted}',
-                  '_SAVED': _formatBytes(result.bytesSaved),
-                })
-              : "AUDIO_SETTING_RECOMPRESS_DONE_WITH_ERRORS".tr(namedArgs: {
-                  '_COUNT': '${result.converted}',
-                  '_SAVED': _formatBytes(result.bytesSaved),
-                  '_FAILED': '${result.failed}',
-                }),
+              ? context.l10n.audioSettingRecompressDone(
+                  count: result.converted,
+                  saved: _formatBytes(result.bytesSaved),
+                )
+              : context.l10n.audioSettingRecompressDoneWithErrors(
+                  count: result.converted,
+                  saved: _formatBytes(result.bytesSaved),
+                  failed: result.failed,
+                ),
         ),
       ),
     );
@@ -95,22 +95,22 @@ class _ClipRecompressCardState extends State<ClipRecompressCard> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text("AUDIO_SETTING_RECOMPRESS_TITLE".tr()),
+        title: Text(context.l10n.audioSettingRecompressTitle),
         content: Text(
-          "AUDIO_SETTING_RECOMPRESS_CONFIRM".tr(namedArgs: {
-            '_COUNT': '${estimate.clipCount}',
-            '_SIZE': _formatBytes(estimate.totalBytes),
-            '_AFTER': _formatBytes(estimate.estimatedBytesAfter),
-          }),
+          context.l10n.audioSettingRecompressConfirm(
+            count: estimate.clipCount,
+            size: _formatBytes(estimate.totalBytes),
+            after: _formatBytes(estimate.estimatedBytesAfter),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text("DIALOG_CANCEL".tr()),
+            child: Text(context.l10n.dialogCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text("AUDIO_SETTING_RECOMPRESS_START".tr()),
+            child: Text(context.l10n.audioSettingRecompressStart),
           ),
         ],
       ),
@@ -130,7 +130,7 @@ class _ClipRecompressCardState extends State<ClipRecompressCard> {
 
     return SettingsCard(
       icon: Icons.compress,
-      title: "AUDIO_SETTING_RECOMPRESS_TITLE".tr(),
+      title: context.l10n.audioSettingRecompressTitle,
       trailing: _running
           ? Row(
               mainAxisSize: MainAxisSize.min,
@@ -147,9 +147,9 @@ class _ClipRecompressCardState extends State<ClipRecompressCard> {
           : TextButton(
               onPressed: _confirmAndRun,
               child: Text(
-                "AUDIO_SETTING_RECOMPRESS_ACTION".tr(namedArgs: {
-                  '_SIZE': _formatBytes(estimate!.totalBytes),
-                }),
+                context.l10n.audioSettingRecompressAction(
+                  size: _formatBytes(estimate!.totalBytes),
+                ),
               ),
             ),
     );

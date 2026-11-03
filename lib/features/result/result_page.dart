@@ -3,7 +3,7 @@ import 'package:eq_trainer/features/result/widget/result_summary_tile.dart';
 import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 
 class ResultPage extends StatelessWidget {
   const ResultPage({ super.key });
@@ -12,7 +12,7 @@ class ResultPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("RESULT_APPBAR_TITLE").tr(),
+        title: Text(context.l10n.resultAppbarTitle),
       ),
       body: SafeArea(
         child: Center(
@@ -22,7 +22,7 @@ class ResultPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: ListView.builder(
-                    itemCount: SessionStore.resultFrequencyLabelList.length,
+                    itemCount: ResultFrequencyBand.values.length,
                     itemBuilder: (context, index) => ResultItemTile(index: index),
                   ),
                 ),

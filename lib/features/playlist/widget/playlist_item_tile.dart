@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/playlist/widget/playlist_control_view.dart';
 import 'package:eq_trainer/features/playlist/widget/playlist_delete_dialog.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
@@ -91,7 +91,7 @@ class PlaylistItemTile extends StatelessWidget {
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 1,
-                  child: Text("PLAYLIST_AUDIO_ACTION_DELETE".tr()),
+                  child: Text(context.l10n.playlistAudioActionDelete),
                 ),
               ],
               icon: const Icon(Icons.more_vert),

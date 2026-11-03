@@ -1,4 +1,4 @@
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/session/model/session_controller.dart';
 import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
@@ -26,7 +26,7 @@ class SessionEqButtonRow extends StatelessWidget {
               foregroundColor: context.colors.onPrimary,
               minimumSize: const Size(100, 64),
             ),
-            child: const Text("SESSION_BUTTON_ORIGINAL").tr(),
+            child: Text(context.l10n.sessionButtonOriginal),
           ),
         ),
         Expanded(
@@ -37,7 +37,7 @@ class SessionEqButtonRow extends StatelessWidget {
               foregroundColor: context.colors.onPrimary,
               minimumSize: const Size(100, 64),
             ),
-            child: const Text("SESSION_BUTTON_EQ_FILTERED").tr(),
+            child: Text(context.l10n.sessionButtonEqFiltered),
           ),
         ),
       ],

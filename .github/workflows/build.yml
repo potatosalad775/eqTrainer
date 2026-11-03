@@ -15,7 +15,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.47.2
+          flutter-version-file: .fvmrc
 
       - name: Get Keystore
         id: android_keystore
@@ -54,7 +54,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.47.2
+          flutter-version-file: .fvmrc
 
       # iOS has no CocoaPods integration any more — every plugin it uses is a
       # Swift Package, which "flutter build" resolves on its own.
@@ -85,7 +85,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.47.2
+          flutter-version-file: .fvmrc
 
       - name: Build Windows
         run: |
@@ -106,7 +106,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.47.2
+          flutter-version-file: .fvmrc
 
       # macOS has no CocoaPods integration any more — every plugin it uses is a
       # Swift Package, which "flutter build" resolves on its own.
@@ -151,7 +151,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: 3.47.2
+          flutter-version-file: .fvmrc
 
       # libasound2-dev is for flutter_soloud: its build hook compiles the
       # SoLoud ALSA backend (-DWITH_ALSA) and links -lasound, so the headers

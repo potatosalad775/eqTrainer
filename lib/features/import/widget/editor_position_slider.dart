@@ -1,5 +1,5 @@
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
-import 'package:easy_localization/easy_localization.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:flutter/material.dart';
@@ -38,8 +38,8 @@ class EditorPositionSlider extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Clip Time Info
-        const Text("IMPORT_EDITOR_TIMESTAMP_START").tr(namedArgs: {'_TIME': clipTimeData.clipStartTime.mmss}),
-        const Text("IMPORT_EDITOR_TIMESTAMP_END").tr(namedArgs: {'_TIME': clipTimeData.clipEndTime.mmss}),
+        Text(context.l10n.importEditorTimestampStart(time: clipTimeData.clipStartTime.mmss)),
+        Text(context.l10n.importEditorTimestampEnd(time: clipTimeData.clipEndTime.mmss)),
         // Clip Indicator
         Stack(
           children: [

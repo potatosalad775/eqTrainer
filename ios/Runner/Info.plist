@@ -18,6 +18,8 @@
 	<array>
 		<string>en</string>
 		<string>ko</string>
+		<string>ru</string>
+		<string>uk</string>
 	</array>
 	<key>CFBundleName</key>
 	<string>eq_trainer</string>
