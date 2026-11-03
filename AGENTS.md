@@ -542,7 +542,17 @@ and exits, before Dart starts.
 | Android, iOS | One process per app |
 
 The Windows and Linux guards are release-only, so `flutter run` and integration
-tests work with the app open.
+tests work with the app open. A debug run on desktop can therefore sit beside a
+release copy, so it keeps its own data: the boxes, library and clip files go under
+`debug/` in the app support directory (`resolveAppDataDir`), and its settings use
+a `debug.` key prefix. **Debug builds on desktop start empty and never migrate an
+installed copy's data**, so test a desktop upgrade with a release build. Android
+and iOS debug builds use the normal paths, which is what upgrade testing there
+relies on.
+
+Settings are the one thing still physically shared: `shared_preferences` writes
+one file per app from a cached copy, so a debug and a release copy open at once
+can revert each other's recent settings. Their library data cannot collide.
 
 On macOS the title is deliberately *not* set from `MainFlutterWindow`.
 Assigning `NSWindow.title` in `awakeFromNib` does not survive — AppKit

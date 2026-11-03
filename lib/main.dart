@@ -5,7 +5,6 @@ import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -36,7 +35,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Prepare Document Directory
-  appSupportDir = await getApplicationSupportDirectory();
+  appSupportDir = await resolveAppDataDir();
+  // shared_preferences has one file per app, so debug gets its own keys instead.
+  // Must come before the first getInstance.
+  if (usesSeparateDebugData) SharedPreferences.setPrefix('debug.');
 
   // Load Hive - only ever read now, to migrate what older versions stored in it
   await Hive.initFlutter(appSupportDir.path);
