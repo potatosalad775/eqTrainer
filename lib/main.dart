@@ -4,8 +4,10 @@ import 'package:eq_trainer/shared/service/third_party_licenses.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -14,7 +16,6 @@ import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/main_page.dart';
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
-import 'package:eq_trainer/shared/model/setting_data.dart';
 import 'package:eq_trainer/shared/model/locale_provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
@@ -23,6 +24,7 @@ import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/service/clip_recompress_service.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
+import 'package:eq_trainer/shared/service/legacy_settings_migration.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 import 'package:eq_trainer/shared/service/upgrader_service.dart';
 import 'package:eq_trainer/features/session/data/session_parameter.dart';
@@ -31,20 +33,17 @@ import 'package:eq_trainer/features/session/model/session_controller.dart';
 
 // Opens a Hive box, recreating it from scratch if it fails to open (e.g. a
 // corrupt file left by a crash mid-write) instead of crash-looping on every
-// launch. For boxes holding data worth trying to recover (audioClipBox), the
-// corrupt file is copied aside first so it isn't silently lost.
-Future<Box<T>> _openBoxSafely<T>(String name, {bool backupOnCorruption = false}) async {
+// launch. The corrupt file is copied aside first so it isn't silently lost.
+Future<Box<T>> _openBoxSafely<T>(String name) async {
   try {
     return await Hive.openBox<T>(name);
   } catch (e) {
     debugPrint('[Hive] Box "$name" failed to open ($e); recreating.');
-    if (backupOnCorruption) {
-      final file = File(p.join(appSupportDir.path, '${name.toLowerCase()}.hive'));
-      if (await file.exists()) {
-        try {
-          await file.copy('${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
-        } catch (_) {}
-      }
+    final file = File(p.join(appSupportDir.path, '${name.toLowerCase()}.hive'));
+    if (await file.exists()) {
+      try {
+        await file.copy('${file.path}.corrupt-${DateTime.now().millisecondsSinceEpoch}');
+      } catch (_) {}
     }
     await Hive.deleteBoxFromDisk(name);
     return Hive.openBox<T>(name);
@@ -54,30 +53,22 @@ Future<Box<T>> _openBoxSafely<T>(String name, {bool backupOnCorruption = false})
 Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
-  final localeProvider = await LocaleProvider.load();
 
   // Prepare Document Directory
   appSupportDir = await getApplicationSupportDirectory();
 
-  // Load Hive - settings data & playlist database
+  // Load Hive - playlist database
   await Hive.initFlutter(appSupportDir.path);
-  Hive.registerAdapter(BackendDataAdapter());
-  Hive.registerAdapter(MiscSettingsAdapter());
 
-  // Load Backend Setting value (opened and closed once — not needed after
-  // startup). Still the coast_audio-era list of backend names; the only thing
-  // read out of it now is the Android backend choice — see
-  // androidBackendFromSavedList.
-  final backendBox = await _openBoxSafely<BackendData>(backendBoxName);
-  backendList = backendBox.get(backendKey)?.backendList ?? [];
-  await backendBox.close();
-
-  // Load Miscellaneous Settings (kept open — MiscSettingsProvider accesses it at runtime)
-  await _openBoxSafely<MiscSettings>(miscSettingsBoxName);
+  // Load Settings - older versions kept these in Hive, so move them first
+  final prefs = await SharedPreferences.getInstance();
+  await migrateLegacySettings(prefs);
+  final localeProvider = await LocaleProvider.load();
+  final miscSettings = await MiscSettingsProvider.load();
 
   // Load Playlist Data
   Hive.registerAdapter(AudioClipAdapter());
-  await _openBoxSafely<AudioClip>(audioClipBoxName, backupOnCorruption: true);
+  await _openBoxSafely<AudioClip>(audioClipBoxName);
 
   // Set Android System UI Style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -105,7 +96,7 @@ Future<void> main() async {
   final clipFormatMigration = ClipFormatMigration(
     AudioClipRepository(),
     AppDirectories(),
-    importFormat: MiscSettingsProvider.storedImportFormat(),
+    importFormat: miscSettings.importFormat,
   );
   unawaited(clipFormatMigration.run());
 
@@ -115,6 +106,8 @@ Future<void> main() async {
         upgrader: upgrader,
         clipFormatMigration: clipFormatMigration,
         localeProvider: localeProvider,
+        miscSettings: miscSettings,
+        androidBackend: readAndroidBackend(prefs),
       ),
     ),
   );
@@ -126,11 +119,15 @@ class App extends StatefulWidget {
     required this.upgrader,
     required this.clipFormatMigration,
     required this.localeProvider,
+    required this.miscSettings,
+    required this.androidBackend,
   });
 
   final Upgrader upgrader;
   final ClipFormatMigration clipFormatMigration;
   final LocaleProvider localeProvider;
+  final MiscSettingsProvider miscSettings;
+  final AndroidAudioBackend androidBackend;
 
   static AppState of(BuildContext context) {
     return context.findAncestorStateOfType<AppState>()!;
@@ -146,7 +143,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _audioState = AudioState.initialize(backendList: backendList);
+    _audioState = AudioState.initialize(androidBackend: widget.androidBackend);
     _audioState.startDevicePolling();
     WidgetsBinding.instance.addObserver(this);
   }
@@ -200,7 +197,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<MiscSettingsProvider>(create: (_) => MiscSettingsProvider()),
+        ChangeNotifierProvider<MiscSettingsProvider>.value(value: widget.miscSettings),
         ChangeNotifierProvider<LocaleProvider>.value(value: widget.localeProvider),
 
         // UI-level
@@ -263,12 +260,9 @@ class AppState extends State<App> with WidgetsBindingObserver {
     );
   }
 
-  void applyAudioState(AudioState newState, {List<String>? savedBackendList}) {
+  void applyAudioState(AudioState newState) {
     final oldState = _audioState;
     oldState.stopDevicePolling();
-    if (savedBackendList != null) {
-      backendList = savedBackendList;
-    }
     setState(() {
       _audioState = newState;
     });
@@ -279,10 +273,6 @@ class AppState extends State<App> with WidgetsBindingObserver {
   }
 }
 
-const String backendBoxName = "backendBox";
-const String backendKey = "backendKey";
 const String audioClipBoxName = "audioClipBox";
 
 late Directory appSupportDir;
-
-late List<String> backendList;

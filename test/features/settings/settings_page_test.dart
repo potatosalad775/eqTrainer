@@ -1,34 +1,20 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eq_trainer/features/settings/settings_page.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/shared/model/locale_provider.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
-import 'package:eq_trainer/shared/model/setting_data.dart';
 
 void main() {
-  late Directory dir;
   late LocaleProvider localeProvider;
-
-  setUpAll(() async {
-    dir = await Directory.systemTemp.createTemp('eqt_settings_');
-    Hive.init(dir.path);
-    Hive.registerAdapter(MiscSettingsAdapter());
-    await Hive.openBox<MiscSettings>(miscSettingsBoxName);
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    await dir.delete(recursive: true);
-  });
+  late MiscSettingsProvider miscSettings;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     localeProvider = await LocaleProvider.load();
+    miscSettings = await MiscSettingsProvider.load();
   });
 
   Future<void> pumpSettings(WidgetTester tester, {required Locale device}) async {
@@ -37,7 +23,7 @@ void main() {
     await tester.pumpWidget(MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: localeProvider),
-        ChangeNotifierProvider(create: (_) => MiscSettingsProvider()),
+        ChangeNotifierProvider.value(value: miscSettings),
       ],
       builder: (context, _) => MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -62,7 +62,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | Provider | Type | Purpose |
 |---|---|---|
 | `NavBarProvider` | ChangeNotifier | Bottom nav state |
-| `MiscSettingsProvider` | ChangeNotifier | Hive-backed misc settings: theme mode, frequency tooltip, import format, volume compensation |
+| `MiscSettingsProvider` | ChangeNotifier | Misc settings: theme mode, frequency tooltip, import format, volume compensation. Loaded in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
 | `AudioState` | ChangeNotifier | Audio backend & output device selection |
 | `AppDirectories` | Provider | App support directory paths |
@@ -91,10 +91,10 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 
 | Sub-directory | Content |
 |---|---|
-| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (the two Hive records, both in `setting_data.dart`), `MiscSettingsProvider` (ChangeNotifier over `MiscSettings`), `LocaleProvider` (ChangeNotifier over `shared_preferences`) |
+| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (legacy Hive records, read only by the settings migration), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`) |
 | `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
+| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `legacy_settings_migration.dart`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
 | `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
 | `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
@@ -222,9 +222,20 @@ SessionController.submitAnswer()
   → SessionController.initSession()  ← next round
 ```
 
-### Persistence (Hive CE)
+### Persistence
 
-- Boxes: `backendBox`, `miscSettingsBox`, `audioClipBox`
+Settings are in `shared_preferences`, through the legacy `SharedPreferences` API
+(see `LocaleProvider` for why). Its cache is in memory, so reads are synchronous
+once `main()` has loaded it.
+
+The clip library is in Hive CE, in the `audioClipBox` box.
+
+`migrateLegacySettings` moves settings out of the old `backendBox` and
+`miscSettingsBox` once, then deletes them. It runs before anything reads a
+setting, which is why `main()` awaits it. It has to stay, along with the two
+`setting_data.dart` records, until dropping users on older versions is
+acceptable, since people can skip releases.
+
 - Adapters are generated with `hive_ce_generator` — run `fvm dart run build_runner build` after modifying `@HiveType` / `@HiveField` annotated models
 - Generated files (`*.g.dart`) are committed to source control
 
@@ -271,7 +282,7 @@ before the widget tree exists, so `_LocalizedUpgrader` overrides
 `determineMessages(context)` to read them when the alert shows. Capture `l10n`
 before an `await` if the widget may be gone after it.
 
-The chosen language is in `shared_preferences`, not Hive, under the key
+The chosen language is in `shared_preferences`, under the key
 easy_localization used, so the migration kept existing users' choices. `null`
 means follow the device. The picker's value is `Localizations.localeOf(context)`
 rather than the saved value, since only the resolved locale is guaranteed to be
@@ -282,7 +293,7 @@ one of its items.
 - Material Design 3. `AppColors` holds fully enumerated `lightScheme`/`darkScheme`
   `ColorScheme` literals — there is **no** `ColorScheme.fromSeed` call to edit;
   regenerate the pair if the palette changes
-- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to the `miscSettingsBox` Hive box
+- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to `shared_preferences`
 - Custom font: `PretendardVariable` (supports Korean)
 - Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`
@@ -454,11 +465,11 @@ ref are cancelled when a newer commit lands.
 | Package | Role |
 |---|---|
 | `provider` | State management |
-| `hive_ce` + `hive_ce_flutter` | Local persistence |
+| `hive_ce` + `hive_ce_flutter` | The clip library, and reading legacy settings |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
 | `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
-| `shared_preferences` | The chosen language |
+| `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |
 | `toastification` | In-session answer feedback toasts |
 | `upgrader` | In-app update prompts |

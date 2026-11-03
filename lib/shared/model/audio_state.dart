@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Output device selection, plus the Android backend the engine opens it with.
 ///
@@ -94,7 +95,7 @@ final class AudioState extends ChangeNotifier {
   ///
   /// Device enumeration is best-effort: it runs before the engine is up, and a
   /// null [outputDevice] simply means "let SoLoud open the OS default".
-  factory AudioState.initialize({required List<String> backendList}) {
+  factory AudioState.initialize({required AndroidAudioBackend androidBackend}) {
     PlaybackDevice? defaultDevice;
     try {
       defaultDevice = SoLoud.instance
@@ -106,49 +107,34 @@ final class AudioState extends ChangeNotifier {
     }
 
     return AudioState(
-      androidBackend: androidBackendFromSavedList(backendList),
+      androidBackend: androidBackend,
       outputDevice: defaultDevice,
     );
   }
 }
 
-/// Reads the Android backend choice out of the saved coast_audio backend list.
-///
-/// The setting is still stored as `BackendData(List<String>)` in `backendBox`,
-/// which is what pre-migration installs already hold — so existing users are
-/// mapped rather than reset. Only two of those lists mean anything now:
-/// a user who deliberately enabled AAudio *and* turned OpenSL ES off keeps
-/// AAudio; everyone else (including the empty default list) gets OpenSL ES,
-/// which is what eqTrainer has always shipped on Android. Several Digital
-/// Audio Players accept an AAudio stream and then glitch on it, and automatic
-/// fallback cannot help — miniaudio only skips a backend that fails to
-/// *initialize*.
-AndroidAudioBackend androidBackendFromSavedList(List<String> backendList) =>
+const String _androidBackendKey = 'androidBackend';
+
+/// The saved Android backend choice. Always [AndroidAudioBackend.auto] on other
+/// platforms, where nothing reads it.
+AndroidAudioBackend readAndroidBackend(SharedPreferences prefs) =>
     Platform.isAndroid
-        ? androidBackendFromSavedListOnAndroid(backendList)
+        ? androidBackendFromName(prefs.getString(_androidBackendKey))
         : AndroidAudioBackend.auto;
 
-/// The Android half of [androidBackendFromSavedList], split out so the mapping
-/// can be tested off-device — a wrong answer here silently moves the Digital
-/// Audio Players this override exists for back onto AAudio.
-@visibleForTesting
-AndroidAudioBackend androidBackendFromSavedListOnAndroid(List<String> backendList) {
-  // Written by the current settings page, which stores one entry.
-  if (backendList.contains('auto')) return AndroidAudioBackend.auto;
-  // Anything else is a legacy coast_audio multi-backend list.
-  if (backendList.contains('aaudio') && !backendList.contains('openSLES')) {
-    return AndroidAudioBackend.aaudio;
-  }
-  return AndroidAudioBackend.openSles;
-}
-
-/// Inverse of [androidBackendFromSavedList], for writing the setting back.
+/// The Android half of [readAndroidBackend], split out so it can be tested
+/// off-device.
 ///
-/// Kept in the old list shape so one round-trip through Hive is lossless and
-/// the mapping above stays the single place that interprets it.
-List<String> savedListForAndroidBackend(AndroidAudioBackend backend) =>
-    switch (backend) {
-      AndroidAudioBackend.auto => ['auto'],
-      AndroidAudioBackend.aaudio => ['aaudio'],
-      AndroidAudioBackend.openSles => ['openSLES'],
-    };
+/// Nothing saved, or nothing recognizable, gets OpenSL ES, which is what
+/// eqTrainer has always shipped on Android. Several Digital Audio Players
+/// accept an AAudio stream and then glitch on it, and automatic fallback cannot
+/// help — miniaudio only skips a backend that fails to *initialize*.
+@visibleForTesting
+AndroidAudioBackend androidBackendFromName(String? name) =>
+    AndroidAudioBackend.values.asNameMap()[name] ?? AndroidAudioBackend.openSles;
+
+Future<bool> saveAndroidBackend(
+  SharedPreferences prefs,
+  AndroidAudioBackend backend,
+) =>
+    prefs.setString(_androidBackendKey, backend.name);

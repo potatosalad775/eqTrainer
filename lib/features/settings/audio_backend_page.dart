@@ -1,12 +1,11 @@
 import 'package:eq_trainer/shared/themes/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:hive_ce/hive.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/main.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
-import 'package:eq_trainer/shared/model/setting_data.dart';
 
 /// Picks the native backend the engine opens the Android output device with.
 ///
@@ -40,7 +39,7 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
   @override
   void initState() {
     super.initState();
-    _selected = androidBackendFromSavedList(backendList);
+    _selected = context.read<AudioState>().androidBackend;
   }
 
   Future<void> _apply() async {
@@ -48,9 +47,7 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
     // API opens it, and dropping the selection here would silently undo the
     // user's choice in the device dropdown.
     final outputDevice = context.read<AudioState>().outputDevice;
-    final saved = savedListForAndroidBackend(_selected);
-    final backendBox = await Hive.openBox<BackendData>(backendBoxName);
-    await backendBox.put(backendKey, BackendData(saved));
+    await saveAndroidBackend(await SharedPreferences.getInstance(), _selected);
 
     if (!mounted) return;
     // The engine reads the backend at init only, so a change taken now would
@@ -68,7 +65,6 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
         androidBackend: _selected,
         outputDevice: outputDevice,
       ),
-      savedBackendList: saved,
     );
   }
 
