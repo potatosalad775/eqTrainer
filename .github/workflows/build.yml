@@ -92,6 +92,13 @@ jobs:
           flutter clean
           flutter build windows --release
 
+      # Before the installer step, so a packaging failure keeps the portable build.
+      - name: Upload EXE
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-windows
+          path: build/windows/x64/runner/Release/*
+
       # Pinned so the installer's language files and script syntax cannot change
       # under a release build.
       - name: Build installer
@@ -106,12 +113,6 @@ jobs:
           name: build-windows-installer
           path: build/installer/*.exe
           if-no-files-found: error
-
-      - name: Upload EXE
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-windows
-          path: build/windows/x64/runner/Release/*
 
   build-macos:
     runs-on: macos-latest

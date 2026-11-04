@@ -50,9 +50,10 @@ Name: "uk"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [InstallDelete]
-; An upgrade must not keep assets the new version no longer ships. The library
-; is in %APPDATA%, not here, so neither this nor the uninstaller touches it.
-Type: filesandordirs; Name: "{app}\data"
+; An upgrade must not keep assets the new version no longer ships. Only this
+; folder: the user can pick an existing directory, whose own "data" is not ours.
+; The library is in %APPDATA%, so neither this nor the uninstaller touches it.
+Type: filesandordirs; Name: "{app}\data\flutter_assets"
 
 [Files]
 Source: "{#BuildDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
