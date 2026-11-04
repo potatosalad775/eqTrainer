@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:hive_ce/hive.dart';
 import 'package:path/path.dart' as p;
-import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
@@ -15,9 +13,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   late TestFixtures fixtures;
-  late Directory hiveDir;
+  late Directory libraryDir;
   late Directory clipsDir;
-  late Box<AudioClip> box;
   late AudioClipRepository repo;
   late AudioClipService service;
 
@@ -33,19 +30,13 @@ void main() {
   tearDownAll(() => fixtures.dispose());
 
   setUp(() async {
-    hiveDir = await Directory.systemTemp.createTemp('eqt_hive_');
+    libraryDir = await Directory.systemTemp.createTemp('eqt_library_');
     clipsDir = await Directory.systemTemp.createTemp('eqt_clips_');
 
-    Hive.init(hiveDir.path);
-    if (!Hive.isAdapterRegistered(AudioClipAdapter().typeId)) {
-      Hive.registerAdapter(AudioClipAdapter());
-    }
-
-    // Use a unique box name per test run to avoid state leakage
-    box = await Hive.openBox<AudioClip>('test_audio_clips');
-
-    // Wire up the real repository with the test box
-    repo = AudioClipRepository(box: box);
+    // Wire up the real repository with a throwaway library file
+    repo = await AudioClipRepository.open(
+      File(p.join(libraryDir.path, 'audio_clips.json')),
+    );
 
     // Real AppDirectories subclass that points to our temp clips dir
     final dirs = _TestAppDirectories(clipsDir.path);
@@ -54,9 +45,7 @@ void main() {
   });
 
   tearDown(() async {
-    await box.deleteFromDisk();
-    await Hive.close();
-    await hiveDir.delete(recursive: true);
+    await libraryDir.delete(recursive: true);
     await clipsDir.delete(recursive: true);
   });
 
@@ -64,7 +53,7 @@ void main() {
   // isTrimmed: false — copy as-is path
   // ---------------------------------------------------------------------------
   group('createClip (isTrimmed: false)', () {
-    testWidgets('copies WAV file and saves correct metadata to Hive', (tester) async {
+    testWidgets('copies WAV file and saves correct metadata to the library', (tester) async {
       final sourcePath = fixture('sine_440hz_1s.wav');
 
       await service.createClip(

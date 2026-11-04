@@ -29,7 +29,7 @@ class PlaylistService {
       if (await File(path).exists()) {
         paths.add(path);
       } else {
-        await _repository.deleteByKey(clip.key);
+        await _repository.deleteById(clip.id);
       }
     }
     return paths;

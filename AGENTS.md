@@ -16,7 +16,7 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 ```
 eqTrainer/
 ├── lib/
-│   ├── main.dart              # App bootstrap, provider wiring, Hive init
+│   ├── main.dart              # App bootstrap, provider wiring, legacy data migrations
 │   ├── l10n/                  # ARB translations, context.l10n (generated/ is gitignored)
 │   ├── features/              # Feature-first UI modules
 │   │   ├── config/            # Session parameter configuration page
@@ -27,9 +27,9 @@ eqTrainer/
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
 │   └── shared/                # Cross-feature code
-│       ├── model/             # AudioClip, AudioState, BackendData/MiscSettings, MiscSettingsProvider
+│       ├── model/             # AudioClip, AudioState, MiscSettingsProvider, legacy Hive records
 │       ├── player/            # Audio engine: PlayerService (flutter_soloud)
-│       ├── repository/        # IAudioClipRepository + Hive implementation
+│       ├── repository/        # IAudioClipRepository + JSON file implementation
 │       ├── service/           # Business logic services
 │       ├── themes/            # AppColors, AppTheme, AppDimens
 │       └── widget/            # Reusable UI widgets
@@ -62,12 +62,11 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | Provider | Type | Purpose |
 |---|---|---|
 | `NavBarProvider` | ChangeNotifier | Bottom nav state |
-| `MiscSettingsProvider` | ChangeNotifier | Hive-backed misc settings: theme mode, frequency tooltip, import format, volume compensation |
+| `MiscSettingsProvider` | ChangeNotifier | Misc settings: theme mode, frequency tooltip, import format, volume compensation. Loaded in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
 | `AudioState` | ChangeNotifier | Audio backend & output device selection |
 | `AppDirectories` | Provider | App support directory paths |
-| `AudioClipRepository` | Provider | Hive-backed clip storage |
-| `IAudioClipRepository` | Provider | Interface alias for DI flexibility |
+| `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `AudioClipService` | Provider | File import / clip management |
 | `PlaylistService` | Provider | Playlist operations & enabled-clip queries |
 | `ImportWorkflowService` | Provider | File-picker import flow |
@@ -91,10 +90,10 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 
 | Sub-directory | Content |
 |---|---|
-| `model/` | `AudioClip` (Hive model), `AudioState` (backend/device), `BackendData` + `MiscSettings` (the two Hive records, both in `setting_data.dart`), `MiscSettingsProvider` (ChangeNotifier over `MiscSettings`), `LocaleProvider` (ChangeNotifier over `shared_preferences`) |
+| `model/` | `AudioClip` (immutable, JSON), `AudioState` (backend/device), `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`) |
 | `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
-| `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (Hive impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
+| `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl) |
+| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `legacy_settings_migration.dart`, `legacy_clip_migration.dart`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
 | `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
 | `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 
@@ -222,9 +221,53 @@ SessionController.submitAnswer()
   → SessionController.initSession()  ← next round
 ```
 
-### Persistence (Hive CE)
+### Persistence
 
-- Boxes: `backendBox`, `miscSettingsBox`, `audioClipBox`
+Settings are in `shared_preferences`, through the legacy `SharedPreferences` API
+(see `LocaleProvider` for why). Its cache is in memory, so reads are synchronous
+once `main()` has loaded it.
+
+The clip library is `audio_clips.json` in the app support directory, loaded whole
+into `AudioClipRepository` and rewritten whole on every change. Things that are
+easy to break:
+
+- **Open exactly one repository.** Each instance keeps its own copy, so a second
+  would overwrite the first's changes. That includes `ClipFormatMigration`, which
+  gets the same instance as the widget tree. It is also why only one copy of the
+  app may run: see [the desktop runners](#dependencies-worth-knowing).
+- **A finished write is on disk, and a failed one rolled back.** The rewrite
+  passes delete a clip's source file straight after repointing its record, so
+  this is what stops a record ever pointing at a file that is gone.
+- **Writes are atomic and queued**: a flushed temp file renamed over the real one,
+  strictly one at a time.
+
+A clip's `id` is what identifies it, not its position. For anything imported now
+it is the file's basename, which format rewrites preserve.
+
+Hive CE is only read now, to migrate what older versions stored. Both migrations
+run in `main()` before anything reads the data, and people can skip releases, so
+they stay until dropping users on older versions is acceptable.
+
+| Migration | Boxes | On an unreadable box | After success |
+|---|---|---|---|
+| `migrateLegacySettings` | `backendBox`, `miscSettingsBox` | Defaults, marked done | Deletes the boxes |
+| `migrateLegacyClips` | `audioClipBox` | Not marked done, retried next launch, and `PlaylistPage` tells the user | Keeps the box, as a backup and for downgrades |
+
+The difference is deliberate: a lost setting takes a moment to fix, but a lost
+library cannot be rebuilt, since files are named by timestamp. The clip migration
+merges rather than overwrites, so clips imported while the box was unreadable
+survive a later retry.
+
+**Hive's default on a damaged box is to cut the file at the first bad frame and
+open successfully**, so a plain `openBox` reads as a smaller library rather than
+an error. `migrateLegacyClips` opens with `crashRecovery: false` first; on failure
+it copies the file to `audioclipbox.hive.damaged`, repairs, migrates what survives
+and tells the user.
+
+Removing Hive means removing both migrations and the `legacy_audio_clip.dart` and
+`setting_data.dart` records, deleting `audioClipBox` from disk, and dropping
+`hive_ce`, `hive_ce_flutter`, `hive_ce_generator` and `build_runner`.
+
 - Adapters are generated with `hive_ce_generator` — run `fvm dart run build_runner build` after modifying `@HiveType` / `@HiveField` annotated models
 - Generated files (`*.g.dart`) are committed to source control
 
@@ -271,7 +314,7 @@ before the widget tree exists, so `_LocalizedUpgrader` overrides
 `determineMessages(context)` to read them when the alert shows. Capture `l10n`
 before an `await` if the widget may be gone after it.
 
-The chosen language is in `shared_preferences`, not Hive, under the key
+The chosen language is in `shared_preferences`, under the key
 easy_localization used, so the migration kept existing users' choices. `null`
 means follow the device. The picker's value is `Localizations.localeOf(context)`
 rather than the saved value, since only the resolved locale is guaranteed to be
@@ -282,7 +325,7 @@ one of its items.
 - Material Design 3. `AppColors` holds fully enumerated `lightScheme`/`darkScheme`
   `ColorScheme` literals — there is **no** `ColorScheme.fromSeed` call to edit;
   regenerate the pair if the palette changes
-- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to the `miscSettingsBox` Hive box
+- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to `shared_preferences`
 - Custom font: `PretendardVariable` (supports Korean)
 - Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`
@@ -331,7 +374,6 @@ scaffolding is in `test/helpers/`:
 |---|---|
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
-| `hive_test_box.dart` | `HiveTestBox`: a throwaway `AudioClip` box. Anything that goes through `clip.key` needs clips added via a box: a bare `AudioClip(...)` has a **null** key, so two of them compare equal and a "was this record deleted?" check passes for the wrong reason. |
 
 Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
@@ -431,7 +473,7 @@ ref are cancelled when a newer commit lands.
 
 | File | Purpose |
 |---|---|
-| `lib/main.dart` | App entry, provider tree, Hive init |
+| `lib/main.dart` | App entry, provider tree, legacy data migrations |
 | `lib/features/session/model/session_controller.dart` | Session orchestration logic |
 | `lib/features/session/model/session_store.dart` | Session UI state (ChangeNotifier) |
 | `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
@@ -441,7 +483,8 @@ ref are cancelled when a newer commit lands.
 | `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
 | `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
 | `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
-| `lib/shared/repository/audio_clip_repository.dart` | Hive CRUD for audio clips |
+| `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
+| `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
 | `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
 | `lib/shared/model/audio_state.dart` | Output device + Android backend state |
 | `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
@@ -454,11 +497,11 @@ ref are cancelled when a newer commit lands.
 | Package | Role |
 |---|---|
 | `provider` | State management |
-| `hive_ce` + `hive_ce_flutter` | Local persistence |
+| `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
 | `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
-| `shared_preferences` | The chosen language |
+| `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |
 | `toastification` | In-session answer feedback toasts |
 | `upgrader` | In-app update prompts |
@@ -486,6 +529,30 @@ Flutter is moving to require.
 | macOS | `NSWindow.minSize` in `macos/Runner/MainFlutterWindow.swift` | `PRODUCT_DISPLAY_NAME` in `macos/Runner/Configs/AppInfo.xcconfig` |
 | Windows | `WM_GETMINMAXINFO` in `windows/runner/win32_window.cpp` | `window.Create` in `windows/runner/main.cpp` |
 | Linux | `gtk_window_set_geometry_hints` in `linux/my_application.cc` | same file, both titlebar branches |
+
+Only one copy of the app may run, because each would keep its own clip library in
+memory and overwrite the other's saves. A second launch shows the running window
+and exits, before Dart starts.
+
+| Platform | How |
+|---|---|
+| Windows | A named mutex at the top of `wWinMain` in `windows/runner/main.cpp` |
+| Linux | `GApplication` uniqueness in `linux/my_application.cc`. It works through the session bus, so with no bus there is no guard |
+| macOS | Launch Services reuses the running app. `open -n` or running the binary directly gets past it |
+| Android, iOS | One process per app |
+
+The Windows and Linux guards are release-only, so `flutter run` and integration
+tests work with the app open. A debug run on desktop can therefore sit beside a
+release copy, so it keeps its own data: the boxes, library and clip files go under
+`debug/` in the app support directory (`resolveAppDataDir`), and its settings use
+a `debug.` key prefix. **Debug builds on desktop start empty and never migrate an
+installed copy's data**, so test a desktop upgrade with a release build. Android
+and iOS debug builds use the normal paths, which is what upgrade testing there
+relies on.
+
+Settings are the one thing still physically shared: `shared_preferences` writes
+one file per app from a cached copy, so a debug and a release copy open at once
+can revert each other's recent settings. Their library data cannot collide.
 
 On macOS the title is deliberately *not* set from `MainFlutterWindow`.
 Assigning `NSWindow.title` in `awakeFromNib` does not survive — AppKit

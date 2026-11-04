@@ -2,6 +2,9 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 
 part 'setting_data.g.dart';
 
+// Both records are read-only history: settings live in shared_preferences now.
+// They exist so migrateLegacySettings can read boxes written by older versions.
+
 @HiveType(typeId: 1)
 class BackendData {
   @HiveField(0, defaultValue: [])
@@ -37,18 +40,4 @@ class MiscSettings {
     this.volumeCompensation, {
     this.themeMode = 0,
   });
-
-  MiscSettings copyWith({
-    bool? inputFrequencyToolTip,
-    int? inputImportFormat,
-    bool? inputVolumeCompensation,
-    int? inputThemeMode,
-  }) {
-    return MiscSettings(
-      inputFrequencyToolTip ?? frequencyToolTip,
-      inputImportFormat ?? importFormat,
-      inputVolumeCompensation ?? volumeCompensation,
-      themeMode: inputThemeMode ?? themeMode,
-    );
-  }
 }

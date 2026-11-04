@@ -17,6 +17,15 @@ G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+
+  // A second launch arrives here as a request to the running copy. Show the
+  // existing window, since building another would start a second engine.
+  GList* windows = gtk_application_get_windows(GTK_APPLICATION(application));
+  if (windows != nullptr) {
+    gtk_window_present(GTK_WINDOW(windows->data));
+    return;
+  }
+
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
   // set icon
@@ -133,8 +142,19 @@ static void my_application_class_init(MyApplicationClass* klass) {
 static void my_application_init(MyApplication* self) {}
 
 MyApplication* my_application_new() {
+  // Each running copy keeps its own in-memory clip library and saves it whole,
+  // so a second one would overwrite the first one's changes. Release builds are
+  // therefore unique, through the session bus. Debug builds are left out so
+  // 'flutter run' and integration tests work with the app open.
+#ifdef NDEBUG
+  // Spelled as a cast because G_APPLICATION_FLAGS_NONE is deprecated, this
+  // builds with -Werror, and G_APPLICATION_DEFAULT_FLAGS needs GLib 2.74.
+  const GApplicationFlags flags = static_cast<GApplicationFlags>(0);
+#else
+  const GApplicationFlags flags = G_APPLICATION_NON_UNIQUE;
+#endif
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID,
-                                     "flags", G_APPLICATION_NON_UNIQUE,
+                                     "flags", flags,
                                      nullptr));
 }

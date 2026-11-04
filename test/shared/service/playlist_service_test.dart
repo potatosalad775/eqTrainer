@@ -5,7 +5,6 @@ import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/playlist_service.dart';
 
-import '../../helpers/hive_test_box.dart';
 import '../../helpers/mocks.dart';
 
 void main() {
@@ -14,7 +13,6 @@ void main() {
     late MockAppDirectories mockDirs;
     late PlaylistService service;
     late Directory tmpClips;
-    late HiveTestBox hive;
 
     setUp(() async {
       mockRepo = MockIAudioClipRepository();
@@ -23,24 +21,16 @@ void main() {
 
       tmpClips = await Directory.systemTemp.createTemp('pls_clips_');
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
-      when(() => mockRepo.deleteByKey(any())).thenAnswer((_) async {});
-
-      // listEnabledClipPaths reconciles a missing file by deleting its record
-      // through clip.key, so the assertion on deleteByKey needs clips with
-      // real, distinct keys — which only a box hands out.
-      hive = await HiveTestBox.open();
+      when(() => mockRepo.deleteById(any())).thenAnswer((_) async {});
     });
 
     tearDown(() async {
-      await hive.dispose();
       await tmpClips.delete(recursive: true);
     });
 
-    /// Adds [clip] to the real test box (so it carries a valid Hive key) and,
-    /// unless [withFile] is false, creates its backing file in the fake clips
-    /// directory so File.exists() finds it.
+    /// Unless [withFile] is false, creates [clip]'s backing file in the fake
+    /// clips directory so File.exists() finds it.
     Future<AudioClip> addClip(AudioClip clip, {bool withFile = true}) async {
-      await hive.box.add(clip);
       if (withFile) {
         File(p.join(tmpClips.path, clip.fileName)).createSync(recursive: true);
       }
@@ -110,7 +100,7 @@ void main() {
         );
         when(() => mockRepo.getAllClips()).thenReturn([missing]);
         await service.listEnabledClipPaths();
-        verify(() => mockRepo.deleteByKey(missing.key)).called(1);
+        verify(() => mockRepo.deleteById(missing.id)).called(1);
       });
     });
 

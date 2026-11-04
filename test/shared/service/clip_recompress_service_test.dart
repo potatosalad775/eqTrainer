@@ -8,18 +8,15 @@ import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/clip_recompress_service.dart';
 
 import '../../helpers/fake_encoder.dart';
-import '../../helpers/hive_test_box.dart';
 import '../../helpers/mocks.dart';
 
 void main() {
   late Directory clipsDir;
-  late HiveTestBox hive;
   late MockIAudioClipRepository repo;
   late MockAppDirectories dirs;
 
-  /// A record in the real test box, so it carries a distinct Hive key for the
-  /// service to commit against.
-  Future<AudioClip> clip(String fileName) => hive.addClip(fileName);
+  Future<AudioClip> clip(String fileName) async =>
+      AudioClip(fileName, fileName, 1, true);
 
   /// Writes a file of [bytes] length into the clips directory.
   void writeClipFile(String name, int bytes) {
@@ -29,17 +26,15 @@ void main() {
 
   setUp(() async {
     clipsDir = Directory.systemTemp.createTempSync('eqt_recompress_');
-    hive = await HiveTestBox.open();
 
     repo = MockIAudioClipRepository();
     dirs = MockAppDirectories();
     when(() => dirs.getClipsPath()).thenAnswer((_) async => clipsDir.path);
-    when(() => repo.updateFileNameByKey(any(), any()))
+    when(() => repo.updateFileNameById(any(), any()))
         .thenAnswer((_) async {});
   });
 
   tearDown(() async {
-    await hive.dispose();
     if (clipsDir.existsSync()) clipsDir.deleteSync(recursive: true);
   });
 
@@ -90,8 +85,8 @@ void main() {
 
       expect(File(p.join(clipsDir.path, 'a.flac')).existsSync(), isTrue);
       expect(File(p.join(clipsDir.path, 'a.wav')).existsSync(), isFalse);
-      verify(() => repo.updateFileNameByKey(any(), 'a.flac')).called(1);
-      verify(() => repo.updateFileNameByKey(any(), 'b.flac')).called(1);
+      verify(() => repo.updateFileNameById(any(), 'a.flac')).called(1);
+      verify(() => repo.updateFileNameById(any(), 'b.flac')).called(1);
     });
 
     test('leaves non-WAV clips completely alone', () async {
@@ -107,7 +102,7 @@ void main() {
       expect(encoder.encoded, isEmpty);
       expect(File(p.join(clipsDir.path, 'a.opus')).existsSync(), isTrue);
       expect(File(p.join(clipsDir.path, 'b.flac')).existsSync(), isTrue);
-      verifyNever(() => repo.updateFileNameByKey(any(), any()));
+      verifyNever(() => repo.updateFileNameById(any(), any()));
     });
 
     test('keeps the WAV when FLAC comes out no smaller', () async {
@@ -123,7 +118,7 @@ void main() {
       expect(result.bytesSaved, equals(0));
       expect(File(p.join(clipsDir.path, 'a.wav')).existsSync(), isTrue);
       expect(File(p.join(clipsDir.path, 'a.flac')).existsSync(), isFalse);
-      verifyNever(() => repo.updateFileNameByKey(any(), any()));
+      verifyNever(() => repo.updateFileNameById(any(), any()));
     });
 
     test('a failing encode leaves the original untouched', () async {
@@ -138,7 +133,7 @@ void main() {
       expect(result.failed, equals(1));
       expect(File(p.join(clipsDir.path, 'a.wav')).existsSync(), isTrue);
       expect(File(p.join(clipsDir.path, 'a.flac')).existsSync(), isFalse);
-      verifyNever(() => repo.updateFileNameByKey(any(), any()));
+      verifyNever(() => repo.updateFileNameById(any(), any()));
     });
 
     test('one failure does not stop the others', () async {

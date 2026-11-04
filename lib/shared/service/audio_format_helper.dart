@@ -1,9 +1,9 @@
 import 'package:path/path.dart' as p;
 
-/// Import format setting values stored in MiscSettings.importFormat.
+/// Import format setting values stored by `MiscSettingsProvider.importFormat`.
 ///
 /// The numbering is historical: [allM4a] and [keepOriginal] are retired but
-/// their ordinals stay reserved, because a Hive box written before the SoLoud
+/// their ordinals stay reserved, because settings written before the SoLoud
 /// migration can still hold them. See `MiscSettingsProvider` for the mapping
 /// applied on read.
 abstract final class ImportFormat {

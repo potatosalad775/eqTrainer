@@ -29,14 +29,14 @@ void main() {
     });
 
     test('AudioState.initialize picks up the default device', () {
-      final state = AudioState.initialize(backendList: []);
+      final state = AudioState.initialize(androidBackend: AndroidAudioBackend.auto);
       expect(state.outputDevice, isNotNull);
       expect(state.outputDevice!.isDefault, isTrue);
       state.dispose();
     });
 
     test('refreshDevices holds a still-present user selection', () {
-      final state = AudioState.initialize(backendList: [])
+      final state = AudioState.initialize(androidBackend: AndroidAudioBackend.auto)
         ..userSelectedDevice = true;
       final chosen = state.outputDevice;
       state.refreshDevices();

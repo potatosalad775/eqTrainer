@@ -1,22 +1,22 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'audio_clip.dart';
+part of 'legacy_audio_clip.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class AudioClipAdapter extends TypeAdapter<AudioClip> {
+class LegacyAudioClipAdapter extends TypeAdapter<LegacyAudioClip> {
   @override
   final typeId = 0;
 
   @override
-  AudioClip read(BinaryReader reader) {
+  LegacyAudioClip read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return AudioClip(
+    return LegacyAudioClip(
       fields[0] as String,
       fields[1] as String,
       (fields[2] as num).toDouble(),
@@ -25,7 +25,7 @@ class AudioClipAdapter extends TypeAdapter<AudioClip> {
   }
 
   @override
-  void write(BinaryWriter writer, AudioClip obj) {
+  void write(BinaryWriter writer, LegacyAudioClip obj) {
     writer
       ..writeByte(4)
       ..writeByte(0)
@@ -44,7 +44,7 @@ class AudioClipAdapter extends TypeAdapter<AudioClip> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AudioClipAdapter &&
+      other is LegacyAudioClipAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

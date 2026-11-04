@@ -98,7 +98,7 @@ class AudioClipService {
   ///
   /// The file is removed best-effort first (an orphaned file is a smaller
   /// problem than a record that outlives its file), then the record is
-  /// removed by its Hive key (stable even if the box changed while a
+  /// removed by its id (stable even if the library changed while a
   /// confirmation dialog was open). Without the file removal this left the
   /// file on disk forever, leaking storage on every deletion.
   Future<void> deleteClip(AudioClip clip) async {
@@ -109,6 +109,6 @@ class AudioClipService {
     } catch (_) {
       // Ignore: still remove the record so the entry doesn't dangle.
     }
-    await _repository.deleteByKey(clip.key);
+    await _repository.deleteById(clip.id);
   }
 }

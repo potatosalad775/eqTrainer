@@ -50,7 +50,7 @@ class PlaylistItemTile extends StatelessWidget {
           index: index,
           child: IconButton(
             onPressed: () async {
-              await repo.toggleEnabledByKey(currentClip.key);
+              await repo.toggleEnabledById(currentClip.id);
             },
             icon: Icon(currentClip.isEnabled
                 ? Icons.radio_button_checked
