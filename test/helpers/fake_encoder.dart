@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
 /// Stands in for [ClipEncoder] so the library-rewrite suites stay headless.
 ///
@@ -9,13 +10,23 @@ import 'package:eq_trainer/shared/service/clip_encoder.dart';
 /// the fork's own tests; here the only thing that matters is that a file of a
 /// known size appears at the destination, or that the call fails.
 class FakeClipEncoder implements ClipEncoder {
-  FakeClipEncoder({this.outputSize = 128, this.throwOnEncode = false});
+  FakeClipEncoder({
+    this.outputSize = 128,
+    this.throwOnEncode = false,
+    this.unreadable = const {},
+  });
 
   /// Bytes written to every destination.
   final int outputSize;
 
   /// When true, both entry points throw before writing anything.
   final bool throwOnEncode;
+
+  /// Sources [trimFile] reports it could not decode.
+  final Set<String> unreadable;
+
+  /// Every source [trimFile] was asked to read, in call order.
+  final List<String> trimmedFrom = [];
 
   /// Every destination path this encoder wrote, in call order — from either
   /// entry point. A test that expects a target to bypass the encoder asserts
@@ -35,6 +46,22 @@ class FakeClipEncoder implements ClipEncoder {
     required String destPath,
   }) =>
       _write(destPath);
+
+  @override
+  Future<void> trimFile({
+    required String sourcePath,
+    required String destPath,
+    required Duration start,
+    required Duration end,
+  }) async {
+    trimmedFrom.add(sourcePath);
+    if (unreadable.contains(sourcePath)) {
+      throw const SoLoudOfflineDecodeCppException(
+        OfflineDecodeResult.unsupportedFormat,
+      );
+    }
+    await _write(destPath);
+  }
 
   Future<void> _write(String destPath) async {
     if (throwOnEncode) throw Exception('encoder failed');

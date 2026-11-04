@@ -9,16 +9,13 @@ import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
 /// Encodes clip files into the app's storage formats.
 ///
-/// Two decoders are in play and they do not overlap:
+/// A trim decodes through SoLoud, which can also write the result: its offline
+/// encoder takes float PCM and writes Ogg Opus, FLAC and WAV.
 ///
-/// - `audio_decoder` reaches platform codecs, and is the only thing that can
-///   open a foreign format (m4a/aac/wma/alac/aiff). It emits WAV.
-/// - SoLoud's offline encoder writes Ogg Opus, FLAC and WAV, but takes float
-///   PCM, not files.
-///
-/// So a foreign import is: platform decode to WAV bytes, parse to float PCM,
-/// encode to the target. WAV targets skip the last step, since the bytes are
-/// already what we want.
+/// A foreign import still goes through `audio_decoder`, which reaches platform
+/// codecs and emits WAV: platform decode to WAV bytes, parse to float PCM, encode
+/// to the target. WAV targets skip the last step, since the bytes are already
+/// what we want.
 class ClipEncoder {
   ClipEncoder({SoLoud? soloud}) : _soloud = soloud ?? SoLoud.instance;
 
@@ -46,6 +43,32 @@ class ClipEncoder {
       formatHint: sourceExt.replaceFirst('.', ''),
     );
     await encodeWavBytes(wavBytes: wavBytes, destPath: destPath);
+  }
+
+  /// Writes the range [start] to [end] of [sourcePath] to [destPath], in the
+  /// format implied by [destPath]'s extension.
+  ///
+  /// Only the range is held in memory, except for formats that SoLoud decodes
+  /// through a platform codec, which hold the whole file while decoding.
+  Future<void> trimFile({
+    required String sourcePath,
+    required String destPath,
+    required Duration start,
+    required Duration end,
+  }) async {
+    final pcm = await _soloud.decodeFileToPcm(
+      sourcePath,
+      start: start,
+      end: end,
+    );
+    await _soloud.encodePcmToFile(
+      pcm.samples,
+      destPath,
+      sampleRate: pcm.sampleRate,
+      channels: pcm.channels,
+      format: _formatFor(p.extension(destPath).toLowerCase()),
+      bitrate: opusBitrate,
+    );
   }
 
   /// Writes already-decoded [wavBytes] to [destPath] in the target format.

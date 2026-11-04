@@ -148,7 +148,8 @@ the compensation volume, because a fresh voice starts at 1.0.
 The engine is a fork, branch `custom-5.2.2`, based on upstream `main` at
 `38dc51b3`: it reports 5.2.2 but sits 5 commits past that tag. It is pinned to an
 exact SHA in `pubspec.yaml`, and the branch `custom` and tag `custom-5.0.0-pre.3`
-keep the previous pin reachable.
+keep the previous pin reachable. For now that SHA is on `feat/offline-decode`, which
+sits on top of `custom-5.2.2` and has not been merged into it.
 
 The SHA alone does not fix the codecs. The build hook downloads the Xiph binaries
 (libopus and the others) from `alnitak/flutter_soloud_prebuilds`, defaulting to
@@ -167,6 +168,7 @@ would be lost:
 | Peaking EQ filter | A bandpass-refactored biquad whose poles don't depend on gain, so sweeping dry/wet moves no recursive coefficient. This is what makes the Original/Filtered toggle click-free by construction. |
 | Android backend override | Upstream prefers AAudio on API ≥ 30; several DAP devices misbehave on it. |
 | Offline PCM-to-file encode | `encodePcmToFile` — Ogg Opus / FLAC / WAV from a float buffer. Runs on a `compute()` isolate and touches no engine state, so it is safe to call while audio is playing and two encodes may overlap. `ClipEncoder` is built on it. |
+| Offline file-to-PCM decode | `decodeFileToPcm`: a whole file or a frame-exact time range, with no engine running. Refuses files with no recognised signature, because `dr_mp3` otherwise turns them into a moment of noise and reports success. Memory follows the range, except for platform-decoded formats such as M4A, which only decode whole. `ClipEncoder.trimFile` is built on it. |
 | Opus bitrate + complexity | Upstream ran libopus defaults with no `OPUS_SET_BITRATE`. |
 | Kaiser-windowed sinc polyphase resampler | Replaced a linear-interpolation 44.1→48 kHz resampler. Opus mandates 48 kHz, so *every* Opus encode went through it — on the exact top-octave material users train against. |
 | Bisected `seekOpus` | Was a linear rewind-and-decode, i.e. O(position), and `PlayerService.seek` is a synchronous FFI call. Deep seeks in long Opus files blocked. |
@@ -196,6 +198,10 @@ which extensions the engine plays natively — `PlayerService` shares that set
 rather than restating it, because the two drifting apart is what breaks Ogg on
 Apple platforms (the `audio_decoder` fallback is AVFoundation, which cannot
 open an Ogg container at all).
+
+A trim reads the file the user picked rather than the converted temp file, so a lossy
+import is not encoded twice. It falls back to the temp file only if SoLoud cannot read
+the original, since the conversion may have used a codec SoLoud has no access to.
 
 Two background passes rewrite clips in an existing library:
 
@@ -519,7 +525,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
 | `lib/shared/service/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
 | `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
+| `lib/shared/service/clip_encoder.dart` | Decode, then encode to Opus/FLAC/WAV; the one place the two decoders meet |
 | `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
 | `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
 | `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |

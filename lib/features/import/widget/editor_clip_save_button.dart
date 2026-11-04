@@ -49,6 +49,7 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
               if (sourcePath == null) throw StateError('no source loaded');
               await clipService.createClip(
                 sourcePath: sourcePath,
+                originalPath: player.originalPath,
                 startSec: clipTimeData.clipStartTime.inMicroseconds / 1e6,
                 endSec: clipTimeData.clipEndTime.inMicroseconds / 1e6,
                 isTrimmed: isTrimmed,

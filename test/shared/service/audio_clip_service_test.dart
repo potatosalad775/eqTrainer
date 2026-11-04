@@ -7,6 +7,7 @@ import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
+import '../../helpers/fake_encoder.dart';
 import '../../helpers/mocks.dart';
 
 void main() {
@@ -181,9 +182,60 @@ void main() {
       });
     });
 
-    // Note: createClip (isTrimmed: true) invokes AudioDecoder.trimAudio() which
-    // is a native platform channel and cannot run in a unit test environment.
-    // The full trim+persist pipeline is covered by the integration tests in
-    // integration_test/audio_clip_service_integration_test.dart.
+    // The real decode and encode are covered by the integration tests in
+    // integration_test/audio_clip_service_integration_test.dart. This is about
+    // which file a trim reads, and what it does when it cannot.
+    group('createClip (isTrimmed: true)', () {
+      const converted = '/tmp/converted.opus';
+      const original = '/tmp/original.m4a';
+
+      Future<FakeClipEncoder> trim({
+        Set<String> unreadable = const {},
+        String? originalPath = original,
+      }) async {
+        final encoder = FakeClipEncoder(unreadable: unreadable);
+        await AudioClipService(mockRepo, mockDirs, encoder: encoder).createClip(
+          sourcePath: converted,
+          originalPath: originalPath,
+          startSec: 1.0,
+          endSec: 3.5,
+          isTrimmed: true,
+          importFormat: ImportFormat.smart,
+        );
+        return encoder;
+      }
+
+      test('reads the original, not the converted file', () async {
+        final encoder = await trim();
+        expect(encoder.trimmedFrom, [original]);
+
+        final clip = verify(() => mockRepo.addClip(captureAny())).captured.single
+            as AudioClip;
+        expect(clip.fileName, endsWith('.opus'));
+        expect(clip.ogAudioName, 'converted.opus');
+        expect(clip.duration, 2.5);
+        expect(File(p.join(tmpClips.path, clip.fileName)).existsSync(), isTrue);
+      });
+
+      test('reads the source when nothing was converted', () async {
+        final encoder = await trim(originalPath: null);
+        expect(encoder.trimmedFrom, [converted]);
+      });
+
+      test('falls back to the converted file if SoLoud cannot read the original',
+          () async {
+        final encoder = await trim(unreadable: {original});
+        expect(encoder.trimmedFrom, [original, converted]);
+        verify(() => mockRepo.addClip(any())).called(1);
+      });
+
+      test('fails, and saves nothing, if neither can be read', () async {
+        await expectLater(
+          trim(unreadable: {original, converted}),
+          throwsException,
+        );
+        verifyNever(() => mockRepo.addClip(any()));
+      });
+    });
   });
 }

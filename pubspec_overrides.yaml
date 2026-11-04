@@ -1,5 +1,0 @@
-# Spike only: builds against the local flutter_soloud checkout, on its
-# feat/offline-decode branch. Remove when the fork pin in pubspec.yaml moves.
-dependency_overrides:
-  flutter_soloud:
-    path: ../flutter_soloud

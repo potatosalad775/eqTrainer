@@ -23,7 +23,9 @@ class ImportWorkflowService {
     required AudioState audioState,
     required ImportPlayer importPlayer,
     required String filePath,
+    String? originalPath,
   }) async {
+    importPlayer.originalPath = originalPath;
     await importPlayer.launch(
       androidBackend: audioState.androidBackend,
       outputDevice: audioState.outputDevice,

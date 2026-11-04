@@ -190,11 +190,12 @@ class _ImportPageState extends State<ImportPage> {
     }
 
     final pickedFile = importResult.first;
-    String? filePath = pickedFile.path;
-    if (filePath == null) {
+    final String? originalPath = pickedFile.path;
+    if (originalPath == null) {
       importPageState.value = ImportPageState.error;
       return;
     }
+    String filePath = originalPath;
 
     final fileName = p.basenameWithoutExtension(pickedFile.name);
     final fileExtension = pickedFile.extension?.toLowerCase();
@@ -229,6 +230,7 @@ class _ImportPageState extends State<ImportPage> {
         audioState: audioState,
         importPlayer: importPlayer,
         filePath: filePath,
+        originalPath: originalPath,
       );
       clipDivProvider.clipEndTime = duration;
       importPageState.value = ImportPageState.ready;
