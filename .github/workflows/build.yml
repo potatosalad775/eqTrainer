@@ -92,6 +92,21 @@ jobs:
           flutter clean
           flutter build windows --release
 
+      # Pinned so the installer's language files and script syntax cannot change
+      # under a release build.
+      - name: Build installer
+        run: |
+          choco install innosetup --version=6.7.1 --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" windows\packaging\eq_trainer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-windows-installer
+          path: build/installer/*.exe
+          if-no-files-found: error
+
       - name: Upload EXE
         uses: actions/upload-artifact@v7
         with:

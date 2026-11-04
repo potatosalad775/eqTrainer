@@ -75,8 +75,8 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
       
 | Windows                 | MacOS                    | Linux          | Android                 | iOS            |
 |-------------------------|--------------------------|----------------|-------------------------|----------------|
-| [Portable ZIP][RELEASE] | [Universal DMG][RELEASE] | [DEB][RELEASE] | [Play Store][PLAYSTORE] | [IPA][RELEASE] |
-|                         |                          |                | [APK][RELEASE]          |                |
+| [Installer][RELEASE]    | [Universal DMG][RELEASE] | [DEB][RELEASE] | [Play Store][PLAYSTORE] | [IPA][RELEASE] |
+| [Portable ZIP][RELEASE] |                          |                | [APK][RELEASE]          |                |
 
 ## FAQ & Troubleshooting
 

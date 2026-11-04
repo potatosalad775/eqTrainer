@@ -116,3 +116,18 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
+
+# Ship the Visual C++ runtime beside the executable, which also imports it, as do
+# the plugins. Without it the app cannot start on a PC where nothing else has
+# installed the runtime, and that failure is only a missing-DLL dialog.
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+include(InstallRequiredSystemLibraries)
+set(VC_RUNTIME_LIBS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
+list(FILTER VC_RUNTIME_LIBS INCLUDE REGEX "/(msvcp140|vcruntime140|vcruntime140_1)\\.dll$")
+list(LENGTH VC_RUNTIME_LIBS VC_RUNTIME_LIB_COUNT)
+if(NOT VC_RUNTIME_LIB_COUNT EQUAL 3)
+  message(FATAL_ERROR "Expected 3 Visual C++ runtime DLLs, found: ${VC_RUNTIME_LIBS}")
+endif()
+install(PROGRAMS ${VC_RUNTIME_LIBS} DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  CONFIGURATIONS Profile;Release
+  COMPONENT Runtime)
