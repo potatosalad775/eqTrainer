@@ -12,14 +12,16 @@ import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
 
-/// Converts library clips that SoLoud cannot decode into a format it can, once.
+/// Converts library clips the app does not play through SoLoud into a format it
+/// does, once.
 ///
 /// eqTrainer used to prefer `.m4a` for imports because coast_audio decoded it
 /// fastest under rapid filter switching. That reason is gone — the filter
 /// switch is now a dry/wet fade on an already-running stream and never touches
-/// the decoder — and `.m4a` is the one common format SoLoud *cannot* read, so
-/// it went from the fast path to the only format needing a decode on every
-/// load. New imports are converted at import time
+/// the decoder — and `.m4a` is the one common format outside the natively
+/// playable set (AGENTS.md > Clip Formats), so it went from the fast path to
+/// the only format needing a decode on every load. New imports are converted at
+/// import time
 /// (`audio_format_helper.dart`); this handles libraries that already exist.
 ///
 /// The target comes from [targetExtForImport] against the user's stored

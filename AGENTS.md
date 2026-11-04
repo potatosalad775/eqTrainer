@@ -198,10 +198,23 @@ Two background passes rewrite clips in an existing library:
 
 | Pass | Trigger | Rule |
 |---|---|---|
-| `ClipFormatMigration` | Automatic, every launch (a no-op scan after the first) | Converts `.m4a`/`.aac` — the formats SoLoud cannot read — to whatever the user's import-format setting would produce for them today. |
+| `ClipFormatMigration` | Automatic, every launch (a no-op scan after the first) | Converts `.m4a`/`.aac` — the formats the app does not play through SoLoud — to whatever the user's import-format setting would produce for them today. |
 | `ClipRecompressService` | User-triggered, from audio settings | WAV → FLAC only. Never re-encodes a *lossless* clip to a lossy format. |
 
-Both keep the record and the basename and change only the extension. The
+**M4A is still converted, by decision.** SoLoud can now read it, and keeping AAC
+as-is on Android and Apple would avoid a second lossy generation. It was not
+adopted with the 5.2.2 fork because of what is still unknown or awkward:
+
+- Only Android, iOS and macOS stream it. Windows and Linux decode the whole file
+  into RAM, and Linux needs system FFmpeg at runtime.
+- A streamed voice can underrun if decoding falls behind, which has not been tested
+  on a slow DAP.
+- `.m4a` does not identify the codec. On an Android 17 (API 37) emulator, AAC
+  plays but ALAC has no decoder, through SoLoud and `audio_decoder` alike, so this
+  varies by device. Adopting it needs a load that handles that failure, not just a
+  per-platform extension set.
+
+Both passes keep the record and the basename and change only the extension. The
 basename is the clip's identity (`AudioClipService` names imports after
 `microsecondsSinceEpoch`), which is what `PlaylistService.resolveClipPath`
 relies on to follow a clip that moved underneath a live session.
@@ -410,7 +423,7 @@ fvm flutter test integration_test/  # integration tests — local only, see belo
 |---|---|
 | `audio_clip_service_integration_test.dart` | native decode/convert only |
 | `clip_encoder_integration_test.dart` | the offline encoder, plus an engine to load the result back |
-| `audio_state_integration_test.dart` | a real device list, enumerated *before* the engine starts |
+| `audio_state_integration_test.dart` | a real device list, enumerated *before* the engine starts. Android reports no default device, so those checks are skipped there |
 | `player_service_integration_test.dart` | an output device (engine init) |
 | `peaking_eq_audio_integration_test.dart` | an output device that actually renders — stream time has to advance for fades to land |
 
@@ -511,7 +524,7 @@ ref are cancelled when a newer commit lands.
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
-| `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. The only thing that can open a format SoLoud cannot — which is the whole reason it is still here |
+| `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. Formats like WMA and AIFF are why it is still here: SoLoud cannot open them |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
 | `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |
