@@ -48,14 +48,6 @@ jobs:
           channel: stable
           flutter-version-file: .fvmrc
 
-      # flutter_soloud ships a native build hook (hook/build.dart), so even a
-      # pure-Dart `flutter test` compiles its C sources. On Linux that build
-      # passes -DWITH_ALSA and includes <alsa/asoundlib.h>, which the runner
-      # image does not carry.
-      - name: Install ALSA headers (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update -y && sudo apt-get install -y libasound2-dev
-
       - name: Install dependencies
         run: flutter pub get
 
