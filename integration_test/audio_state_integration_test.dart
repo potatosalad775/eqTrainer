@@ -1,7 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
+
+/// miniaudio's Android enumeration reports one device and never sets its
+/// default flag, so [AudioState.outputDevice] stays null there. That is the
+/// documented "let SoLoud open the OS default".
+const _noDefaultFlag = 'Android devices do not report isDefault';
 
 /// Device enumeration without a running engine.
 ///
@@ -24,6 +31,7 @@ void main() {
     test('listPlaybackDevices returns the machine\'s devices', () {
       final devices = SoLoud.instance.listPlaybackDevices();
       expect(devices, isNotEmpty);
+      if (Platform.isAndroid) return; // See [_noDefaultFlag].
       expect(devices.where((d) => d.isDefault), isNotEmpty,
           reason: 'no device reported itself as the OS default');
     });
@@ -33,7 +41,7 @@ void main() {
       expect(state.outputDevice, isNotNull);
       expect(state.outputDevice!.isDefault, isTrue);
       state.dispose();
-    });
+    }, skip: Platform.isAndroid ? _noDefaultFlag : false);
 
     test('refreshDevices holds a still-present user selection', () {
       final state = AudioState.initialize(androidBackend: AndroidAudioBackend.auto)
