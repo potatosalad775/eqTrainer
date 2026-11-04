@@ -145,8 +145,20 @@ the compensation volume, because a fresh voice starts at 1.0.
 
 ### What the `flutter_soloud` fork carries
 
-The engine is a fork, pinned to an exact SHA in `pubspec.yaml`. Know what is in
-it before considering a move back to upstream — all of this would be lost:
+The engine is a fork, branch `custom-5.2.2`, based on upstream `main` at
+`38dc51b3`: it reports 5.2.2 but sits 5 commits past that tag. It is pinned to an
+exact SHA in `pubspec.yaml`, and the branch `custom` and tag `custom-5.0.0-pre.3`
+keep the previous pin reachable.
+
+The SHA alone does not fix the codecs. The build hook downloads the Xiph binaries
+(libopus and the others) from `alnitak/flutter_soloud_prebuilds`, defaulting to
+the `latest` release, with no checksum verification, so `pubspec.yaml` also pins
+`hooks.user_defines.flutter_soloud.prebuild_tag`. **Builds therefore need network
+access to GitHub** unless the package's `.dart_tool/flutter_soloud/` cache is
+already populated.
+
+Know what is in the fork before considering a move back to upstream — all of this
+would be lost:
 
 | Delta | Why it exists |
 |---|---|
