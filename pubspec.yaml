@@ -34,23 +34,22 @@ dependencies:
     sdk: flutter
   intl: any # version pinned by flutter_localizations
   audio_decoder: ^0.8.1
-  cupertino_icons: ^1.0.2
-  file_picker: ^12.0.0-beta.7
-  provider: ^6.0.5
+  file_picker: ^13.3.2
+  provider: ^6.1.5
   font_awesome_flutter: ^11.0.0
-  url_launcher: ^6.1.11
-  hive_ce: ^2.13.1
-  hive_ce_flutter: ^2.3.2
-  path_provider: ^2.0.15
-  path: ^1.9.0
-  fl_chart: ^1.0.0
-  shared_preferences: ^2.5.3
-  toastification: ^3.0.3
-  upgrader: ^13.5.0
-  audio_video_progress_bar: ^2.0.0
-  equatable: ^2.0.5
-  device_info_plus: ^13.2.0
-  package_info_plus: ^10.2.1
+  url_launcher: ^6.3.3
+  hive_ce: ^2.22.0
+  hive_ce_flutter: ^2.5.0
+  path_provider: ^2.1.6
+  path: ^1.9.1
+  fl_chart: ^1.3.0
+  shared_preferences: ^2.5.6
+  toastification: ^3.2.2
+  upgrader: ^13.7.0
+  audio_video_progress_bar: ^2.0.3
+  equatable: ^3.0.0
+  device_info_plus: ^13.3.0
+  package_info_plus: ^10.2.2
   version: ^3.0.2
   # Git deps are pinned to exact commit SHAs (not mutable branches) so builds
   # are reproducible and the audio engine can't change silently on re-resolve.
@@ -86,11 +85,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  hive_ce_generator: ^1.11.1
-  flutter_launcher_icons: ^0.14.1
-  mocktail: ^1.0.0
-  msix: ^3.16.7
-  build_runner: ^2.16.0
+  hive_ce_generator: ^1.12.1
+  flutter_launcher_icons: ^0.14.4
+  mocktail: ^1.0.5
+  build_runner: ^2.17.1
 
 flutter_launcher_icons:
   windows:
@@ -100,12 +98,6 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   image_path: "assets/icon/icon.png"
   min_sdk_android: 24
-
-msix_config:
-  display_name: eqTrainer
-  publisher_display_name: potatosalad775
-  identity_name: kr.potatosalad775.eqtrainer
-  logo_path: .\windows\runner\resources\app_icon.ico
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
