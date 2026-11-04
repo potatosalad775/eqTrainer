@@ -152,10 +152,12 @@ keep the previous pin reachable.
 
 The SHA alone does not fix the codecs. The build hook downloads the Xiph binaries
 (libopus and the others) from `alnitak/flutter_soloud_prebuilds`, defaulting to
-the `latest` release, with no checksum verification, so `pubspec.yaml` also pins
+the `latest` release, so `pubspec.yaml` also pins
 `hooks.user_defines.flutter_soloud.prebuild_tag`. **Builds therefore need network
 access to GitHub** unless the package's `.dart_tool/flutter_soloud/` cache is
-already populated.
+already populated. The fork checks each archive against a SHA-256 pinned per
+release in `hook/build.dart`, so bumping the tag means adding its digests there:
+a named tag without them fails the build.
 
 Know what is in the fork before considering a move back to upstream — all of this
 would be lost:
@@ -168,6 +170,7 @@ would be lost:
 | Opus bitrate + complexity | Upstream ran libopus defaults with no `OPUS_SET_BITRATE`. |
 | Kaiser-windowed sinc polyphase resampler | Replaced a linear-interpolation 44.1→48 kHz resampler. Opus mandates 48 kHz, so *every* Opus encode went through it — on the exact top-octave material users train against. |
 | Bisected `seekOpus` | Was a linear rewind-and-decode, i.e. O(position), and `PlayerService.seek` is a synchronous FFI call. Deep seeks in long Opus files blocked. |
+| Pinned prebuild digests | Upstream's hook links whatever the release serves, with no checksum. A cache with no matching recorded digest is downloaded again. |
 
 Measured, on the fork's own test material:
 

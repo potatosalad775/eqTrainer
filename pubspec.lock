@@ -388,8 +388,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "645e0c8704114ddd3b577de50c3da8fd5c85c47a"
-      resolved-ref: "645e0c8704114ddd3b577de50c3da8fd5c85c47a"
+      ref: c203eb26f32af7cf2b3cac4a2be0cc6ac8023b12
+      resolved-ref: c203eb26f32af7cf2b3cac4a2be0cc6ac8023b12
       url: "https://github.com/potatosalad775/flutter_soloud.git"
     source: git
     version: "5.2.2"
