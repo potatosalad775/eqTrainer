@@ -206,10 +206,10 @@ class PlayerService extends ChangeNotifier {
   /// native audio thread, so a full song costs a file handle rather than the
   /// ~21 MB per stereo minute that fully-decoded float PCM would take in RAM.
   ///
-  /// The fallback exists for one case. The app plays wav/mp3/flac/ogg/opus
+  /// The fallback exists for one case. The app plays wav/mp3/flac/ogg/opus/oga
   /// through SoLoud and the importer converts everything else
   /// (`audio_format_helper.dart`), but libraries created before that policy
-  /// hold `.m4a` clips. Those are converted once at startup by
+  /// hold `.m4a` and `.aac` clips. Those are converted once at startup by
   /// `ClipFormatMigration`; this catches the ones it could not convert, so a
   /// clip that fails migration still plays instead of failing to load. It
   /// holds the whole file in memory, which is what disk mode exists to avoid —

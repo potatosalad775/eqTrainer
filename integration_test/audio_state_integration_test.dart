@@ -44,11 +44,20 @@ void main() {
     }, skip: Platform.isAndroid ? _noDefaultFlag : false);
 
     test('refreshDevices holds a still-present user selection', () {
-      final state = AudioState.initialize(androidBackend: AndroidAudioBackend.auto)
-        ..userSelectedDevice = true;
-      final chosen = state.outputDevice;
+      // Prefer a non-default device: refreshDevices would land on the default
+      // anyway, so only this one can tell a held selection from a followed one.
+      final devices = SoLoud.instance.listPlaybackDevices();
+      expect(devices, isNotEmpty);
+      final chosen = devices.firstWhere(
+        (d) => !d.isDefault,
+        orElse: () => devices.first,
+      );
+      final state = AudioState(
+        androidBackend: AndroidAudioBackend.auto,
+        outputDevice: chosen,
+      )..userSelectedDevice = true;
       state.refreshDevices();
-      expect(state.outputDevice?.name, equals(chosen?.name));
+      expect(state.outputDevice?.name, equals(chosen.name));
       expect(state.userSelectedDevice, isTrue);
       state.dispose();
     });
