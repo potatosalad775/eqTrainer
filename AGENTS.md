@@ -38,7 +38,7 @@ eqTrainer/
 │   └── icon/                  # App icon
 ├── test/                      # Unit tests, mirroring lib/ (+ helpers/)
 ├── integration_test/          # Real-engine tests — local only, never CI
-├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners
+├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners and packaging
 ├── .github/workflows/
 │   ├── build.yml              # 5-platform release builds
 │   └── test.yml               # Unit tests, every push
@@ -491,9 +491,19 @@ ref are cancelled when a newer commit lands.
 |---|---|
 | Android | AAB only (`flutter build appbundle`; the step is misnamed "Build APK") |
 | iOS | IPA |
-| Windows | Windows executable |
+| Windows | Inno Setup installer (`windows/packaging/eq_trainer.iss`) + the release folder, zipped by hand as the portable download |
 | macOS | DMG |
 | Linux | DEB + RPM (via `fastforge`, jobs in `distribute_options.yaml`) |
+
+The Windows installer is per-user, so it needs no UAC prompt, and takes its version
+from the built executable. Three of its values must not drift: `AppId` is what makes
+a new version upgrade the old one; `AppMutex` must match the mutex in
+`windows/runner/main.cpp`, case included; and `CompanyName`/`ProductName` in
+`Runner.rc` decide where the library lives in `%APPDATA%`, so changing them strands
+existing users' data. It is unsigned, so SmartScreen warns on it as it does on the zip.
+
+`windows/CMakeLists.txt` copies the Visual C++ runtime DLLs into the release folder,
+so both downloads carry them. The build fails if they cannot be found.
 
 ---
 

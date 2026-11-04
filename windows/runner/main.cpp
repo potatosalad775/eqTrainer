@@ -11,6 +11,8 @@ namespace {
 // Each running copy keeps its own in-memory clip library and saves it whole, so
 // a second one would overwrite the first one's changes. Debug builds are left
 // out so 'flutter run' and integration tests work with the app open.
+// The installer checks this mutex too: keep AppMutex in
+// windows/packaging/eq_trainer.iss identical.
 bool AnotherInstanceIsRunning() {
   ::CreateMutexW(nullptr, FALSE, L"Local\\kr.potatosalad775.eq_trainer");
   const DWORD error = ::GetLastError();
