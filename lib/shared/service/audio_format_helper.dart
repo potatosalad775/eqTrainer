@@ -12,9 +12,10 @@ abstract final class ImportFormat {
   static const int smart = 0;
 
   /// Retired. Convert-everything-to-AAC made sense when coast_audio decoded
-  /// m4a fastest; SoLoud cannot decode it at all. The constant stays so a
-  /// stored value from before the migration is still recognized — it is
-  /// migrated to [smart], and the settings UI no longer offers it.
+  /// m4a fastest; the app does not play m4a through SoLoud (AGENTS.md > Clip
+  /// Formats). The constant stays so a stored value from before the migration
+  /// is still recognized — it is migrated to [smart], and the settings UI no
+  /// longer offers it.
   static const int allM4a = 1;
 
   /// Convert everything to WAV. Uncompressed and lossless, so it is the safe

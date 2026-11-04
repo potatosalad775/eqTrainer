@@ -12,15 +12,16 @@ import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
 
-/// Converts library clips that SoLoud cannot decode into a format it can, once.
+/// Converts a library's legacy `.m4a` and `.aac` clips, which the app does not
+/// play through SoLoud, into a format it does, once.
 ///
 /// eqTrainer used to prefer `.m4a` for imports because coast_audio decoded it
 /// fastest under rapid filter switching. That reason is gone — the filter
 /// switch is now a dry/wet fade on an already-running stream and never touches
-/// the decoder — and `.m4a` is the one common format SoLoud *cannot* read, so
-/// it went from the fast path to the only format needing a decode on every
-/// load. New imports are converted at import time
-/// (`audio_format_helper.dart`); this handles libraries that already exist.
+/// the decoder — and neither extension is in the natively playable set
+/// (AGENTS.md > Clip Formats), so these clips need a decode on every load. New
+/// imports are converted at import time (`audio_format_helper.dart`); this
+/// handles libraries that already exist.
 ///
 /// The target comes from [targetExtForImport] against the user's stored
 /// import-format setting, so an old clip lands where the same file would land
@@ -48,9 +49,9 @@ import 'package:eq_trainer/shared/service/clip_encoder.dart';
 /// can be heard. Screens that play audio [pause] it on entry and [resume] it
 /// on exit; the checkpoint is between clips, which the per-clip commit makes
 /// free. Blocking the user instead was considered and rejected: a large
-/// library on a slow device is minutes of a dead Start button, and the
-/// `.m4a` clips still play through [PlayerService]'s decode-on-load fallback
-/// in the meantime, so there is nothing to wait for.
+/// library on a slow device is minutes of a dead Start button, and legacy
+/// clips still play through [PlayerService]'s decode-on-load fallback in the
+/// meantime, so there is nothing to wait for.
 class ClipFormatMigration extends ChangeNotifier {
   ClipFormatMigration(
     this._repository,

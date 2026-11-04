@@ -8,9 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// Under coast_audio this also owned a set of enabled *backends* per platform,
 /// because every platform's backend had to be picked explicitly. SoLoud picks
-/// the desktop backend itself and exposes no hook to override it (Windows and
-/// Linux never create an explicit `ma_context`), so the only choice left is
-/// Android's — which eqTrainer does need, see [androidBackend].
+/// the desktop backend itself, and Linux's override is left at its default, so
+/// the only choice left is Android's — which eqTrainer does need, see
+/// [androidBackend].
 final class AudioState extends ChangeNotifier {
   AudioState({
     required this.androidBackend,
@@ -19,8 +19,7 @@ final class AudioState extends ChangeNotifier {
 
   /// Which native backend the engine opens the Android output device with.
   ///
-  /// Read at [SoLoud.init] only. Ignored on every other platform, where SoLoud
-  /// chooses the backend and offers nothing to override it with.
+  /// Read at [SoLoud.init] only. Ignored on every other platform.
   AndroidAudioBackend androidBackend;
 
   PlaybackDevice? outputDevice;
@@ -48,9 +47,9 @@ final class AudioState extends ChangeNotifier {
   /// - If no explicit selection was made, follow the OS default device.
   void refreshDevices() {
     try {
-      // Safe with or without an initialized engine, and it does not create a
-      // second context — the coast_audio version had to cache an
-      // AudioDeviceContext here precisely to avoid that.
+      // Safe with or without an initialized engine. Before init it uses a
+      // temporary context, never alongside the engine's — the coast_audio
+      // version had to cache an AudioDeviceContext here to avoid that.
       final devices = SoLoud.instance.listPlaybackDevices();
 
       if (userSelectedDevice && outputDevice != null) {

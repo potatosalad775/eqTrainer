@@ -143,8 +143,12 @@ jobs:
           path: build/macos/Build/Products/Release/eq_trainer.dmg
 
   build-linux:
-    runs-on: ubuntu-latest
-  
+    # Not ubuntu-latest: the rpm on 26.04 runs %install from a -build
+    # subdirectory, which breaks the relative paths in fastforge's generated
+    # spec. Building on the older image also keeps the glibc requirement of what
+    # we ship lower.
+    runs-on: ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v7
   
@@ -153,16 +157,15 @@ jobs:
           channel: "stable"
           flutter-version-file: .fvmrc
 
-      # libasound2-dev is for flutter_soloud: its build hook compiles the
-      # SoLoud ALSA backend (-DWITH_ALSA) and links -lasound, so the headers
-      # have to be on the runner. The gstreamer -dev packages are what
-      # audio_decoder's Linux plugin builds against.
+      # The gstreamer -dev packages are what audio_decoder's Linux plugin builds
+      # against. flutter_soloud needs no ALSA headers: miniaudio loads its
+      # backends with dlopen at runtime.
       - name: Update system dependencies
         run: |
           sudo apt-get update -y
           sudo apt-get install -y clang cmake git ninja-build \
           pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
-          libasound2-dev rpm \
+          rpm \
           libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
           gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
   
