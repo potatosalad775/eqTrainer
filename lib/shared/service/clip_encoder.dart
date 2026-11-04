@@ -9,17 +9,21 @@ import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
 /// Encodes clip files into the app's storage formats.
 ///
-/// A trim decodes through SoLoud, which can also write the result: its offline
+/// Decoding goes through SoLoud, which can also write the result: its offline
 /// encoder takes float PCM and writes Ogg Opus, FLAC and WAV.
 ///
-/// A foreign import still goes through `audio_decoder`, which reaches platform
-/// codecs and emits WAV: platform decode to WAV bytes, parse to float PCM, encode
-/// to the target. WAV targets skip the last step, since the bytes are already
-/// what we want.
+/// `audio_decoder` is only left as a fallback on Linux, where SoLoud reads M4A and
+/// AAC through a system FFmpeg that may not be there. Elsewhere it reads nothing
+/// SoLoud cannot, and falling back would bring back what it does to a file neither
+/// can read: on a FiiO JM21, an ALAC M4A sometimes crashes the whole process
+/// inside `MediaExtractor`, which Dart cannot catch.
 class ClipEncoder {
-  ClipEncoder({SoLoud? soloud}) : _soloud = soloud ?? SoLoud.instance;
+  ClipEncoder({SoLoud? soloud, bool? platformCodecFallback})
+      : _soloud = soloud ?? SoLoud.instance,
+        _platformCodecFallback = platformCodecFallback ?? Platform.isLinux;
 
   final SoLoud _soloud;
+  final bool _platformCodecFallback;
 
   /// Bitrate for Opus output, in bits per second.
   ///
@@ -31,12 +35,34 @@ class ClipEncoder {
   /// Decodes [sourcePath] and writes it to [destPath] in the format implied by
   /// [destPath]'s extension.
   ///
-  /// [formatHint] is the source extension without the dot, which the platform
-  /// decoders need when the container is ambiguous.
+  /// Throws [SoLoudOfflineDecodeCppException] if the file cannot be read, and the
+  /// caller's existing failure handling takes it from there.
   Future<void> convertFile({
     required String sourcePath,
     required String destPath,
   }) async {
+    final DecodedPcm pcm;
+    try {
+      pcm = await _soloud.decodeFileToPcm(sourcePath);
+    } on SoLoudOfflineDecodeCppException {
+      if (!_platformCodecFallback) rethrow;
+      await _convertThroughPlatformCodec(sourcePath, destPath);
+      return;
+    }
+    await _soloud.encodePcmToFile(
+      pcm.samples,
+      destPath,
+      sampleRate: pcm.sampleRate,
+      channels: pcm.channels,
+      format: _formatFor(p.extension(destPath).toLowerCase()),
+      bitrate: opusBitrate,
+    );
+  }
+
+  Future<void> _convertThroughPlatformCodec(
+    String sourcePath,
+    String destPath,
+  ) async {
     final sourceExt = p.extension(sourcePath).toLowerCase();
     final wavBytes = await AudioDecoder.convertToWavBytes(
       await File(sourcePath).readAsBytes(),

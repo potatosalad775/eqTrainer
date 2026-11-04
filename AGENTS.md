@@ -148,8 +148,7 @@ the compensation volume, because a fresh voice starts at 1.0.
 The engine is a fork, branch `custom-5.2.2`, based on upstream `main` at
 `38dc51b3`: it reports 5.2.2 but sits 5 commits past that tag. It is pinned to an
 exact SHA in `pubspec.yaml`, and the branch `custom` and tag `custom-5.0.0-pre.3`
-keep the previous pin reachable. For now that SHA is on `feat/offline-decode`, which
-sits on top of `custom-5.2.2` and has not been merged into it.
+keep the previous pin reachable.
 
 The SHA alone does not fix the codecs. The build hook downloads the Xiph binaries
 (libopus and the others) from `alnitak/flutter_soloud_prebuilds`, defaulting to
@@ -543,7 +542,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
-| `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. Formats like WMA and AIFF are why it is still here: SoLoud cannot open them |
+| `audio_decoder` (hosted) | Platform codecs that emit WAV. Being removed, see `PLAN_drop_audio_decoder.md`. Still behind All-WAV imports, the WAV migration and `PlayerService`'s fallback, and `ClipEncoder`'s fallback on Linux only |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
 | `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |

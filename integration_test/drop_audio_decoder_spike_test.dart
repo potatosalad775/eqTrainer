@@ -16,6 +16,7 @@ import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
 import 'helpers/fixture_formats.dart';
@@ -187,6 +188,28 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 2)));
 
+  // Stage 3: the crash this replaced came on round 2 of the same loop.
+  testWidgets('convertFile on ALAC, repeatedly', (_) async {
+    final source = fixturePath(
+      formatFixtures.firstWhere((f) => f.name == 'm4a_alac'),
+    );
+    final encoder = ClipEncoder();
+    var converted = 0;
+    var refused = 0;
+    for (var i = 0; i < 60; i++) {
+      try {
+        await encoder.convertFile(
+          sourcePath: source,
+          destPath: p.join(dir.path, 'alac_out.flac'),
+        );
+        converted++;
+      } on SoLoudOfflineDecodeCppException {
+        refused++;
+      }
+    }
+    report('convertFile ALAC x60: $converted converted, $refused refused');
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   testWidgets('non-ASCII paths', (_) async {
     for (final name in ['a.opus', 'a.flac', 'a.mp3', 'a.m4a']) {
       final ext = p.extension(name);
@@ -267,6 +290,37 @@ void main() {
     }
 
     final flac = p.join(dir.path, 'long.flac');
+
+    // An import of a long M4A, the worst case: only platform codecs read it, so
+    // the whole file is in memory, and the new path holds it twice while
+    // interleaving.
+    final m4a = p.join(dir.path, 'long.m4a');
+    await AudioDecoder.convertToM4a(flac, m4a);
+    final encoder = ClipEncoder();
+    final viaSoLoud = await _measure(
+      () => encoder.convertFile(
+        sourcePath: m4a,
+        destPath: p.join(dir.path, 'long_import_new.opus'),
+      ),
+    );
+    report('long $_longMinutes min .m4a import, SoLoud: '
+        '${viaSoLoud.seconds} s, RSS rose by up to ${viaSoLoud.rssRiseMb} MB');
+    // On Android the old path cannot be measured: on a JM21 it ends the process
+    // with an OutOfMemoryError, returning 105 MB over the method channel.
+    if (!Platform.isAndroid) {
+      final viaPlugin = await _measure(() async {
+        await encoder.encodeWavBytes(
+          wavBytes: await AudioDecoder.convertToWavBytes(
+            await File(m4a).readAsBytes(),
+            formatHint: 'm4a',
+          ),
+          destPath: p.join(dir.path, 'long_import_old.opus'),
+        );
+      });
+      report('long $_longMinutes min .m4a import, audio_decoder: '
+          '${viaPlugin.seconds} s, RSS rose by up to ${viaPlugin.rssRiseMb} MB');
+    }
+
     final out = p.join(dir.path, 'long_trim.wav');
     final measured = await _measure(
       () => AudioDecoder.trimAudio(

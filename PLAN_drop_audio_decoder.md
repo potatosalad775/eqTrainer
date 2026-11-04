@@ -8,8 +8,9 @@ Android on one device, a FiiO JM21. A real iOS device, other Android devices and
 are not.
 
 **Progress:** stages 1 and 2 are done and tested on macOS, the iOS simulator and the JM21.
-Windows and Linux have not built them. The pin is on the fork's `feat/offline-decode`,
-which has not been merged into `custom-5.2.2`. Gate 5 passed on the JM21.
+On Windows and Linux they have only been compiled, by CI: nothing has run them there. The
+pin is on the fork's `custom-5.2.2`. Gate 5 passed on the JM21. Stage 3 has started:
+`ClipEncoder.convertFile` is on SoLoud. See [Stage 3 so far](#stage-3-so-far).
 
 **Recommendation:** make SoLoud the only decoder, in stages. Stop if the gates below
 fail on a phone. Moving the trim is worth doing even if the package never fully goes,
@@ -276,6 +277,35 @@ Someone listened through it on headphones and heard no problems or drops, as if 
 else were running. AudioFlinger's underrun counter also stayed at 0, sampled every 4 s, in
 both complete runs. The material was a steady synthetic chord, not music, and this is
 a debug build.
+
+## Stage 3 so far
+
+`ClipEncoder.convertFile` decodes through SoLoud, so it covers lossy, FLAC and Opus imports
+and the migration of old M4A clips. `audio_decoder` remains its fallback on Linux only,
+until the FFmpeg decision. Falling back everywhere would keep the ALAC crash, since a file
+SoLoud cannot read is exactly what reaches it.
+
+| JM21 | Before | Now |
+|---|---|---|
+| ALAC M4A, 60 conversions | crashed on round 2 of the plugin loop | 60 clean refusals |
+| 10 minute M4A import | **`OutOfMemoryError` ends the app** | works, 97 to 99 s, RSS up 377 to 378 MB |
+
+The crash comes from `audio_decoder` returning about 105 MB of WAV over a method channel,
+which the Java heap cannot hold. It is uncaught, so nothing in Dart can handle it.
+
+| 10 minute M4A import | SoLoud | `audio_decoder` |
+|---|---|---|
+| macOS | 4.3 s, 467 MB | 4.5 s, 616 MB |
+| iOS simulator | 4.4 s, 529 MB | 4.6 s, 305 MB |
+
+Debug builds, and RSS rise depends on what the process freed earlier, so these are rough.
+
+**Still reaching `audio_decoder`, and so still able to hit the ALAC crash:** All-WAV imports
+(`import_workflow_service.dart`), the WAV migration (`clip_format_migration.dart`), and
+`PlayerService`'s decode-on-load fallback for old clips.
+
+**Gate 3 for imports:** an hour of M4A extrapolates to about 2.3 GB on the JM21, so it does
+not fit. A 10 minute import does, which is more than the old path managed.
 
 ## Gates
 
