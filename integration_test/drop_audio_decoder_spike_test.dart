@@ -11,6 +11,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/model/audio_clip.dart';
+import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
 import 'package:eq_trainer/shared/service/app_directories.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
@@ -158,6 +159,34 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 2)));
 
+  // Every format SoLoud reads here: a range must be exactly those frames of the
+  // whole decode, or a trim would not line up with what the editor showed.
+  testWidgets('ranges match the whole decode', (_) async {
+    const start = Duration(milliseconds: 100);
+    const end = Duration(milliseconds: 200);
+    for (final f in formatFixtures) {
+      final DecodedPcm whole;
+      try {
+        whole = await SoLoud.instance.decodeFileToPcm(fixturePath(f));
+      } on SoLoudOfflineDecodeCppException {
+        continue;
+      }
+      final part = await SoLoud.instance.decodeFileToPcm(
+        fixturePath(f),
+        start: start,
+        end: end,
+      );
+      final expected = _slice(whole, 0.1, 0.2);
+      var same = part.samples.length == expected.length;
+      for (var i = 0; same && i < expected.length; i++) {
+        same = part.samples[i] == expected[i];
+      }
+      report('range ${f.name}: ${part.samples.length ~/ part.channels} frames, '
+          '${same ? 'exact' : 'DIFFERS'}');
+      expect(same, isTrue, reason: f.name);
+    }
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   testWidgets('non-ASCII paths', (_) async {
     for (final name in ['a.opus', 'a.flac', 'a.mp3', 'a.m4a']) {
       final ext = p.extension(name);
@@ -172,7 +201,7 @@ void main() {
   });
 
   testWidgets('non-ASCII paths through the engine loader', (_) async {
-    await SoLoud.instance.init();
+    await SoLoud.instance.init(androidBackend: defaultAndroidBackend);
     try {
       for (final ext in ['.opus', '.flac', '.mp3', '.m4a']) {
         final path = p.join(dir.path, '한글 파일 é$ext');
@@ -223,6 +252,18 @@ void main() {
       report('long $_longMinutes min $ext (${size ~/ (1024 * 1024)} MB file): '
           'decoded in ${measured.seconds} s, $decodedMb MB of PCM, '
           'RSS rose by up to ${measured.rssRiseMb} MB');
+
+      final trim = await _measure(
+        () => SoLoud.instance.decodeFileToPcm(
+          path,
+          start: const Duration(minutes: _longMinutes - 1),
+          end: const Duration(minutes: _longMinutes - 1, seconds: 10),
+        ),
+      );
+      final trimMb = trim.result.samples.lengthInBytes ~/ (1024 * 1024);
+      report('long $_longMinutes min $ext, 10 s range near the end: '
+          '${trim.seconds} s, $trimMb MB of PCM, '
+          'RSS rose by up to ${trim.rssRiseMb} MB');
     }
 
     final flac = p.join(dir.path, 'long.flac');
