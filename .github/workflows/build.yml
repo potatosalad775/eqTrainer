@@ -143,8 +143,12 @@ jobs:
           path: build/macos/Build/Products/Release/eq_trainer.dmg
 
   build-linux:
-    runs-on: ubuntu-latest
-  
+    # Not ubuntu-latest: the rpm on 26.04 runs %install from a -build
+    # subdirectory, which breaks the relative paths in fastforge's generated
+    # spec. Building on the older image also keeps the glibc requirement of what
+    # we ship lower.
+    runs-on: ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v7
   
