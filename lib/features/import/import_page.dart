@@ -14,6 +14,7 @@ import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -99,6 +100,23 @@ class _ImportPageState extends State<ImportPage> {
                           )
                         ],
                       );
+                    } else if (value == ImportPageState.unsupported) {
+                      return AlertDialog(
+                        title: Text(context.l10n.importAlertErrorTitle),
+                        content: Text(
+                          Platform.isLinux
+                              ? context.l10n.importAlertUnsupportedContentLinux
+                              : context.l10n.importAlertUnsupportedContent,
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text(context.l10n.importAlertErrorButton),
+                          )
+                        ],
+                      );
                     } else if (value == ImportPageState.aborted) {
                       return AlertDialog(
                         title: Text(context.l10n.importAlertErrorTitle),
@@ -166,15 +184,13 @@ class _ImportPageState extends State<ImportPage> {
     final audioState = Provider.of<AudioState>(context, listen: false);
     final workflow = context.read<ImportWorkflowService>();
 
-    // Single source of truth with the format policy, so a format can never be
-    // offered in the picker that the importer has no rule for.
-    const allowedExtensions = importPickerExtensions;
-
     final List<PlatformFile> importResult;
     try {
       importResult = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: allowedExtensions,
+        // Single source of truth with the format policy, so a format can never
+        // be offered in the picker that the importer has no rule for.
+        allowedExtensions: importPickerExtensions(),
       );
     } catch (e) {
       debugPrint("Error picking file: $e");
@@ -218,7 +234,9 @@ class _ImportPageState extends State<ImportPage> {
         _tempConvertedPath = filePath;
       } catch (e) {
         debugPrint("Error converting audio file: $e");
-        importPageState.value = ImportPageState.error;
+        importPageState.value = isUnreadableAudioError(e)
+            ? ImportPageState.unsupported
+            : ImportPageState.error;
         return;
       }
     }
@@ -272,6 +290,7 @@ enum ImportPageState {
   loading,
   converting,
   error,
+  unsupported,
   timeout,
   aborted,
   noedit

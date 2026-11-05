@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 /// Import format setting values stored by `MiscSettingsProvider.importFormat`.
@@ -75,24 +76,34 @@ const _nativePlayableExts = {
   '.oga',
 };
 
-/// Extensions offered in the import file picker: everything the engine plays,
-/// plus the foreign formats audio_decoder can convert through platform codecs.
-const importPickerExtensions = [
-  'wav',
-  'mp3',
-  'flac',
-  'ogg',
-  'opus',
-  'oga',
-  'm4a',
-  'aac',
-  'mp4',
-  'wma',
-  'aiff',
-  'aif',
-  'alac',
-  'caf',
-];
+/// Extensions offered in the import file picker on [platform], by default the
+/// one running: everything the engine plays, plus the formats the platform's
+/// codecs were measured to read (`PLAN_drop_audio_decoder.md`).
+///
+/// This removes known failures but cannot promise a file works: `.m4a` does not
+/// identify its codec, and ALAC varies by Android device. A file that still
+/// cannot be read is refused at import ([isUnreadableAudioError]).
+///
+/// Linux offers everything because FFmpeg decides what it reads there.
+List<String> importPickerExtensions({TargetPlatform? platform}) => [
+      'wav',
+      'mp3',
+      'flac',
+      'ogg',
+      'opus',
+      'oga',
+      'm4a',
+      'aac',
+      'mp4',
+      ...switch (platform ?? defaultTargetPlatform) {
+        TargetPlatform.windows => const ['wma'],
+        TargetPlatform.macOS ||
+        TargetPlatform.iOS =>
+          const ['aiff', 'aif', 'caf'],
+        TargetPlatform.linux => const ['wma', 'aiff', 'aif', 'caf'],
+        TargetPlatform.android || TargetPlatform.fuchsia => const <String>[],
+      },
+    ];
 
 /// Returns `true` if [ext] (with leading dot, lowercase) is a lossless format.
 bool isLossless(String ext) => _losslessExts.contains(ext);

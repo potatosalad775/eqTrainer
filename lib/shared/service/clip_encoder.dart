@@ -7,6 +7,13 @@ import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
+/// Whether [error] means nothing on this platform can read the file, as opposed
+/// to the conversion failing for some other reason. On Linux this is also what a
+/// missing FFmpeg looks like.
+bool isUnreadableAudioError(Object error) =>
+    error is SoLoudOfflineDecodeCppException &&
+    error.result == OfflineDecodeResult.unsupportedFormat;
+
 /// Encodes clip files into the app's storage formats.
 ///
 /// Decoding goes through SoLoud, which can also write the result: its offline

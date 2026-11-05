@@ -73,6 +73,8 @@
   "importAlertExitNo": "아니오",
   "importAlertErrorTitle": "오류",
   "importAlertErrorContent": "오디오 파일을 불러오는 동안 오류가 발생했습니다.",
+  "importAlertUnsupportedContent": "이 기기에서는 이 파일의 형식을 읽을 수 없습니다. FLAC 또는 WAV로 변환한 뒤 다시 시도해 주세요.",
+  "importAlertUnsupportedContentLinux": "이 파일의 형식을 읽을 수 없습니다. Linux에서 M4A, AAC 등 일부 형식을 읽으려면 FFmpeg가 필요합니다. 설치되어 있는지 확인한 뒤 다시 시도해 주세요.",
   "importAlertErrorButton": "확인",
   "importAlertAbortedContent": "파일 불러오기가 취소되었습니다",
   "importAlertAbortedButton": "확인",

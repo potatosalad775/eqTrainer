@@ -73,6 +73,8 @@
   "importAlertExitNo": "Ні",
   "importAlertErrorTitle": "Помилка",
   "importAlertErrorContent": "Сталася помилка під час завантаження аудіокліпу",
+  "importAlertUnsupportedContent": "Формат цього файлу не читається на цьому пристрої. Спочатку перетворіть його на FLAC або WAV.",
+  "importAlertUnsupportedContentLinux": "Не вдалося прочитати формат цього файлу. Для деяких форматів, як-от M4A та AAC, у Linux потрібен FFmpeg. Переконайтеся, що його встановлено, і повторіть спробу.",
   "importAlertErrorButton": "Гаразд",
   "importAlertAbortedContent": "Імпорт файлу скасовано",
   "importAlertAbortedButton": "Гаразд",

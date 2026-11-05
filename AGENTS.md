@@ -193,10 +193,13 @@ codec (LAME) and an LGPL dependency. WAV remains the zero-work fallback.
 
 Clips are app-owned copies, converted once at import rather than on every load.
 `AudioFormatHelper` holds the mapping and is the single source of truth for
-which extensions the engine plays natively — `PlayerService` shares that set
-rather than restating it, because the two drifting apart is what breaks Ogg on
-Apple platforms (the `audio_decoder` fallback is AVFoundation, which cannot
-open an Ogg container at all).
+which extensions the engine streams — `PlayerService` shares that set rather than
+restating it, and loads anything else whole in `LoadMode.memory`.
+
+The import picker's list is per platform, from what each was measured to read. It
+removes known failures but cannot promise a file works, since `.m4a` does not identify
+its codec. A file nothing can read is refused with its own dialog, and on Linux that
+is also what a missing FFmpeg looks like, so the Linux message says to install it.
 
 A trim reads the file the user picked rather than the converted temp file, so a lossy
 import is not encoded twice. It falls back to the temp file only if SoLoud cannot read
@@ -542,7 +545,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
-| `audio_decoder` (hosted) | Platform codecs that emit WAV. Being removed, see `PLAN_drop_audio_decoder.md`. Still behind All-WAV imports, the WAV migration and `PlayerService`'s fallback, and `ClipEncoder`'s fallback on Linux only |
+| `audio_decoder` (hosted) | Platform codecs that emit WAV. Being removed, see `PLAN_drop_audio_decoder.md`. Only `ClipEncoder`'s fallback on Linux still uses it |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
 | `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |

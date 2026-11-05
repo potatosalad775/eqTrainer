@@ -7,10 +7,13 @@ when the decision is made and recorded in `AGENTS.md`.
 Android on one device, a FiiO JM21. A real iOS device, other Android devices and Linux
 are not.
 
-**Progress:** stages 1 and 2 are done and tested on macOS, the iOS simulator and the JM21.
-On Windows and Linux they have only been compiled, by CI: nothing has run them there. The
-pin is on the fork's `custom-5.2.2`. Gate 5 passed on the JM21. Stage 3 has started:
-`ClipEncoder.convertFile` is on SoLoud. See [Stage 3 so far](#stage-3-so-far).
+**Progress:** stages 1 and 2 are done and tested on macOS, the iOS simulator, the JM21 and
+Windows. On Linux they have only been compiled, by CI. The pin is on the fork's
+`custom-5.2.2`. Gate 5 passed on the JM21. On every platform but Linux, nothing in the app
+calls `audio_decoder` any more. See [Stage 3 so far](#stage-3-so-far).
+
+**Next:** test Linux and decide its packaging, then stage 4. Test a real iPhone before
+release. That needs the Mac, since iOS builds need Xcode.
 
 **Recommendation:** make SoLoud the only decoder, in stages. Stop if the gates below
 fail on a phone. Moving the trim is worth doing even if the package never fully goes,
@@ -300,12 +303,43 @@ which the Java heap cannot hold. It is uncaught, so nothing in Dart can handle i
 
 Debug builds, and RSS rise depends on what the process freed earlier, so these are rough.
 
-**Still reaching `audio_decoder`, and so still able to hit the ALAC crash:** All-WAV imports
-(`import_workflow_service.dart`), the WAV migration (`clip_format_migration.dart`), and
-`PlayerService`'s decode-on-load fallback for old clips.
+All-WAV imports and the WAV migration now go through `convertFile` too. WAV output stays
+16-bit, the default of `audio_decoder`'s path as well. `PlayerService` loads old `.m4a` and
+`.aac` clips with `loadFile` in `LoadMode.memory`. The picker's list is per platform, and a
+refused file gets its own dialog, which on Linux says to install FFmpeg. Nothing outside
+Linux can now reach `audio_decoder`, so the ALAC crash is closed there.
+
+**Not measured:** a long All-WAV M4A import on a slow device. `convertToWav` was described
+as not holding the clip in memory, so this one path may be worse than before.
+
+**Not tried by hand:** the new dialog and the per-platform picker in the running app. The
+Linux message only appears after stage 4, since `ClipEncoder` falls back until then.
 
 **Gate 3 for imports:** an hour of M4A extrapolates to about 2.3 GB on the JM21, so it does
-not fit. A 10 minute import does, which is more than the old path managed.
+not fit. A 10 minute import does, which is more than the old path managed. The gate is now
+"no worse than today" rather than a fixed hour.
+
+## Results after stage 3: Windows
+
+Windows 11 build 26300, debug build, with the same fixtures. All 8 spike tests passed.
+
+- **Matrix:** unchanged from [the first Windows run](#results-so-far-windows), except that
+  CAF PCM is now refused rather than returning wrong audio.
+- **Trim:** `createClip` on `.opus`, `.ogg`, `.flac`, `.mp3` and `.wav` all work, so the bug
+  this plan started from is fixed here. `audio_decoder` still fails on `.opus`.
+- **Ranges and paths:** every range equals the same frames of the whole decode, and
+  `한글 파일 é` loads through both `decodeFileToPcm` and `loadFile` in disk mode, so
+  problem 3 is confirmed fixed.
+- **ALAC:** 60 of 60 conversions worked. Windows has a decoder for it.
+
+| 10 minutes stereo | Time | RSS rise |
+|---|---|---|
+| FLAC, whole file | 0.2 s | 202 MB |
+| FLAC, 10 s range near the end | 0.1 s | 0 MB |
+| Opus, whole file | 1.1 s | 285 MB |
+| Opus, 10 s range near the end | 0.9 s | 0 MB |
+| M4A import through SoLoud | 12.0 s | 403 MB |
+| M4A import through `audio_decoder` | 12.5 s | 302 MB |
 
 ## Gates
 
@@ -319,8 +353,8 @@ All of these need passing results before the switch.
 | 4 | The formats lost are acceptable (see below) | none lost | none lost since stage 1 | none lost since stage 1 (simulator) | none lost (JM21) | ? |
 | 5 | Decoding during a session does not cause audible problems | not run | not run | not run | pass: nothing heard, 0 underruns (JM21) | ? |
 
-Gate 3's target is one hour of stereo at 44.1 kHz. Pick the real number from the longest
-file anyone would reasonably import.
+Gate 3's table records the original target of one hour of stereo at 44.1 kHz. The target is
+now "no worse than today", since the old path crashed at 10 minutes on the JM21.
 
 Gate 5 needs a person listening: import or trim on a slow DAP while audio plays. The
 decode runs on an isolate, but it is still CPU-seconds.

@@ -64,4 +64,15 @@ void main() {
     await expectLater(convert(true), throwsA(isA<Exception>()));
     expect(pluginCalls, 1);
   });
+
+  test('only an unsupported format counts as unreadable', () {
+    for (final result in OfflineDecodeResult.values) {
+      expect(
+        isUnreadableAudioError(SoLoudOfflineDecodeCppException(result)),
+        result == OfflineDecodeResult.unsupportedFormat,
+        reason: result.name,
+      );
+    }
+    expect(isUnreadableAudioError(Exception('disk full')), isFalse);
+  });
 }
