@@ -201,9 +201,14 @@ removes known failures but cannot promise a file works, since `.m4a` does not id
 its codec. A file nothing can read is refused with its own dialog, and on Linux that
 is also what a missing FFmpeg looks like, so the Linux message says to install it.
 
+SoLoud is the only decoder. On Linux, M4A, AAC, AIFF and WMA go through a system
+FFmpeg that it opens with `dlopen`, measured on 6.1, 7.1, 8.1 and 9.0. The packages
+recommend FFmpeg rather than depend on it, since the core formats need nothing. `caf`
+is left out of the Linux picker because CAF ALAC decodes about 70 ms short on 8.1 and 9.0.
+
 A trim reads the file the user picked rather than the converted temp file, so a lossy
-import is not encoded twice. It falls back to the temp file only if SoLoud cannot read
-the original, since the conversion may have used a codec SoLoud has no access to.
+import is not encoded twice. It falls back to the temp file only if the original can no
+longer be read, for example because it was on a drive that has been removed.
 
 Two background passes rewrite clips in an existing library:
 
@@ -221,8 +226,7 @@ adopted with the 5.2.2 fork because of what is still unknown or awkward:
 - A streamed voice can underrun if decoding falls behind, which has not been tested
   on a slow DAP.
 - `.m4a` does not identify the codec. On an Android 17 (API 37) emulator, AAC
-  plays but ALAC has no decoder, through SoLoud and `audio_decoder` alike, so this
-  varies by device. Adopting it needs a load that handles that failure, not just a
+  plays but ALAC has no decoder, so this varies by device. Adopting it needs a load that handles that failure, not just a
   per-platform extension set.
 
 Both passes keep the record and the basename and change only the extension. The
@@ -411,7 +415,7 @@ scaffolding is in `test/helpers/`:
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
 
-Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
+Platform channels (`path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
 `import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
 so use its `setMockInitialValues`.
@@ -527,7 +531,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
 | `lib/shared/service/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
 | `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_encoder.dart` | Decode, then encode to Opus/FLAC/WAV; the one place the two decoders meet |
+| `lib/shared/service/clip_encoder.dart` | Decode through SoLoud, then encode to Opus/FLAC/WAV |
 | `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
 | `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
 | `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
@@ -545,7 +549,6 @@ so both downloads carry them. The build fails if they cannot be found.
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
-| `audio_decoder` (hosted) | Platform codecs that emit WAV. Being removed, see `PLAN_drop_audio_decoder.md`. Only `ClipEncoder`'s fallback on Linux still uses it |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
 | `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |

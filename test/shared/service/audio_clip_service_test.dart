@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
@@ -35,31 +34,9 @@ void main() {
 
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
       when(() => mockRepo.addClip(any())).thenAnswer((_) async {});
-
-      // Mock the audio_decoder platform channel so convertToWav works in unit
-      // tests by simply copying the source file to the destination.
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('audio_decoder'),
-        (MethodCall call) async {
-          if (call.method == 'convertToWav') {
-            final args = call.arguments as Map;
-            final input = args['inputPath'] as String;
-            final output = args['outputPath'] as String;
-            await File(input).copy(output);
-            return output;
-          }
-          return null;
-        },
-      );
     });
 
     tearDown(() async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('audio_decoder'),
-        null,
-      );
       await tmpSrc.delete(recursive: true);
       await tmpClips.delete(recursive: true);
     });

@@ -78,7 +78,7 @@ const _nativePlayableExts = {
 
 /// Extensions offered in the import file picker on [platform], by default the
 /// one running: everything the engine plays, plus the formats the platform's
-/// codecs were measured to read (`PLAN_drop_audio_decoder.md`).
+/// codecs were measured to read.
 ///
 /// This removes known failures but cannot promise a file works: `.m4a` does not
 /// identify its codec, and ALAC varies by Android device. A file that still

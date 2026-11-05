@@ -80,9 +80,9 @@ class AudioClipService {
     await _repository.addClip(clip);
   }
 
-  /// Trims from [originalPath] where possible. The conversion may have read a
-  /// format SoLoud cannot, in which case the converted file is what is left, at
-  /// the cost of the extra generation.
+  /// Trims from [originalPath] where possible. The picked file can stop being
+  /// readable while the editor is open, on a removable drive for example, in which
+  /// case the converted file is what is left, at the cost of the extra generation.
   Future<void> _trim({
     required String sourcePath,
     required String? originalPath,

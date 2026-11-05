@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:audio_decoder/audio_decoder.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path/path.dart' as p;
 
@@ -18,19 +17,10 @@ bool isUnreadableAudioError(Object error) =>
 ///
 /// Decoding goes through SoLoud, which can also write the result: its offline
 /// encoder takes float PCM and writes Ogg Opus, FLAC and WAV.
-///
-/// `audio_decoder` is only left as a fallback on Linux, where SoLoud reads M4A and
-/// AAC through a system FFmpeg that may not be there. Elsewhere it reads nothing
-/// SoLoud cannot, and falling back would bring back what it does to a file neither
-/// can read: on a FiiO JM21, an ALAC M4A sometimes crashes the whole process
-/// inside `MediaExtractor`, which Dart cannot catch.
 class ClipEncoder {
-  ClipEncoder({SoLoud? soloud, bool? platformCodecFallback})
-      : _soloud = soloud ?? SoLoud.instance,
-        _platformCodecFallback = platformCodecFallback ?? Platform.isLinux;
+  ClipEncoder({SoLoud? soloud}) : _soloud = soloud ?? SoLoud.instance;
 
   final SoLoud _soloud;
-  final bool _platformCodecFallback;
 
   /// Bitrate for Opus output, in bits per second.
   ///
@@ -48,14 +38,7 @@ class ClipEncoder {
     required String sourcePath,
     required String destPath,
   }) async {
-    final DecodedPcm pcm;
-    try {
-      pcm = await _soloud.decodeFileToPcm(sourcePath);
-    } on SoLoudOfflineDecodeCppException {
-      if (!_platformCodecFallback) rethrow;
-      await _convertThroughPlatformCodec(sourcePath, destPath);
-      return;
-    }
+    final pcm = await _soloud.decodeFileToPcm(sourcePath);
     await _soloud.encodePcmToFile(
       pcm.samples,
       destPath,
@@ -64,18 +47,6 @@ class ClipEncoder {
       format: _formatFor(p.extension(destPath).toLowerCase()),
       bitrate: opusBitrate,
     );
-  }
-
-  Future<void> _convertThroughPlatformCodec(
-    String sourcePath,
-    String destPath,
-  ) async {
-    final sourceExt = p.extension(sourcePath).toLowerCase();
-    final wavBytes = await AudioDecoder.convertToWavBytes(
-      await File(sourcePath).readAsBytes(),
-      formatHint: sourceExt.replaceFirst('.', ''),
-    );
-    await encodeWavBytes(wavBytes: wavBytes, destPath: destPath);
   }
 
   /// Writes the range [start] to [end] of [sourcePath] to [destPath], in the

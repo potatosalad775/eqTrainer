@@ -33,7 +33,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any # version pinned by flutter_localizations
-  audio_decoder: ^0.8.1
   file_picker: ^13.3.2
   provider: ^6.1.5
   font_awesome_flutter: ^11.0.0

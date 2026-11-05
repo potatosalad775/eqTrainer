@@ -3,17 +3,13 @@
 Written 2026-11-04. This is a working note, not project documentation. Delete it
 when the decision is made and recorded in `AGENTS.md`.
 
-**Status:** not decided. Windows and macOS are measured, iOS on the simulator only, and
-Android on one device, a FiiO JM21. A real iOS device, other Android devices and Linux
-are not.
+**Status:** decided, and the package is removed. Testing stopped with some gates open, by
+choice: nothing on iOS or elsewhere used the package any more, so removing it changes nothing
+there. The spike and gate 5 tests are deleted, and are at commit `96341b6` if needed.
 
-**Progress:** stages 1 and 2 are done and tested on macOS, the iOS simulator, the JM21 and
-Windows. On Linux they have only been compiled, by CI. The pin is on the fork's
-`custom-5.2.2`. Gate 5 passed on the JM21. On every platform but Linux, nothing in the app
-calls `audio_decoder` any more. See [Stage 3 so far](#stage-3-so-far).
-
-**Next:** test Linux and decide its packaging, then stage 4. Test a real iPhone before
-release. That needs the Mac, since iOS builds need Xcode.
+**Still open, and needed before release, not before the removal:** a real iPhone, since iOS
+has only run on the simulator. Gate 5 has only run on the JM21. PulseAudio and PipeWire on a
+desktop Linux session have not been tried.
 
 **Recommendation:** make SoLoud the only decoder, in stages. Stop if the gates below
 fail on a phone. Moving the trim is worth doing even if the package never fully goes,
@@ -402,8 +398,13 @@ versions do not matter.
 
 **Decision so far:** with no FFmpeg, the core formats need nothing and everything else fails
 cleanly once the fallback is gone. Removing it also removes the hang. FFmpeg 6.1, 7.1, 8.1 and
-9.0 work, and the packages recommend FFmpeg. Still to test after the removal: the package
-without GStreamer, and the refusal dialog in the installed app with no FFmpeg.
+9.0 work, and the packages recommend FFmpeg.
+
+**After the removal, same VM with GStreamer and FFmpeg purged:** the packages build with no
+GStreamer dev packages and carry no GStreamer. Installed with no FFmpeg, an M4A gets the refusal
+dialog straight away and a FLAC imports. Installing FFmpeg with the app open and retrying the M4A
+works, with no restart. The `.deb` had only been getting GTK 3 through
+`gstreamer1.0-plugins-bad`, so it now depends on it directly. The `.rpm` lists it automatically.
 
 ## Gates
 
