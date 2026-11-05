@@ -28,10 +28,6 @@ void main() {
   late FakeClipEncoder encoder;
   late ImportWorkflowService service;
 
-  /// Inputs the mocked audio_decoder channel saw.
-  late List<String> convertCalls;
-  var convertShouldThrow = false;
-
   setUpAll(() => registerFallbackValue(AndroidAudioBackend.openSles));
 
   setUp(() async {
@@ -39,8 +35,6 @@ void main() {
     srcDir = await Directory.systemTemp.createTemp('eqt_import_src_');
     encoder = FakeClipEncoder();
     service = ImportWorkflowService(encoder: encoder);
-    convertCalls = [];
-    convertShouldThrow = false;
 
     // path_provider's platform implementations register through the plugin
     // registrant, which a unit test never runs, so the default method-channel
@@ -51,29 +45,14 @@ void main() {
       (call) async =>
           call.method == 'getTemporaryDirectory' ? tmpRoot.path : null,
     );
-
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      const MethodChannel('audio_decoder'),
-      (call) async {
-        if (call.method != 'convertToWav') return null;
-        final args = call.arguments as Map;
-        convertCalls.add(args['inputPath'] as String);
-        if (convertShouldThrow) {
-          throw PlatformException(code: 'CONVERSION_FAILED');
-        }
-        await File(args['outputPath'] as String).writeAsBytes([1, 2, 3, 4]);
-        return args['outputPath'];
-      },
-    );
   });
 
   tearDown(() async {
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(
-        const MethodChannel('plugins.flutter.io/path_provider'), null);
-    messenger.setMockMethodCallHandler(const MethodChannel('audio_decoder'), null);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      null,
+    );
     await tmpRoot.delete(recursive: true);
     await srcDir.delete(recursive: true);
   });
@@ -96,30 +75,18 @@ void main() {
       expect(File(out).existsSync(), isTrue);
     });
 
-    test('a non-WAV target goes through the encoder, not audio_decoder',
-        () async {
-      final out = await service.convertTo(
-        fileNameWithoutExt: '1000',
-        sourcePath: await source('song.m4a'),
-        targetExt: '.flac',
-      );
+    for (final targetExt in const ['.flac', '.opus', '.wav']) {
+      test('a $targetExt target goes through the encoder', () async {
+        final out = await service.convertTo(
+          fileNameWithoutExt: '1000',
+          sourcePath: await source('song.m4a'),
+          targetExt: targetExt,
+        );
 
-      expect(encoder.encoded, equals([out]));
-      expect(convertCalls, isEmpty);
-    });
-
-    test('a WAV target goes through audio_decoder, not the encoder', () async {
-      final src = await source('song.m4a');
-      final out = await service.convertTo(
-        fileNameWithoutExt: '1000',
-        sourcePath: src,
-        targetExt: '.wav',
-      );
-
-      expect(convertCalls, equals([src]));
-      expect(encoder.encoded, isEmpty);
-      expect(File(out).existsSync(), isTrue);
-    });
+        expect(encoder.encoded, equals([out]));
+        expect(File(out).existsSync(), isTrue);
+      });
+    }
 
     test('a failed encode removes the partial file and rethrows', () async {
       service = ImportWorkflowService(
@@ -141,26 +108,6 @@ void main() {
       expect(partial.existsSync(), isFalse);
     });
 
-    test('a failed platform decode removes the partial file and rethrows',
-        () async {
-      convertShouldThrow = true;
-      final partial = File(p.join(tmpRoot.path, 'temp', '1000.wav'))
-        ..createSync(recursive: true)
-        ..writeAsBytesSync([1]);
-
-      // audio_decoder wraps the PlatformException in its own exception type;
-      // what matters here is that convertTo lets it out rather than
-      // swallowing it and returning the path of a file that does not exist.
-      await expectLater(
-        service.convertTo(
-          fileNameWithoutExt: '1000',
-          sourcePath: await source('song.m4a'),
-          targetExt: '.wav',
-        ),
-        throwsA(anything),
-      );
-      expect(partial.existsSync(), isFalse);
-    });
   });
 
   group('loadAudioFile', () {

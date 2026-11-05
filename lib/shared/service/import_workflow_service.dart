@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:audio_decoder/audio_decoder.dart' as audio_decoder;
 import 'package:path_provider/path_provider.dart';
 import 'package:eq_trainer/shared/model/audio_state.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
@@ -41,12 +40,6 @@ class ImportWorkflowService {
 
   /// Convert an audio file to [targetExt] in a temp directory, returning the
   /// path to the converted file.
-  ///
-  /// WAV goes through audio_decoder directly, since that is what it already
-  /// writes. Every other target is decoded to WAV bytes first and then handed
-  /// to the offline encoder — audio_decoder is the only thing that can open a
-  /// foreign container, and the encoder is the only thing that can write Opus
-  /// or FLAC, so both are needed and neither can be skipped.
   Future<String> convertTo({
     required String fileNameWithoutExt,
     required String sourcePath,
@@ -60,14 +53,10 @@ class ImportWorkflowService {
         p.join(tempClipDir.path, "$fileNameWithoutExt$targetExt");
 
     try {
-      if (targetExt == '.wav') {
-        await audio_decoder.AudioDecoder.convertToWav(sourcePath, newFilePath);
-      } else {
-        await _encoder.convertFile(
-          sourcePath: sourcePath,
-          destPath: newFilePath,
-        );
-      }
+      await _encoder.convertFile(
+        sourcePath: sourcePath,
+        destPath: newFilePath,
+      );
     } catch (_) {
       // Never leave a half-written file behind for the importer to pick up as
       // if it were a finished conversion.

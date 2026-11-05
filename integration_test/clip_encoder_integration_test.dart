@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:eq_trainer/shared/player/player_service.dart';
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
+import 'helpers/fixture_formats.dart';
 import 'helpers/fixtures.dart';
 
 /// End-to-end coverage for the Opus/FLAC clip path.
@@ -74,6 +76,20 @@ void main() {
         await SoLoud.instance.disposeSource(source);
       });
     }
+
+    // What an All-WAV import or migration of an M4A clip does.
+    test('converts an M4A source to WAV', () async {
+      final format = formatFixtures.firstWhere((f) => f.name == 'm4a_aac');
+      final sourcePath = fixture(format.fileName);
+      await File(sourcePath).writeAsBytes(base64Decode(format.base64Data));
+      final dest = fixture('out_from_m4a.wav');
+
+      await encoder.convertFile(sourcePath: sourcePath, destPath: dest);
+
+      final pcm = parseWav(await File(dest).readAsBytes());
+      expect(pcm.channels, 2);
+      expect(pcm.frameCount * 1000 ~/ pcm.sampleRate, closeTo(325, 50));
+    });
 
     test('converts an MP3 source to Opus', () async {
       final dest = fixture('out_from_mp3.opus');
