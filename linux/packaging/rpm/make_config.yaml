@@ -22,6 +22,12 @@ requires:
   - gstreamer1-plugins-base
   - gstreamer1-plugins-good
 
+# See the deb make_config for why FFmpeg is only recommended. fastforge has no
+# option for this, but it writes spec_macros into the spec as they are. Fedora
+# ships ffmpeg-free, and RPM Fusion ships ffmpeg.
+spec_macros:
+  - "Recommends: (ffmpeg-free or ffmpeg)"
+
 keywords:
   - eq
   - eqTrainer

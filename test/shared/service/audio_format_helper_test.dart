@@ -324,6 +324,10 @@ void main() {
       expect(on(TargetPlatform.macOS), isNot(contains('wma')));
       expect(on(TargetPlatform.iOS), isNot(contains('wma')));
       expect(on(TargetPlatform.android), isNot(contains('wma')));
+
+      // CAF ALAC decodes short on FFmpeg 8.1 and 9.0.
+      expect(on(TargetPlatform.linux), containsAll(['wma', 'aiff', 'aif']));
+      expect(on(TargetPlatform.linux), isNot(contains('caf')));
     });
   });
 

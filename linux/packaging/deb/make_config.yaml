@@ -18,6 +18,12 @@ dependencies:
   - gstreamer1.0-plugins-good
   - gstreamer1.0-plugins-bad
 
+# flutter_soloud opens FFmpeg with dlopen to read M4A, AAC, AIFF and WMA. A
+# recommendation rather than a dependency: WAV, MP3, FLAC and Ogg need nothing,
+# and without it the other formats are refused with a message.
+recommended_dependencies:
+  - ffmpeg
+
 essential: false
 icon: linux/assets/app_icon.png
 

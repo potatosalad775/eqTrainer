@@ -84,7 +84,9 @@ const _nativePlayableExts = {
 /// identify its codec, and ALAC varies by Android device. A file that still
 /// cannot be read is refused at import ([isUnreadableAudioError]).
 ///
-/// Linux offers everything because FFmpeg decides what it reads there.
+/// Linux offers what FFmpeg reads, except `.caf`: CAF ALAC came back about 70 ms
+/// short on FFmpeg 8.1 and 9.0, and silently losing audio is worse than not
+/// offering a format that is rare there.
 List<String> importPickerExtensions({TargetPlatform? platform}) => [
       'wav',
       'mp3',
@@ -100,7 +102,7 @@ List<String> importPickerExtensions({TargetPlatform? platform}) => [
         TargetPlatform.macOS ||
         TargetPlatform.iOS =>
           const ['aiff', 'aif', 'caf'],
-        TargetPlatform.linux => const ['wma', 'aiff', 'aif', 'caf'],
+        TargetPlatform.linux => const ['wma', 'aiff', 'aif'],
         TargetPlatform.android || TargetPlatform.fuchsia => const <String>[],
       },
     ];

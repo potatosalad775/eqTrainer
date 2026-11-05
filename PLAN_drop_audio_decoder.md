@@ -341,16 +341,80 @@ Windows 11 build 26300, debug build, with the same fixtures. All 8 spike tests p
 | M4A import through SoLoud | 12.0 s | 403 MB |
 | M4A import through `audio_decoder` | 12.5 s | 302 MB |
 
+## Results so far: Linux
+
+Measured in a Debian 13 VM (kernel 6.12), debug build, with the same fixtures. A VM says
+nothing about audio timing, so gate 5 cannot be run here. Decoding results do carry over.
+
+| Format | SoLoud, no FFmpeg | SoLoud, FFmpeg 7.1 | `audio_decoder` (GStreamer) |
+|---|---|---|---|
+| WAV 16/24, FLAC, FLAC mono, Ogg Vorbis, Ogg FLAC | correct | correct | correct |
+| MP3 | correct, 0.300 s | correct, 0.300 s | correct, but 0.366 s long |
+| Ogg Opus, stereo and mono | correct, 48 kHz | correct, 48 kHz | reports 24 kHz |
+| M4A AAC, MP4 AAC | clean refusal | correct, 0.302 s | 0.279 s, short |
+| Raw AAC | clean refusal | correct, 0.325 s | 0.302 s, short |
+| AIFF, AIF | clean refusal | correct | correct |
+| M4A ALAC, WMA, CAF PCM, CAF ALAC | clean refusal | correct | **no result after 30 s** |
+
+- **`audio_decoder` can hang forever:** on the files in the last row, it had not returned
+  after 30 s. With no FFmpeg, `ClipEncoder`'s Linux fallback reaches it, and the ALAC
+  conversion loop then sat until the 5 minute test timeout. So today an import of such a
+  file would stay on the converting screen. This comes from the test and the code, and has
+  not been clicked through in the app.
+- **Trim:** SoLoud is frame-exact at 2205 frames. `audio_decoder` returned 4608 for the same
+  range.
+- **With FFmpeg 7.1:** every range is exact in all 18 formats, 60 of 60 ALAC conversions
+  worked, and non-ASCII paths load through `decodeFileToPcm` and `loadFile`.
+- **Without FFmpeg:** `loadFile` on M4A throws a normal exception, so `PlayerService` can
+  report it. Nothing crashed in either state.
+- **Long files, 10 minutes stereo:** FLAC 0.2 s and 202 MB, Opus 0.9 s and 219 to 223 MB. The
+  M4A step did not run, because its fixture needs `avenc_aac` from `gstreamer1.0-libav`,
+  which the VM does not have. That is a fixture problem and says nothing about SoLoud.
+
+**FFmpeg 8.1 and 9.0:** BtbN's shared builds through `LD_LIBRARY_PATH`, with no system FFmpeg,
+and the app's memory map confirmed it loaded them. Same results as 7.1: every format decodes
+with no bad length or channels, every range is exact, 60 of 60 ALAC conversions worked, and
+nothing crashed. The one difference is CAF ALAC, which comes back as 0.228 s rather than
+0.300 s on both. That is inside the spike's 0.08 s tolerance, so it is not flagged, and the
+cause is not known. `caf` is out of the Linux picker because of it: it is rare there, and
+silently losing audio is worse than not offering it.
+
+**FFmpeg 6.1 and the real package, Ubuntu 24.04 VM:** a `.deb` and `.rpm` built with fastforge
+0.6.13 as CI builds them, on a server install with no system FFmpeg.
+
+- **Install:** the default `apt-get install` brought in `ffmpeg` 6.1.1 and with
+  `--no-install-recommends` it did not. The `.rpm` reports the recommendation, but was only
+  inspected, not installed.
+- **Spike:** 8 of 8 against system 6.1, confirmed in the memory map. Every format decodes,
+  every range is exact, 60 of 60 ALAC conversions worked, and CAF ALAC is the full 0.300 s, so
+  the short result is specific to 8.1 and 9.0.
+- **Long M4A, 10 minutes:** SoLoud 4.6 s and up to 396 MB, `audio_decoder` 5.1 s and up to
+  357 MB. The first measurement of this on Linux.
+- **Installed app:** with the VM's sound muted, an M4A went through the real portal file
+  dialog to a 20.01 s Opus clip, and it played in the import screen and in a session, with the
+  EQ toggle and an answer submitted. miniaudio chose ALSA, and that is the only backend this
+  VM has, so PulseAudio and PipeWire are still untested.
+- **Device list:** it shows ALSA's raw entries, including "Discard all samples (playback) or
+  generate zero samples" and "Default Audio Device" twice.
+
+The app needs glibc 2.38, so Debian 12 and Ubuntu 22.04 cannot run it, and their older FFmpeg
+versions do not matter.
+
+**Decision so far:** with no FFmpeg, the core formats need nothing and everything else fails
+cleanly once the fallback is gone. Removing it also removes the hang. FFmpeg 6.1, 7.1, 8.1 and
+9.0 work, and the packages recommend FFmpeg. Still to test after the removal: the package
+without GStreamer, and the refusal dialog in the installed app with no FFmpeg.
+
 ## Gates
 
 All of these need passing results before the switch.
 
 | # | Gate | Windows | macOS | iOS | Android | Linux |
 |---|---|---|---|---|---|---|
-| 1 | SoLoud decodes WAV, MP3, FLAC, Vorbis and Opus correctly | pass | pass | pass (simulator) | pass (JM21) | ? |
-| 2 | Trim through SoLoud is frame-exact | pass | pass | pass (simulator) | pass (JM21) | ? |
-| 3 | A long file fits in memory on the weakest supported device | ~2.4 GB for the target below, extrapolated from 10 min | ~2.5 GB FLAC, ~3.5 GB Opus, extrapolated from 10 min | ~2.4 GB on the simulator before stage 1, device limit unknown | Before stage 1, ~2.4 to 2.6 GB extrapolated with 1.1 to 1.5 GB available (JM21). **Passes for trims of WAV, FLAC, MP3 and Ogg now**, not yet for M4A or a whole-file conversion | ? |
-| 4 | The formats lost are acceptable (see below) | none lost | none lost since stage 1 | none lost since stage 1 (simulator) | none lost (JM21) | ? |
+| 1 | SoLoud decodes WAV, MP3, FLAC, Vorbis and Opus correctly | pass | pass | pass (simulator) | pass (JM21) | pass (Debian 13 VM) |
+| 2 | Trim through SoLoud is frame-exact | pass | pass | pass (simulator) | pass (JM21) | pass (Debian 13 VM) |
+| 3 | A long file fits in memory on the weakest supported device | ~2.4 GB for the target below, extrapolated from 10 min | ~2.5 GB FLAC, ~3.5 GB Opus, extrapolated from 10 min | ~2.4 GB on the simulator before stage 1, device limit unknown | Before stage 1, ~2.4 to 2.6 GB extrapolated with 1.1 to 1.5 GB available (JM21). **Passes for trims of WAV, FLAC, MP3 and Ogg now**, not yet for M4A or a whole-file conversion | no worse than today: 10 min M4A up to 396 MB, against 357 MB (Ubuntu 24.04 VM) |
+| 4 | The formats lost are acceptable (see below) | none lost | none lost since stage 1 | none lost since stage 1 (simulator) | none lost (JM21) | none lost with FFmpeg. Without it, M4A, AAC and AIFF, which GStreamer reads today (Debian 13 VM) |
 | 5 | Decoding during a session does not cause audible problems | not run | not run | not run | pass: nothing heard, 0 underruns (JM21) | ? |
 
 Gate 3's table records the original target of one hour of stereo at 44.1 kHz. The target is
