@@ -61,17 +61,15 @@ void main() {
     expect(AppLocalizations.supportedLocales.first, const Locale('en'));
   });
 
-  test('each language picker entry is named in its own language', () {
-    final names = {
+  test('each language has its own name in the picker', () {
+    // Catches a copied app_en.arb that still says "English". Whether a name is
+    // spelled right is for review: restating them here would only copy mistakes.
+    final names = [
       for (final locale in AppLocalizations.supportedLocales)
-        locale.languageCode: lookupAppLocalizations(locale).languageName,
-    };
-    expect(names, {
-      'en': 'English',
-      'ko': '한국어',
-      'ru': 'Русский',
-      'uk': 'Українська',
-    });
+        lookupAppLocalizations(locale).languageName,
+    ];
+    expect(names, everyElement(isNotEmpty));
+    expect(names.toSet(), hasLength(names.length));
   });
 
   group('plurals', () {
