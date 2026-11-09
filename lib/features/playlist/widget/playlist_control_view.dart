@@ -49,6 +49,7 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
             Navigator.of(context).pop();
           },
           error: e,
+          path: widget.filePath,
         );
       }
     });

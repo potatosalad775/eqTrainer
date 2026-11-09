@@ -331,6 +331,18 @@ void main() {
     });
   });
 
+  group('mayNeedFfmpeg', () {
+    test('is only Linux, and only what the engine does not read itself', () {
+      for (final path in ['/clips/1.m4a', '/clips/1.AAC']) {
+        expect(mayNeedFfmpeg(path, platform: TargetPlatform.linux), isTrue);
+        expect(mayNeedFfmpeg(path, platform: TargetPlatform.windows), isFalse);
+      }
+      for (final path in ['/clips/1.wav', '/clips/1.opus', '/clips/1.mp3']) {
+        expect(mayNeedFfmpeg(path, platform: TargetPlatform.linux), isFalse);
+      }
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // isLossless
   // ---------------------------------------------------------------------------

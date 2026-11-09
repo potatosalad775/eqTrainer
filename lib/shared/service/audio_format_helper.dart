@@ -114,6 +114,13 @@ bool isLossless(String ext) => _losslessExts.contains(ext);
 bool isNativelyPlayable(String ext) =>
     _nativePlayableExts.contains(ext.toLowerCase());
 
+/// Whether playing [path] depends on FFmpeg, which the Linux packages only
+/// recommend. An upgraded install can have an old `.m4a` or `.aac` clip and no
+/// FFmpeg, so errors on those clips say to install it.
+bool mayNeedFfmpeg(String path, {TargetPlatform? platform}) =>
+    (platform ?? defaultTargetPlatform) == TargetPlatform.linux &&
+    !isNativelyPlayable(p.extension(path));
+
 /// Returns the target extension for an import, or `null` to keep the file
 /// as-is.
 ///

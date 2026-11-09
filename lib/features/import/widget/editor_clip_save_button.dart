@@ -1,11 +1,28 @@
+import 'dart:io';
+
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/features/import/data/import_audio_data.dart';
 import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
+import 'package:eq_trainer/shared/service/clip_encoder.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+/// A file can play and still be refused by the stricter offline decoder a trim
+/// uses, so a retry is not always the right advice.
+String _saveErrorMessage(AppLocalizations l10n, Object error) {
+  if (error is UnsupportedChannelCountException) {
+    return l10n.importAlertTooManyChannelsContent;
+  }
+  if (isUnreadableAudioError(error)) {
+    return Platform.isLinux
+        ? l10n.importAlertUnsupportedContentLinux
+        : l10n.importAlertUnsupportedContent;
+  }
+  return l10n.importEditorSaveError;
+}
 
 class EditorClipSaveButton extends StatefulWidget {
   const EditorClipSaveButton({super.key});
@@ -55,13 +72,13 @@ class _EditorClipSaveButtonState extends State<EditorClipSaveButton> {
                 isTrimmed: isTrimmed,
                 importFormat: importFormat,
               );
-            } catch (_) {
+            } catch (e) {
               // On failure, surface the error and re-enable the button instead
               // of leaving it permanently disabled with no feedback.
               if (mounted) {
                 setState(() => _isProcessing = false);
                 messenger.showSnackBar(
-                  SnackBar(content: Text(l10n.importEditorSaveError)),
+                  SnackBar(content: Text(_saveErrorMessage(l10n, e))),
                 );
               }
               return;

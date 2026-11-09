@@ -75,6 +75,7 @@
   "importAlertErrorContent": "오디오 파일을 불러오는 동안 오류가 발생했습니다.",
   "importAlertUnsupportedContent": "이 기기에서는 이 파일의 형식을 읽을 수 없습니다. FLAC 또는 WAV로 변환한 뒤 다시 시도해 주세요.",
   "importAlertUnsupportedContentLinux": "이 파일의 형식을 읽을 수 없습니다. Linux에서 M4A, AAC 등 일부 형식을 읽으려면 FFmpeg가 필요합니다. 설치되어 있는지 확인한 뒤 다시 시도해 주세요.",
+  "importAlertTooManyChannelsContent": "이 파일은 채널이 2개를 넘습니다. 모노와 스테레오만 변환하거나 자를 수 있으니 먼저 스테레오로 믹스다운해 주세요.",
   "importAlertErrorButton": "확인",
   "importAlertAbortedContent": "파일 불러오기가 취소되었습니다",
   "importAlertAbortedButton": "확인",

@@ -83,6 +83,7 @@
   "importAlertErrorContent": "There was an error while trying to loading audio clip",
   "importAlertUnsupportedContent": "This file's format can't be read on this device. Try converting it to FLAC or WAV first.",
   "importAlertUnsupportedContentLinux": "This file's format can't be read. On Linux, some formats such as M4A and AAC need FFmpeg. Make sure it's installed, then try again.",
+  "importAlertTooManyChannelsContent": "This file has more than two channels. Only mono and stereo can be converted or trimmed, so mix it down to stereo first.",
   "importAlertErrorButton": "Okay",
   "importAlertAbortedContent": "File import cancelled",
   "importAlertAbortedButton": "Okay",

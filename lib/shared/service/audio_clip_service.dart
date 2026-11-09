@@ -57,6 +57,12 @@ class AudioClipService {
           end: end,
         );
       } catch (e) {
+        await _deleteQuietly(destPath);
+        // The save button tells the user why, since retrying cannot help.
+        if (e is UnsupportedChannelCountException ||
+            isUnreadableAudioError(e)) {
+          rethrow;
+        }
         throw Exception('Audio trim failed: $e');
       }
     } else {
@@ -64,6 +70,7 @@ class AudioClipService {
       try {
         await File(sourcePath).copy(destPath);
       } catch (e) {
+        await _deleteQuietly(destPath);
         throw Exception('Audio copy failed: $e');
       }
     }
@@ -77,7 +84,21 @@ class AudioClipService {
       true,
     );
 
-    await _repository.addClip(clip);
+    try {
+      await _repository.addClip(clip);
+    } catch (_) {
+      await _deleteQuietly(destPath);
+      rethrow;
+    }
+  }
+
+  /// Removes a file no record will point at. The original error is the one worth
+  /// reporting, so a failure here is ignored.
+  Future<void> _deleteQuietly(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
   }
 
   /// Trims from [originalPath] where possible. The picked file can stop being

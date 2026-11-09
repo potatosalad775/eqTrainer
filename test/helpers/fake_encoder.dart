@@ -14,6 +14,7 @@ class FakeClipEncoder implements ClipEncoder {
     this.outputSize = 128,
     this.throwOnEncode = false,
     this.unreadable = const {},
+    this.trimFailure,
   });
 
   /// Bytes written to every destination.
@@ -24,6 +25,10 @@ class FakeClipEncoder implements ClipEncoder {
 
   /// Sources [trimFile] reports it could not decode.
   final Set<String> unreadable;
+
+  /// When set, [trimFile] writes a partial file and then throws this, as an
+  /// encode that dies partway does.
+  final Object? trimFailure;
 
   /// Every source [trimFile] was asked to read, in call order.
   final List<String> trimmedFrom = [];
@@ -61,6 +66,7 @@ class FakeClipEncoder implements ClipEncoder {
       );
     }
     await _write(destPath);
+    if (trimFailure case final failure?) throw failure;
   }
 
   Future<void> _write(String destPath) async {

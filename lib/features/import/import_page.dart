@@ -15,6 +15,7 @@ import 'package:eq_trainer/shared/player/import_player.dart';
 import 'package:eq_trainer/shared/service/import_workflow_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/service/clip_encoder.dart';
+import 'package:eq_trainer/shared/service/clip_format_migration.dart';
 import 'package:eq_trainer/shared/model/misc_settings_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -36,31 +37,48 @@ class _ImportPageState extends State<ImportPage> {
   // was aborted, so it doesn't linger in the temp dir forever.
   String? _tempConvertedPath;
 
+  /// Captured in initState rather than read in dispose, where the element is
+  /// already detached from the tree.
+  late final ClipFormatMigration _clipFormatMigration;
+
   @override
   void initState() {
     super.initState();
+    // The editor plays audio, and an import decodes and encodes on the same
+    // whole-file path as the migration, so running both doubles the memory peak.
+    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
     _init();
   }
 
   @override
   void dispose() {
+    _clipFormatMigration.resume();
     clipDivProvider.dispose();
     importPlayer.dispose();
     final tempPath = _tempConvertedPath;
-    if (tempPath != null) {
-      // Best-effort: dispose() can't be awaited, and an orphaned temp file is
-      // a smaller problem than blocking teardown on disk I/O.
-      unawaited(() async {
-        try {
-          await File(tempPath).delete();
-        } catch (_) {}
-      }());
-    }
+    if (tempPath != null) unawaited(_deleteTemp(tempPath));
     super.dispose();
+  }
+
+  /// Best-effort: dispose() can't await it, and an orphaned temp file is a
+  /// smaller problem than blocking teardown on disk I/O.
+  Future<void> _deleteTemp(String path) async {
+    try {
+      await File(path).delete();
+    } catch (_) {}
   }
 
   Future<void> _init() async {
     await importFile();
+  }
+
+  ImportPageState _failureState(Object error) {
+    if (error is UnsupportedChannelCountException) {
+      return ImportPageState.tooManyChannels;
+    }
+    return isUnreadableAudioError(error)
+        ? ImportPageState.unsupported
+        : ImportPageState.error;
   }
 
   @override
@@ -86,28 +104,21 @@ class _ImportPageState extends State<ImportPage> {
                 child: ValueListenableBuilder<ImportPageState>(
                   valueListenable: importPageState,
                   builder: (context, value, _) {
-                    if (value == ImportPageState.error ||
-                        value == ImportPageState.timeout) {
+                    final failure = switch (value) {
+                      ImportPageState.error ||
+                      ImportPageState.timeout =>
+                        context.l10n.importAlertErrorContent,
+                      ImportPageState.unsupported => Platform.isLinux
+                          ? context.l10n.importAlertUnsupportedContentLinux
+                          : context.l10n.importAlertUnsupportedContent,
+                      ImportPageState.tooManyChannels =>
+                        context.l10n.importAlertTooManyChannelsContent,
+                      _ => null,
+                    };
+                    if (failure != null) {
                       return AlertDialog(
                         title: Text(context.l10n.importAlertErrorTitle),
-                        content: Text(context.l10n.importAlertErrorContent),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: Text(context.l10n.importAlertErrorButton),
-                          )
-                        ],
-                      );
-                    } else if (value == ImportPageState.unsupported) {
-                      return AlertDialog(
-                        title: Text(context.l10n.importAlertErrorTitle),
-                        content: Text(
-                          Platform.isLinux
-                              ? context.l10n.importAlertUnsupportedContentLinux
-                              : context.l10n.importAlertUnsupportedContent,
-                        ),
+                        content: Text(failure),
                         actions: [
                           TextButton(
                             onPressed: () {
@@ -229,14 +240,18 @@ class _ImportPageState extends State<ImportPage> {
           sourcePath: filePath,
           targetExt: targetExt,
         );
+        // A conversion cannot be cancelled, so the user may have left while it
+        // ran, and dispose() has already looked for this file.
+        if (!mounted) {
+          await _deleteTemp(filePath);
+          return;
+        }
         // Track the converted temp file so it's cleaned up on dispose,
         // whether the import completes or is aborted.
         _tempConvertedPath = filePath;
       } catch (e) {
         debugPrint("Error converting audio file: $e");
-        importPageState.value = isUnreadableAudioError(e)
-            ? ImportPageState.unsupported
-            : ImportPageState.error;
+        importPageState.value = _failureState(e);
         return;
       }
     }
@@ -254,7 +269,7 @@ class _ImportPageState extends State<ImportPage> {
       importPageState.value = ImportPageState.ready;
     } catch (e) {
       debugPrint("Error loading audio file: $e");
-      importPageState.value = ImportPageState.error;
+      importPageState.value = _failureState(e);
     }
   }
 
@@ -291,6 +306,7 @@ enum ImportPageState {
   converting,
   error,
   unsupported,
+  tooManyChannels,
   timeout,
   aborted,
   noedit

@@ -75,6 +75,7 @@
   "importAlertErrorContent": "Произошла ошибка при загрузке аудиоклипа",
   "importAlertUnsupportedContent": "Формат этого файла не читается на этом устройстве. Сначала преобразуйте его в FLAC или WAV.",
   "importAlertUnsupportedContentLinux": "Не удалось прочитать формат этого файла. Для некоторых форматов, например M4A и AAC, в Linux требуется FFmpeg. Убедитесь, что он установлен, и повторите попытку.",
+  "importAlertTooManyChannelsContent": "В этом файле больше двух каналов. Преобразовать или обрезать можно только моно и стерео, поэтому сначала сведите его в стерео.",
   "importAlertErrorButton": "Хорошо",
   "importAlertAbortedContent": "Импорт файла отменён",
   "importAlertAbortedButton": "Хорошо",

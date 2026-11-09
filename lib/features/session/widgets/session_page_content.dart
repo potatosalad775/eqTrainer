@@ -3,6 +3,7 @@ import 'package:eq_trainer/features/session/data/session_state.dart';
 import 'package:eq_trainer/features/session/model/session_store.dart';
 import 'package:eq_trainer/features/session/widgets/session_page_content_landscape.dart';
 import 'package:eq_trainer/features/session/widgets/session_page_content_portrait.dart';
+import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 import 'package:eq_trainer/shared/themes/app_theme.dart';
 import 'package:eq_trainer/shared/widget/interaction_lock.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +43,10 @@ class SessionPageContent extends StatelessWidget {
                 Text(context.l10n.sessionAlertErrorTitle, style: context.textTheme.titleLarge),
                 const SizedBox(height: 12),
                 Text(context.l10n.sessionAlertErrorContent),
+                if (context.read<SessionStore>().playlistPaths.any(mayNeedFfmpeg)) ...[
+                  const SizedBox(height: 12),
+                  Text(context.l10n.importAlertUnsupportedContentLinux),
+                ],
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),

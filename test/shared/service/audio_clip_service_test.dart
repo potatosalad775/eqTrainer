@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/shared/service/clip_encoder.dart';
 
 import '../../helpers/fake_encoder.dart';
 import '../../helpers/mocks.dart';
@@ -212,6 +214,53 @@ void main() {
           throwsException,
         );
         verifyNever(() => mockRepo.addClip(any()));
+      });
+
+      Future<void> trimFailingWith(Object failure) =>
+          AudioClipService(
+            mockRepo,
+            mockDirs,
+            encoder: FakeClipEncoder(trimFailure: failure),
+          ).createClip(
+            sourcePath: converted,
+            startSec: 1.0,
+            endSec: 3.5,
+            isTrimmed: true,
+            importFormat: ImportFormat.smart,
+          );
+
+      test('an encode that dies partway leaves no file behind', () async {
+        await expectLater(
+          trimFailingWith(StateError('disk full')),
+          throwsA(isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Audio trim failed'),
+          )),
+        );
+        expect(tmpClips.listSync(), isEmpty);
+        verifyNever(() => mockRepo.addClip(any()));
+      });
+
+      test('keeps the reason a retry cannot help', () async {
+        const channels = UnsupportedChannelCountException(6);
+        await expectLater(trimFailingWith(channels), throwsA(same(channels)));
+        expect(tmpClips.listSync(), isEmpty);
+
+        const unreadable = SoLoudOfflineDecodeCppException(
+          OfflineDecodeResult.unsupportedFormat,
+        );
+        await expectLater(
+          trimFailingWith(unreadable),
+          throwsA(predicate(isUnreadableAudioError)),
+        );
+        expect(tmpClips.listSync(), isEmpty);
+      });
+
+      test('a record that cannot be saved leaves no file behind', () async {
+        when(() => mockRepo.addClip(any())).thenThrow(StateError('write failed'));
+        await expectLater(trim(), throwsStateError);
+        expect(tmpClips.listSync(), isEmpty);
       });
     });
   });

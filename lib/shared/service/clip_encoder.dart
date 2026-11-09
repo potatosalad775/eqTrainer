@@ -8,10 +8,27 @@ import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
 /// Whether [error] means nothing on this platform can read the file, as opposed
 /// to the conversion failing for some other reason. On Linux this is also what a
-/// missing FFmpeg looks like.
+/// missing FFmpeg looks like. Covers both ways in: the offline decoder behind a
+/// conversion or trim, and `loadFile`, which a file that skips conversion reaches
+/// first.
 bool isUnreadableAudioError(Object error) =>
-    error is SoLoudOfflineDecodeCppException &&
-    error.result == OfflineDecodeResult.unsupportedFormat;
+    error is SoLoudFileLoadFailedException ||
+    (error is SoLoudOfflineDecodeCppException &&
+        error.result == OfflineDecodeResult.unsupportedFormat);
+
+/// The offline encoder only takes mono and stereo.
+///
+/// Refused rather than mixed down: channel order depends on the decoder that
+/// produced the PCM (Vorbis and Opus put centre second, WAV and FLAC third), so a
+/// mixdown here could silently pan the wrong channels.
+class UnsupportedChannelCountException implements Exception {
+  const UnsupportedChannelCountException(this.channels);
+
+  final int channels;
+
+  @override
+  String toString() => 'UnsupportedChannelCountException: $channels channels';
+}
 
 /// Encodes clip files into the app's storage formats.
 ///
@@ -32,21 +49,13 @@ class ClipEncoder {
   /// Decodes [sourcePath] and writes it to [destPath] in the format implied by
   /// [destPath]'s extension.
   ///
-  /// Throws [SoLoudOfflineDecodeCppException] if the file cannot be read, and the
-  /// caller's existing failure handling takes it from there.
+  /// Throws [SoLoudOfflineDecodeCppException] if the file cannot be read, and
+  /// [UnsupportedChannelCountException] if it has more than two channels.
   Future<void> convertFile({
     required String sourcePath,
     required String destPath,
   }) async {
-    final pcm = await _soloud.decodeFileToPcm(sourcePath);
-    await _soloud.encodePcmToFile(
-      pcm.samples,
-      destPath,
-      sampleRate: pcm.sampleRate,
-      channels: pcm.channels,
-      format: _formatFor(p.extension(destPath).toLowerCase()),
-      bitrate: opusBitrate,
-    );
+    await _encode(await _soloud.decodeFileToPcm(sourcePath), destPath);
   }
 
   /// Writes the range [start] to [end] of [sourcePath] to [destPath], in the
@@ -65,6 +74,11 @@ class ClipEncoder {
       start: start,
       end: end,
     );
+    await _encode(pcm, destPath);
+  }
+
+  Future<void> _encode(DecodedPcm pcm, String destPath) async {
+    if (pcm.channels > 2) throw UnsupportedChannelCountException(pcm.channels);
     await _soloud.encodePcmToFile(
       pcm.samples,
       destPath,

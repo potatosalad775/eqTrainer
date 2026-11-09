@@ -199,7 +199,11 @@ restating it, and loads anything else whole in `LoadMode.memory`.
 The import picker's list is per platform, from what each was measured to read. It
 removes known failures but cannot promise a file works, since `.m4a` does not identify
 its codec. A file nothing can read is refused with its own dialog, and on Linux that
-is also what a missing FFmpeg looks like, so the Linux message says to install it.
+is also what a missing FFmpeg looks like, so the Linux message says to install it, and so
+do the playback errors on an old `.m4a` or `.aac` clip, which is how an upgraded install
+with no FFmpeg finds out. The offline encoder takes mono and stereo only, so a file with
+more channels plays but is refused when something has to convert or trim it. It is not
+mixed down, because channel order depends on the decoder.
 
 SoLoud is the only decoder. On Linux, M4A, AAC, AIFF and WMA go through a system
 FFmpeg that it opens with `dlopen`, measured on 6.1, 7.1, 8.1 and 9.0. The packages
@@ -238,7 +242,7 @@ relies on to follow a clip that moved underneath a live session.
 decode-plus-encode is CPU-seconds per clip on a phone or a DAP — the hardware
 where libraries are largest and the contention is audible. `ClipFormatMigration`
 exposes `pause()`/`resume()`, and the screens that play audio (`SessionPage`,
-`PlaylistControlView`) hold it while they are open; the checkpoint is between
+`PlaylistControlView`, `ImportPage`) hold it while they are open; the checkpoint is between
 clips, which the per-clip commit makes free. Disabling the UI instead was
 considered and rejected: a large library on a slow device is minutes of a dead
 Start button, and legacy clips still play through `PlayerService`'s

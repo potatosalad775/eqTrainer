@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,5 +54,33 @@ void main() {
       );
     }
     expect(isUnreadableAudioError(Exception('disk full')), isFalse);
+  });
+
+  test('a failed load counts as unreadable, a missing file or engine does not',
+      () {
+    expect(isUnreadableAudioError(const SoLoudFileLoadFailedException()), isTrue);
+    expect(isUnreadableAudioError(const SoLoudFileNotFoundException()), isFalse);
+    expect(
+      isUnreadableAudioError(const SoLoudNotInitializedException()),
+      isFalse,
+    );
+  });
+
+  test('more than two channels is refused before the encoder sees it', () async {
+    final DecodedPcm sixChannels = (
+      samples: Float32List(12),
+      sampleRate: 44100,
+      channels: 6,
+    );
+    when(() => soloud.decodeFileToPcm(any()))
+        .thenAnswer((_) async => sixChannels);
+    final dest = p.join(dir.path, 'a.wav');
+
+    await expectLater(
+      ClipEncoder(soloud: soloud).convertFile(sourcePath: 'a.flac', destPath: dest),
+      throwsA(isA<UnsupportedChannelCountException>()
+          .having((e) => e.channels, 'channels', 6)),
+    );
+    expect(File(dest).existsSync(), isFalse);
   });
 }
