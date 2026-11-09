@@ -60,7 +60,7 @@ dependencies:
   flutter_soloud:
     git:
       url: https://github.com/potatosalad775/flutter_soloud.git
-      ref: 2067afa4f2e5a48289bbda3d43300ad0dcaa9578 # custom-5.2.2
+      ref: ef8323113c4a88de53ada2cdfb6f1ea54fa810e1 # custom-5.2.2
 
 # flutter_soloud's build hook downloads its Xiph binaries (libopus and the other
 # codecs) from alnitak/flutter_soloud_prebuilds. It defaults to the `latest`

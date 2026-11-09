@@ -46,47 +46,51 @@ class ClipEncoder {
   /// must not be the thing they end up hearing.
   static const int opusBitrate = 192000;
 
-  /// Decodes [sourcePath] and writes it to [destPath] in the format implied by
-  /// [destPath]'s extension.
+  /// Writes [sourcePath] to [destPath] in the format implied by [destPath]'s
+  /// extension.
+  ///
+  /// The audio goes straight from the decoder to the encoder, so a long file costs
+  /// no more memory than a short one, except for formats that SoLoud decodes
+  /// through a platform codec, which hold the whole file once.
   ///
   /// Throws [SoLoudOfflineDecodeCppException] if the file cannot be read, and
-  /// [UnsupportedChannelCountException] if it has more than two channels.
+  /// [UnsupportedChannelCountException] if it has more than two channels. Nothing
+  /// is left at [destPath] on failure.
   Future<void> convertFile({
     required String sourcePath,
     required String destPath,
-  }) async {
-    await _encode(await _soloud.decodeFileToPcm(sourcePath), destPath);
-  }
+  }) => _convert(sourcePath, destPath);
 
   /// Writes the range [start] to [end] of [sourcePath] to [destPath], in the
-  /// format implied by [destPath]'s extension.
+  /// format implied by [destPath]'s extension. Otherwise as [convertFile].
   ///
-  /// Only the range is held in memory, except for formats that SoLoud decodes
-  /// through a platform codec, which hold the whole file while decoding.
+  /// An editor's untouched selection is the whole file, so this needs the same
+  /// memory behaviour as [convertFile] and not just a small range's.
   Future<void> trimFile({
     required String sourcePath,
     required String destPath,
     required Duration start,
     required Duration end,
-  }) async {
-    final pcm = await _soloud.decodeFileToPcm(
-      sourcePath,
-      start: start,
-      end: end,
-    );
-    await _encode(pcm, destPath);
-  }
+  }) => _convert(sourcePath, destPath, start: start, end: end);
 
-  Future<void> _encode(DecodedPcm pcm, String destPath) async {
-    if (pcm.channels > 2) throw UnsupportedChannelCountException(pcm.channels);
-    await _soloud.encodePcmToFile(
-      pcm.samples,
-      destPath,
-      sampleRate: pcm.sampleRate,
-      channels: pcm.channels,
-      format: _formatFor(p.extension(destPath).toLowerCase()),
-      bitrate: opusBitrate,
-    );
+  Future<void> _convert(
+    String sourcePath,
+    String destPath, {
+    Duration start = Duration.zero,
+    Duration? end,
+  }) async {
+    try {
+      await _soloud.convertFile(
+        sourcePath,
+        destPath,
+        format: _formatFor(p.extension(destPath).toLowerCase()),
+        bitrate: opusBitrate,
+        start: start,
+        end: end,
+      );
+    } on SoLoudOfflineChannelCountCppException catch (e) {
+      throw UnsupportedChannelCountException(e.channels);
+    }
   }
 
   /// Writes already-decoded [wavBytes] to [destPath] in the target format.

@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -17,10 +15,25 @@ void main() {
   late Directory dir;
   late _MockSoLoud soloud;
 
+  /// The call [convertFile] and [trimFile] make, for any arguments.
+  Future<void> convertCall() => soloud.convertFile(
+        any(),
+        any(),
+        format: any(named: 'format'),
+        bitrate: any(named: 'bitrate'),
+        start: any(named: 'start'),
+        end: any(named: 'end'),
+      );
+
+  setUpAll(() {
+    registerFallbackValue(MixerOutputFormat.flac);
+    registerFallbackValue(Duration.zero);
+  });
+
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('clip_encoder_');
     soloud = _MockSoLoud();
-    when(() => soloud.decodeFileToPcm(any())).thenThrow(
+    when(convertCall).thenThrow(
       const SoLoudOfflineDecodeCppException(
         OfflineDecodeResult.unsupportedFormat,
       ),
@@ -66,14 +79,8 @@ void main() {
     );
   });
 
-  test('more than two channels is refused before the encoder sees it', () async {
-    final DecodedPcm sixChannels = (
-      samples: Float32List(12),
-      sampleRate: 44100,
-      channels: 6,
-    );
-    when(() => soloud.decodeFileToPcm(any()))
-        .thenAnswer((_) async => sixChannels);
+  test('more than two channels reaches the caller as its own exception', () async {
+    when(convertCall).thenThrow(const SoLoudOfflineChannelCountCppException(6));
     final dest = p.join(dir.path, 'a.wav');
 
     await expectLater(
@@ -82,5 +89,60 @@ void main() {
           .having((e) => e.channels, 'channels', 6)),
     );
     expect(File(dest).existsSync(), isFalse);
+  });
+
+  test('a trim passes its range and the format its extension implies', () async {
+    when(convertCall).thenAnswer((_) async {});
+
+    await ClipEncoder(soloud: soloud).trimFile(
+      sourcePath: 'a.flac',
+      destPath: 'b.OPUS',
+      start: const Duration(seconds: 1),
+      end: const Duration(seconds: 2),
+    );
+
+    verify(
+      () => soloud.convertFile(
+        'a.flac',
+        'b.OPUS',
+        format: MixerOutputFormat.opus,
+        bitrate: ClipEncoder.opusBitrate,
+        start: const Duration(seconds: 1),
+        end: const Duration(seconds: 2),
+      ),
+    ).called(1);
+  });
+
+  test('a conversion covers the whole file', () async {
+    when(convertCall).thenAnswer((_) async {});
+
+    await ClipEncoder(soloud: soloud).convertFile(
+      sourcePath: 'a.m4a',
+      destPath: 'a.flac',
+    );
+
+    verify(
+      () => soloud.convertFile(
+        'a.m4a',
+        'a.flac',
+        format: MixerOutputFormat.flac,
+        bitrate: ClipEncoder.opusBitrate,
+        // ignore: avoid_redundant_argument_values
+        start: Duration.zero,
+        // ignore: avoid_redundant_argument_values
+        end: null,
+      ),
+    ).called(1);
+  });
+
+  test('an unknown target extension is refused before anything is read', () {
+    expect(
+      () => ClipEncoder(soloud: soloud).convertFile(
+        sourcePath: 'a.m4a',
+        destPath: 'a.xyz',
+      ),
+      throwsArgumentError,
+    );
+    verifyNever(convertCall);
   });
 }
