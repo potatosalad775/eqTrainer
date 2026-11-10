@@ -371,11 +371,11 @@ void main() {
 
       test('applies the session Q to the fresh player once', () async {
         when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
-        sessionParameter.qFactor = 2.5;
+        sessionParameter.qFactor = 2.0;
 
         await launch();
 
-        verify(() => mockPlayer.setEQQ(2.5)).called(1);
+        verify(() => mockPlayer.setEQQ(2.0)).called(1);
       });
 
       test('reports playlistEmpty and never touches the player when nothing '

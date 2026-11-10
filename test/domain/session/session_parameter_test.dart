@@ -5,9 +5,12 @@ import 'package:eq_trainer/domain/session/session_settings.dart';
 void main() {
   group('SessionParameter', () {
     late SessionParameter param;
+    late int notifications;
 
     setUp(() {
       param = SessionParameter();
+      notifications = 0;
+      param.addListener(() => notifications++);
     });
 
     test('default values are correct', () {
@@ -18,105 +21,84 @@ void main() {
       expect(param.threshold, equals(3));
     });
 
-    group('startingBand clamping', () {
-      test('clamps to minimum of 2 when set below range', () {
-        param.startingBand = 0;
-        expect(param.startingBand, equals(2));
-      });
-
-      test('clamps to minimum of 2 when set to 1', () {
-        param.startingBand = 1;
-        expect(param.startingBand, equals(2));
-      });
-
-      test('clamps to maximum of 25 when set above range', () {
-        param.startingBand = 30;
-        expect(param.startingBand, equals(25));
-      });
-
-      test('clamps to maximum of 25 when set to 26', () {
-        param.startingBand = 26;
-        expect(param.startingBand, equals(25));
-      });
-
-      test('accepts minimum boundary value of 2', () {
-        param.startingBand = 2;
-        expect(param.startingBand, equals(2));
-      });
-
-      test('accepts maximum boundary value of 25', () {
-        param.startingBand = 25;
-        expect(param.startingBand, equals(25));
-      });
-
-      test('accepts a mid-range value', () {
-        param.startingBand = 10;
-        expect(param.startingBand, equals(10));
-      });
-
-      test('clamps negative values to 2', () {
-        param.startingBand = -5;
-        expect(param.startingBand, equals(2));
-      });
+    test('every offered value is accepted', () {
+      for (final value in SessionSettings.bandCounts) {
+        param.startingBand = value;
+        expect(param.startingBand, value);
+      }
+      for (final value in SessionSettings.gains) {
+        param.gain = value;
+        expect(param.gain, value);
+      }
+      for (final value in SessionSettings.qFactors) {
+        param.qFactor = value;
+        expect(param.qFactor, value);
+      }
+      for (final value in SessionSettings.thresholds) {
+        param.threshold = value;
+        expect(param.threshold, value);
+      }
+      for (final value in FilterType.values) {
+        param.filterType = value;
+        expect(param.filterType, value);
+      }
     });
 
-    group('gain setter', () {
-      test('stores the assigned value', () {
-        param.gain = 12;
-        expect(param.gain, equals(12));
-      });
+    test('a value that is not offered is ignored, not clamped', () {
+      param.startingBand = 30;
+      param.startingBand = 1;
+      param.startingBand = -5;
+      expect(param.startingBand, 3);
 
-      test('clamps negative values to minimum of 1', () {
-        param.gain = -6;
-        expect(param.gain, equals(1));
-      });
+      param.gain = 7;
+      param.gain = 20;
+      param.gain = 0;
+      expect(param.gain, 6);
 
-      test('clamps zero to minimum of 1', () {
-        param.gain = 0;
-        expect(param.gain, equals(1));
-      });
+      param.qFactor = 2.5;
+      expect(param.qFactor, 1.0);
 
-      test('clamps values above 15 to maximum of 15', () {
-        param.gain = 20;
-        expect(param.gain, equals(15));
-      });
-
-      test('accepts boundary values', () {
-        param.gain = 1;
-        expect(param.gain, equals(1));
-        param.gain = 15;
-        expect(param.gain, equals(15));
-      });
+      param.threshold = 2;
+      param.threshold = 0;
+      expect(param.threshold, 3);
     });
 
-    group('qFactor setter', () {
-      test('stores the assigned value', () {
-        param.qFactor = 2.5;
-        expect(param.qFactor, closeTo(2.5, 1e-9));
-      });
+    test('an ignored value does not notify, an accepted one does', () {
+      param.startingBand = 30;
+      param.gain = 7;
+      param.qFactor = 2.5;
+      param.threshold = 2;
+      expect(notifications, 0);
+
+      param.startingBand = 10;
+      expect(notifications, 1);
     });
 
-    group('filterType setter', () {
-      test('can be set to FilterType.peak', () {
-        param.filterType = FilterType.peak;
-        expect(param.filterType, equals(FilterType.peak));
-      });
-
-      test('can be set to FilterType.dip', () {
+    group('snapshot', () {
+      test('holds the values as they are now', () {
+        param.startingBand = 12;
+        param.gain = 10;
+        param.qFactor = 5.0;
         param.filterType = FilterType.dip;
-        expect(param.filterType, equals(FilterType.dip));
-      });
-
-      test('can be set to FilterType.peakDip', () {
-        param.filterType = FilterType.peakDip;
-        expect(param.filterType, equals(FilterType.peakDip));
-      });
-    });
-
-    group('threshold setter', () {
-      test('stores the assigned value', () {
         param.threshold = 5;
-        expect(param.threshold, equals(5));
+
+        expect(
+          param.snapshot(),
+          const SessionSettings(
+            startingBand: 12,
+            gain: 10,
+            qFactor: 5.0,
+            filterType: FilterType.dip,
+            threshold: 5,
+          ),
+        );
+      });
+
+      test('does not follow later changes', () {
+        final before = param.snapshot();
+        param.startingBand = 20;
+        expect(before.startingBand, 3);
+        expect(param.snapshot().startingBand, 20);
       });
     });
   });
