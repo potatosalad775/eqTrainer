@@ -53,6 +53,7 @@ class ClipImport {
   String? _sourcePath;
   String? _tempPath;
   bool _disposed = false;
+  int _savesRunning = 0;
 
   String? _targetExt(String pickedName) =>
       targetExtForImport(p.extension(pickedName).toLowerCase(), _importFormat);
@@ -112,20 +113,32 @@ class ClipImport {
     // Either edge counts. Comparing only the end once discarded a start-only
     // trim and copied the whole file.
     final isTrimmed = start != Duration.zero || end != duration;
-    return _clips.createClip(
-      sourcePath: sourcePath,
-      originalPath: _pickedPath,
-      startSec: start.inMicroseconds / 1e6,
-      endSec: end.inMicroseconds / 1e6,
-      isTrimmed: isTrimmed,
-      importFormat: _importFormat,
-    );
+    _savesRunning++;
+    return _clips
+        .createClip(
+          sourcePath: sourcePath,
+          originalPath: _pickedPath,
+          startSec: start.inMicroseconds / 1e6,
+          endSec: end.inMicroseconds / 1e6,
+          isTrimmed: isTrimmed,
+          importFormat: _importFormat,
+        )
+        .whenComplete(() {
+      // The save may be reading the temp file, so a dispose that came while it
+      // ran left the file for it to delete.
+      if (--_savesRunning == 0 && _disposed) _deleteTemp();
+    });
   }
 
   /// Deletes the converted temp file, best effort. If a conversion is still in
-  /// flight, its output is deleted when it finishes.
+  /// flight, its output is deleted when it finishes; if a save is, the file is
+  /// deleted once the save has settled, since the save may be reading it.
   void dispose() {
     _disposed = true;
+    if (_savesRunning == 0) _deleteTemp();
+  }
+
+  void _deleteTemp() {
     final temp = _tempPath;
     if (temp != null) _deleteSyncQuietly(temp);
   }

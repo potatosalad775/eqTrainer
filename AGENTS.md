@@ -243,7 +243,8 @@ is left out of the Linux picker because CAF ALAC decodes about 70 ms short on 8.
 An import is a `ClipImport` (`data/clips/clip_import.dart`). `prepare` converts the
 picked file when the format policy says to and owns the temp file it makes, `save` hands
 the result to `AudioClipService`, and `dispose` deletes the temp file, also when it is
-called while a conversion is still running. The page does the picking and loads the
+called while a conversion is still running, and waits for a running save to settle first,
+since the save may be reading it. The page does the picking and loads the
 result into the player, since the engine stays out of `ClipImport`. `importFailureOf`
 sorts any failure into too many channels, unreadable or other, and `ffmpegMayBeMissing`
 is the one place the Linux hint is decided.

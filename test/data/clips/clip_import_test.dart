@@ -260,6 +260,85 @@ void main() {
     });
   });
 
+  group('dispose during a save', () {
+    const full = Duration(seconds: 10);
+
+    /// Stubs `createClip` to wait on [finish], then "read" the source by
+    /// recording whether it still exists.
+    List<bool> stubSlowSave(Completer<void> finish, {Object? error}) {
+      final existedWhenRead = <bool>[];
+      when(() => clips.createClip(
+            sourcePath: any(named: 'sourcePath'),
+            originalPath: any(named: 'originalPath'),
+            startSec: any(named: 'startSec'),
+            endSec: any(named: 'endSec'),
+            isTrimmed: any(named: 'isTrimmed'),
+            importFormat: any(named: 'importFormat'),
+          )).thenAnswer((invocation) async {
+        await finish.future;
+        existedWhenRead.add(
+            File(invocation.namedArguments[#sourcePath] as String)
+                .existsSync());
+        if (error != null) throw error;
+      });
+      return existedWhenRead;
+    }
+
+    test('keeps the converted file until the save has read it', () async {
+      final finish = Completer<void>();
+      final existedWhenRead = stubSlowSave(finish);
+      final import = make();
+      final path = await import.prepare(
+          pickedPath: '/picked/a.m4a', pickedName: 'a.m4a');
+
+      final saving = import.save(
+          start: Duration.zero, end: full, duration: full);
+      import.dispose();
+      expect(File(path).existsSync(), isTrue);
+
+      finish.complete();
+      await saving;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(existedWhenRead, [true]);
+      expect(File(path).existsSync(), isFalse);
+    });
+
+    test('deletes the file after a save that fails, and the error still '
+        'reaches the caller', () async {
+      final finish = Completer<void>();
+      final existedWhenRead =
+          stubSlowSave(finish, error: const UnsupportedChannelCountException(6));
+      final import = make();
+      final path = await import.prepare(
+          pickedPath: '/picked/a.m4a', pickedName: 'a.m4a');
+
+      final saving = import.save(
+          start: Duration.zero, end: full, duration: full);
+      final outcome = expectLater(
+          saving, throwsA(isA<UnsupportedChannelCountException>()));
+      import.dispose();
+      expect(File(path).existsSync(), isTrue);
+
+      finish.complete();
+      await outcome;
+      await Future<void>.delayed(Duration.zero);
+
+      expect(existedWhenRead, [true]);
+      expect(File(path).existsSync(), isFalse);
+    });
+
+    test('a save that already finished does not delay dispose', () async {
+      final import = make();
+      final path = await import.prepare(
+          pickedPath: '/picked/a.m4a', pickedName: 'a.m4a');
+      await import.save(start: Duration.zero, end: full, duration: full);
+
+      import.dispose();
+      expect(File(path).existsSync(), isFalse);
+    });
+  });
+
   group('importFailureOf', () {
     test('too many channels', () {
       expect(importFailureOf(const UnsupportedChannelCountException(6)),
