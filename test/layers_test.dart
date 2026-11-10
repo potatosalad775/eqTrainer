@@ -28,10 +28,7 @@ const _knownViolations = <String>{
   // Rule 1: ui must not import shared_preferences.
   'lib/ui/settings/audio_backend_page.dart -> package:shared_preferences/shared_preferences.dart',
   // Rule 4: domain and data take only package:flutter/foundation.dart.
-  'lib/domain/session_parameter.dart -> package:flutter/material.dart',
-  'lib/data/audio_state.dart -> package:flutter/material.dart',
   'lib/data/misc_settings_provider.dart -> package:flutter/material.dart',
-  'lib/data/locale_provider.dart -> package:flutter/widgets.dart',
   'lib/data/clips/clip_format_migration.dart -> package:flutter/scheduler.dart',
   // Rule 5: nothing in the layers imports main.dart.
   'lib/ui/core/error.dart -> package:eq_trainer/main.dart',

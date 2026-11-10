@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

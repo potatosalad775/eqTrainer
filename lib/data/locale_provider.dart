@@ -1,4 +1,5 @@
-import 'package:flutter/widgets.dart';
+import 'dart:ui' show Locale;
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The language the user picked in settings; `null` follows the device.
