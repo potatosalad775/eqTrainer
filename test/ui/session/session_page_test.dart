@@ -21,6 +21,44 @@ void main() {
   // engine cannot run here, so this pins the wiring that makes it so: the
   // session's player reads the app's one OutputSelection, not a copy taken
   // when the session started.
+  testWidgets('the session holds the migration while it is up', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final library = MockClipLibrary();
+    when(library.enabledClipPaths).thenAnswer((_) async => []);
+    final migration = ClipFormatMigration(
+      MockClipLibrary(),
+      importFormat: 0,
+      encoder: FakeClipEncoder(),
+    );
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(
+          value: OutputSelection(
+            prefs: await SharedPreferences.getInstance(),
+            devices: FakeOutputDevices([]),
+            watchesDevices: false,
+          ),
+        ),
+        ChangeNotifierProvider.value(value: await MiscSettingsProvider.load()),
+        ChangeNotifierProvider.value(value: migration),
+        ChangeNotifierProvider(create: (_) => SessionParameter()),
+        Provider<ClipLibrary>.value(value: library),
+      ],
+      child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: Locale('en'),
+        home: SessionPage(),
+      ),
+    ));
+    await tester.pump();
+    expect(migration.isPaused, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    expect(migration.isPaused, isFalse);
+  });
+
   testWidgets("the session's player reads the app's output selection",
       (tester) async {
     SharedPreferences.setMockInitialValues({});

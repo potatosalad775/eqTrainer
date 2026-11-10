@@ -8,6 +8,7 @@ import 'package:eq_trainer/domain/audio_clip.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
+import 'package:eq_trainer/data/playback_hold.dart';
 
 /// Converts a library's legacy `.m4a` and `.aac` clips, which the app does not
 /// play through SoLoud, into a format it does, once.
@@ -43,13 +44,13 @@ import 'package:eq_trainer/data/clips/clip_library.dart';
 /// It yields to playback. A decode-plus-encode is CPU-seconds per clip on the
 /// hardware this app is most used on — a phone or a DAP, where the library is
 /// also largest — so a run competing with a live session is the one way this
-/// can be heard. Screens that play audio [pause] it on entry and [resume] it
-/// on exit; the checkpoint is between clips, which the per-clip commit makes
+/// can be heard. Every [PlayerService] [pause]s it when built and [resume]s it
+/// when disposed; the checkpoint is between clips, which the per-clip commit makes
 /// free. Blocking the user instead was considered and rejected: a large
 /// library on a slow device is minutes of a dead Start button, and legacy
 /// clips still play through [PlayerService]'s decode-on-load fallback in the
 /// meantime, so there is nothing to wait for.
-class ClipFormatMigration extends ChangeNotifier {
+class ClipFormatMigration extends ChangeNotifier implements PlaybackHold {
   ClipFormatMigration(
     this._library, {
     required int importFormat,
@@ -82,6 +83,7 @@ class ClipFormatMigration extends ChangeNotifier {
 
   /// Holds the run at the next clip boundary. Balance every call with
   /// [resume]; a clip already in flight finishes first.
+  @override
   void pause() {
     _pauseDepth++;
     _resumed ??= Completer<void>();
@@ -90,6 +92,7 @@ class ClipFormatMigration extends ChangeNotifier {
 
   /// Releases one [pause]. Unbalanced calls are ignored rather than driving
   /// the depth negative, so a double dispose cannot un-pause a live session.
+  @override
   void resume() {
     if (_pauseDepth == 0) return;
     _pauseDepth--;

@@ -37,23 +37,20 @@ class _ImportPageState extends State<ImportPage> {
   // was aborted, so it doesn't linger in the temp dir forever.
   String? _tempConvertedPath;
 
-  /// Captured in initState rather than read in dispose, where the element is
-  /// already detached from the tree.
-  late final ClipFormatMigration _clipFormatMigration;
-
   @override
   void initState() {
     super.initState();
     // The editor plays audio, and an import decodes and encodes on the same
     // whole-file path as the migration, so running both doubles the memory peak.
-    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
-    importPlayer = ImportPlayer(context.read<OutputSelection>());
+    importPlayer = ImportPlayer(
+      context.read<OutputSelection>(),
+      hold: context.read<ClipFormatMigration>(),
+    );
     _init();
   }
 
   @override
   void dispose() {
-    _clipFormatMigration.resume();
     clipDivProvider.dispose();
     importPlayer.dispose();
     final tempPath = _tempConvertedPath;

@@ -21,10 +21,6 @@ class PlaylistControlView extends StatefulWidget {
 class _PlaylistControlViewState extends State<PlaylistControlView> {
   late final PlaylistPlayer _player;
 
-  /// Captured in initState rather than read in dispose, where the element is
-  /// already detached from the tree.
-  late final ClipFormatMigration _clipFormatMigration;
-
   @override
   void initState() {
     super.initState();
@@ -32,8 +28,10 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
     // decode-and-encode running against it costs CPU we would rather spend on
     // the audio. Nested pauses are counted, so a preview opened over a
     // session does not resume the run when only the preview closes.
-    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
-    _player = PlaylistPlayer(context.read<OutputSelection>());
+    _player = PlaylistPlayer(
+      context.read<OutputSelection>(),
+      hold: context.read<ClipFormatMigration>(),
+    );
     _player.launch(
       path: widget.filePath,
     ).onError((e, _) {
@@ -55,7 +53,6 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
 
   @override
   void dispose() {
-    _clipFormatMigration.resume();
     _player.dispose();
     super.dispose();
   }
@@ -112,5 +109,5 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
 }
 
 class PlaylistPlayer extends PlayerService {
-  PlaylistPlayer(super.output);
+  PlaylistPlayer(super.output, {required super.hold});
 }
