@@ -27,8 +27,6 @@ import 'package:eq_trainer/data/legacy/legacy_clip_migration.dart';
 import 'package:eq_trainer/data/legacy/legacy_settings_migration.dart';
 import 'package:eq_trainer/ui/core/upgrader_service.dart';
 import 'package:eq_trainer/domain/session/session_parameter.dart';
-import 'package:eq_trainer/ui/session/state/session_store.dart';
-import 'package:eq_trainer/ui/session/state/session_controller.dart';
 
 Future<void> main() async {
   // Initialize Packages
@@ -215,16 +213,9 @@ class AppState extends State<App> with WidgetsBindingObserver {
           ctx.read<ClipLibrary>(),
         )),
 
-        // Session parameters and data notifiers
+        // What the config page edits. A session takes a snapshot of it; the
+        // session's own state is made by SessionPage, not here.
         ChangeNotifierProvider<SessionParameter>(create: (_) => SessionParameter()),
-
-        // Session store (depends on freq/state/result)
-        ChangeNotifierProvider<SessionStore>(
-          create: (ctx) => SessionStore(),
-        ),
-
-        // Controller
-        Provider<SessionController>(create: (_) => SessionController()),
       ],
       builder: (context, child) => MaterialApp(
         title: 'eq_trainer',

@@ -10,7 +10,6 @@ class SessionEqButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final player = context.read<PlayerService>();
     final sessionController = context.read<SessionController>();
     final pEQState = context.select<PlayerService, bool>((p) => p.fetchEQState);
 
@@ -20,7 +19,7 @@ class SessionEqButtonRow extends StatelessWidget {
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: pEQState ? () { sessionController.setEqEnabled(player, false); } : null,
+            onPressed: pEQState ? () { sessionController.setEqEnabled(false); } : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: context.colors.primary,
               foregroundColor: context.colors.onPrimary,
@@ -31,7 +30,7 @@ class SessionEqButtonRow extends StatelessWidget {
         ),
         Expanded(
           child: ElevatedButton(
-            onPressed: !pEQState ? () { sessionController.setEqEnabled(player, true); } : null,
+            onPressed: !pEQState ? () { sessionController.setEqEnabled(true); } : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: context.colors.primary,
               foregroundColor: context.colors.onPrimary,

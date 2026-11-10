@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
@@ -75,37 +76,32 @@ void main() {
     });
 
     /// A controller whose rounds come up in [script]: first the launch's
-    /// round, then one per submit.
-    SessionController controllerFor(List<int> script) =>
-        SessionController(random: ScriptedRandom(script));
-
-    Future<void> launch(
-      SessionController controller, {
-      bool Function()? shouldContinue,
+    /// round, then one per submit. It is made from [parameter] as it is now,
+    /// the way the session page snapshots it when a session starts.
+    SessionController controllerFor(
+      List<int> script, {
+      SessionStore? sessionStore,
       ClipLibrary? clipLibrary,
     }) =>
-        controller.launchSession(
-          player,
-          audioState: audioState,
-          sessionStore: store,
-          sessionParameter: parameter,
+        SessionController(
+          player: player,
+          sessionStore: sessionStore ?? store,
           clipLibrary: clipLibrary ?? library,
+          audioState: audioState,
+          settings: parameter.snapshot(),
           volumeCompensation: true,
-          shouldContinue: shouldContinue,
+          random: ScriptedRandom(script),
         );
 
-    /// Picks [graphIndex] and submits it.
+    /// Picks [graphIndex] in [on] (the test's store unless given) and submits.
     Future<RoundOutcome?> submit(
       SessionController controller,
       int graphIndex, {
+      SessionStore? on,
       void Function(bool isCorrect, int correctGraphIndex)? onResult,
     }) {
-      store.setPickerValue(SessionStore.pickerValueOf(graphIndex));
-      return controller.submitAnswer(
-        player: player,
-        sessionStore: store,
-        onResult: onResult,
-      );
+      (on ?? store).setPickerValue(SessionStore.pickerValueOf(graphIndex));
+      return controller.submitAnswer(onResult: onResult);
     }
 
     // -------------------------------------------------------------------------
@@ -115,7 +111,7 @@ void main() {
       test('sends the next round to the player with the band taken out',
           () async {
         final controller = controllerFor([0, 2]);
-        await launch(controller);
+        await controller.launch();
 
         await submit(controller, 0);
 
@@ -131,7 +127,7 @@ void main() {
         parameter.filterType = FilterType.peakDip;
         final peakDip3 = BandLayout(3, FilterType.peakDip);
         final controller = controllerFor([0, 3]);
-        await launch(controller);
+        await controller.launch();
 
         await submit(controller, 0);
 
@@ -145,7 +141,7 @@ void main() {
       test('tells onResult whether the pick was right and which graph was',
           () async {
         final controller = controllerFor([2, 0]);
-        await launch(controller);
+        await controller.launch();
 
         bool? isCorrect;
         int? correctGraphIndex;
@@ -160,7 +156,7 @@ void main() {
 
       test('puts the results in the store', () async {
         final controller = controllerFor([0, 1, 2]);
-        await launch(controller);
+        await controller.launch();
 
         await submit(controller, 0);
         await submit(controller, 0);
@@ -175,7 +171,7 @@ void main() {
           'changes', () async {
         parameter.threshold = 1;
         final controller = controllerFor([2, 0]);
-        await launch(controller);
+        await controller.launch();
         expect(store.graphBarDataList.length, 3);
 
         await submit(controller, 2);
@@ -187,7 +183,7 @@ void main() {
 
       test('leaves the picker where it is when the band count stays', () async {
         final controller = controllerFor([1, 2]);
-        await launch(controller);
+        await controller.launch();
 
         await submit(controller, 1);
 
@@ -197,7 +193,7 @@ void main() {
 
       test('goes loading, then ready', () async {
         final controller = controllerFor([0, 1]);
-        await launch(controller);
+        await controller.launch();
 
         final states = <SessionState>[];
         store.addListener(() {
@@ -213,11 +209,11 @@ void main() {
 
       test('a second submit while the first is running is ignored', () async {
         final controller = controllerFor([0, 1, 2]);
-        await launch(controller);
+        await controller.launch();
         store.setPickerValue(1);
 
-        final first = controller.submitAnswer(player: player, sessionStore: store);
-        final second = controller.submitAnswer(player: player, sessionStore: store);
+        final first = controller.submitAnswer();
+        final second = controller.submitAnswer();
 
         expect(await second, isNull);
         expect(await first, isNotNull);
@@ -233,10 +229,7 @@ void main() {
       test('is ignored before the session is ready', () async {
         final controller = controllerFor([0]);
 
-        final outcome = await controller.submitAnswer(
-          player: player,
-          sessionStore: store,
-        );
+        final outcome = await controller.submitAnswer();
 
         expect(outcome, isNull);
         verifyNever(() => player.setEQParams(
@@ -246,9 +239,30 @@ void main() {
             ));
       });
 
+      test('a submit that finishes after the page is gone writes nothing',
+          () async {
+        // The store is dropped with the page, and writing to a disposed
+        // notifier asserts.
+        final pageStore = SessionStore();
+        final controller = controllerFor([0, 1], sessionStore: pageStore);
+        await controller.launch();
+        final retuned = Completer<void>();
+        when(() => player.setEQParams(
+              enableEQ: any(named: 'enableEQ'),
+              frequency: any(named: 'frequency'),
+              gainDb: any(named: 'gainDb'),
+            )).thenAnswer((_) => retuned.future);
+
+        final pending = submit(controller, 0, on: pageStore);
+        pageStore.dispose();
+        retuned.complete();
+
+        expect(await pending, isNull);
+      });
+
       test('a throw ends in the error state and returns null', () async {
         final controller = controllerFor([0, 1]);
-        await launch(controller);
+        await controller.launch();
         when(() => player.setEQParams(
               enableEQ: any(named: 'enableEQ'),
               frequency: any(named: 'frequency'),
@@ -265,42 +279,67 @@ void main() {
     // -------------------------------------------------------------------------
     // One session after another
     //
-    // The app keeps one store, one controller and one SessionParameter across
-    // sessions, so whatever a session leaves behind in them is what the next
-    // one starts from.
+    // The session page makes a store and a controller when a session starts
+    // and drops them when it ends. Only the SessionParameter outlives them.
     // -------------------------------------------------------------------------
     group('one session after another', () {
       test('a new session starts at zero points', () async {
-        // The rounds are drawn 0, 1, 2 in the first session and 0, 1 in the
-        // second. Two points are left behind; one more would reach the
-        // threshold of 3 if they carried over, and add a band.
-        final controller = controllerFor([0, 1, 2, 0, 1]);
-        await launch(controller);
-        await submit(controller, 0);
-        await submit(controller, 1);
+        // Two points are left behind by the first session. One more would
+        // reach the threshold of 3 if they carried over, and add a band.
+        final first = controllerFor([0, 1, 2]);
+        await first.launch();
+        await submit(first, 0);
+        await submit(first, 1);
         expect(store.graphBarDataList.length, 3);
 
-        await launch(controller);
-        await submit(controller, 0);
+        final nextStore = SessionStore();
+        addTearDown(nextStore.dispose);
+        final second = controllerFor([0, 1], sessionStore: nextStore);
+        await second.launch();
+        await submit(second, 0, on: nextStore);
 
-        expect(store.graphBarDataList.length, 3,
+        expect(nextStore.graphBarDataList.length, 3,
             reason: 'the second session began with points left over from the '
                 'first');
       });
 
+      test('a new session starts with no results and the picker on the first '
+          'graph', () async {
+        final first = controllerFor([0, 1, 2]);
+        await first.launch();
+        await submit(first, 0);
+        await submit(first, 1);
+        store.setPickerValue(3);
+
+        final nextStore = SessionStore();
+        addTearDown(nextStore.dispose);
+        final second = controllerFor([0], sessionStore: nextStore);
+        await second.launch();
+
+        expect(nextStore.results.rounds, isZero);
+        expect(second.results.rounds, isZero);
+        expect(nextStore.currentPickerValue, 1);
+        // And the first session's are still its own.
+        expect(first.results.rounds, 2);
+        expect(store.results.rounds, 2);
+      });
+
       test('a session whose band count went up leaves the settings alone',
           () async {
-        final controller = controllerFor([0, 1, 2, 0, 0]);
-        await launch(controller);
-        await submit(controller, 0);
-        await submit(controller, 1);
-        await submit(controller, 2);
+        final first = controllerFor([0, 1, 2, 0]);
+        await first.launch();
+        await submit(first, 0);
+        await submit(first, 1);
+        await submit(first, 2);
         expect(store.graphBarDataList.length, 4, reason: 'the ladder moved');
 
         expect(parameter.startingBand, 3);
 
-        await launch(controller);
-        expect(store.graphBarDataList.length, 3,
+        final nextStore = SessionStore();
+        addTearDown(nextStore.dispose);
+        final second = controllerFor([0], sessionStore: nextStore);
+        await second.launch();
+        expect(nextStore.graphBarDataList.length, 3,
             reason: 'the next session starts at the configured band count');
       });
     });
@@ -313,10 +352,10 @@ void main() {
         parameter.qFactor = 2.0;
         parameter.gain = 8;
         final controller = controllerFor([1]);
-        await launch(controller);
+        await controller.launch();
         clearInteractions(player);
 
-        controller.updatePlayerState(player, eqEnabled: true);
+        controller.updatePlayerState(eqEnabled: true);
 
         verify(() => player.setEQQ(2.0)).called(1);
         verify(() => player.setEQFreq(peak3.frequencyOf(1))).called(1);
@@ -333,7 +372,7 @@ void main() {
         when(library.enabledClipPaths)
             .thenAnswer((_) async => ['/a.flac', '/b.flac']);
 
-        await launch(controllerFor([1]));
+        await controllerFor([1]).launch();
 
         expect(store.sessionState, equals(SessionState.ready));
         expect(store.playlistPaths, equals(['/a.flac', '/b.flac']));
@@ -356,7 +395,7 @@ void main() {
       test('starts at the configured band count', () async {
         parameter.startingBand = 7;
 
-        await launch(controllerFor([0]));
+        await controllerFor([0]).launch();
 
         expect(store.layout, equals(BandLayout(7, FilterType.peak)));
       });
@@ -364,7 +403,7 @@ void main() {
       test('applies the session Q to the fresh player once', () async {
         parameter.qFactor = 2.0;
 
-        await launch(controllerFor([0]));
+        await controllerFor([0]).launch();
 
         verify(() => player.setEQQ(2.0)).called(1);
       });
@@ -373,7 +412,7 @@ void main() {
           'is enabled', () async {
         when(library.enabledClipPaths).thenAnswer((_) async => []);
 
-        await launch(controllerFor([]));
+        await controllerFor([]).launch();
 
         expect(store.sessionState, equals(SessionState.playlistEmpty));
         verifyNever(() => player.launch(
@@ -382,21 +421,6 @@ void main() {
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             ));
-      });
-
-      test('resets the previous session\'s results and picker', () async {
-        // Leave a finished session behind in the store.
-        final controller = controllerFor([0, 1, 2, 0]);
-        await launch(controller);
-        await submit(controller, 0);
-        await submit(controller, 1);
-        store.setPickerValue(2);
-
-        await launch(controller);
-
-        expect(store.results.rounds, isZero);
-        expect(controller.results.rounds, isZero);
-        expect(store.currentPickerValue, equals(1));
       });
 
       test('has no results before it has launched', () {
@@ -417,7 +441,7 @@ void main() {
         final dirs = MockAppDirectories();
         when(() => dirs.getClipsPath()).thenAnswer((_) async => dir.path);
 
-        await launch(controllerFor([]), clipLibrary: ClipLibrary(repo, dirs));
+        await controllerFor([], clipLibrary: ClipLibrary(repo, dirs)).launch();
 
         expect(store.sessionState, equals(SessionState.playlistEmpty));
         expect(repo.getAllClips(), [clip]);
@@ -428,7 +452,7 @@ void main() {
 
         // Not awaited on purpose: the state must already have moved so a
         // relaunch never renders the previous session's ready UI.
-        final pending = launch(controllerFor([0]));
+        final pending = controllerFor([0]).launch();
         expect(store.sessionState, equals(SessionState.init));
         return pending;
       });
@@ -442,7 +466,7 @@ void main() {
           return ['/a.flac'];
         });
 
-        await launch(controllerFor([]), shouldContinue: () => stillOnPage);
+        await controllerFor([]).launch(shouldContinue: () => stillOnPage);
 
         // Nothing after the abandoned await may land in the store.
         expect(store.sessionState, equals(SessionState.init));
@@ -463,7 +487,7 @@ void main() {
               volumeCompensation: any(named: 'volumeCompensation'),
             )).thenThrow(StateError('no device'));
 
-        await expectLater(launch(controllerFor([])), throwsException);
+        await expectLater(controllerFor([]).launch(), throwsException);
         expect(store.sessionState, equals(SessionState.error));
       });
 
@@ -476,7 +500,7 @@ void main() {
         });
 
         await expectLater(
-          launch(controllerFor([]), shouldContinue: () => stillOnPage),
+          controllerFor([]).launch(shouldContinue: () => stillOnPage),
           throwsException,
         );
         expect(store.sessionState, equals(SessionState.init));

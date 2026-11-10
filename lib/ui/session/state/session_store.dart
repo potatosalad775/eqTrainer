@@ -117,8 +117,16 @@ class SessionStore extends ChangeNotifier {
     setPickerValue(1);
   }
 
+  bool _disposed = false;
+
+  /// Whether the session page that owned this store has closed. Work that
+  /// finishes after an await checks it, since writing to a disposed notifier
+  /// asserts.
+  bool get isDisposed => _disposed;
+
   @override
   void dispose() {
+    _disposed = true;
     graphStateNotifier.dispose();
     super.dispose();
   }

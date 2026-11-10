@@ -2,107 +2,105 @@ import 'dart:math';
 import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
-import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:eq_trainer/domain/session/session_results.dart';
 import 'package:eq_trainer/domain/session/session_rounds.dart';
+import 'package:eq_trainer/domain/session/session_settings.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
 
 /// SessionController connects the session's rules to the audio and the screen.
 ///
-/// Which graph is the answer, the score and the band ladder are
-/// [SessionRounds]'; this launches the player, hands each round's band to it,
-/// and puts what changed into the [SessionStore].
+/// There is one per session, made when the session page opens and dropped when
+/// it closes, with the [SessionStore] it writes to. Which graph is the answer,
+/// the score and the band ladder are [SessionRounds]'; this launches the
+/// player, hands each round's band to it, and puts what changed into the store.
 class SessionController {
+  /// [settings] is the config as it was when the session started, so what the
+  /// user does on the config page later cannot reach a running session.
   /// [random] is for tests that need to know which graph comes up.
-  SessionController({Random? random}) : _random = random;
+  SessionController({
+    required PlayerService player,
+    required SessionStore sessionStore,
+    required ClipLibrary clipLibrary,
+    required AudioState audioState,
+    required SessionSettings settings,
+    required bool volumeCompensation,
+    Random? random,
+  })  : _player = player,
+        _store = sessionStore,
+        _clipLibrary = clipLibrary,
+        _audioState = audioState,
+        _settings = settings,
+        _volumeCompensation = volumeCompensation,
+        _random = random;
 
+  final PlayerService _player;
+  final SessionStore _store;
+  final ClipLibrary _clipLibrary;
+  final AudioState _audioState;
+  final SessionSettings _settings;
+  final bool _volumeCompensation;
   final Random? _random;
 
-  /// The rules of the session in progress; every launch makes a new one.
+  /// The rules of the session, made once the player is open.
   SessionRounds? _rounds;
 
-  // EQ bandwidth is fixed for the whole session (set from config at launch),
-  // not part of a round's answer. Kept so it can be re-applied to a fresh
-  // player after a track switch.
-  double _qFactor = 1;
-
-  /// How the session in progress is going. This is what the result page shows.
+  /// How the session is going. This is what the result page shows.
   SessionResults get results => _rounds?.results ?? SessionResults.empty();
 
   /// Toggle peaking EQ on the player via controller to keep UI logic thin.
-  void setEqEnabled(PlayerService player, bool enabled) {
-    player.setEQ(enabled);
+  void setEqEnabled(bool enabled) {
+    _player.setEQ(enabled);
   }
 
-  Future<void> launchSession(
-    PlayerService player, {
-    required AudioState audioState,
-    required SessionStore sessionStore,
-    required SessionParameter sessionParameter,
-    required ClipLibrary clipLibrary,
-    required bool volumeCompensation,
-    // Checked before each write to the (app-scoped) SessionStore after an
-    // await, so exiting the session page mid-launch doesn't leave a stray
-    // ready/error/playlistEmpty state written into a store that outlives
-    // this page. Callers that don't care can omit it.
+  Future<void> launch({
+    // Checked before each write to the store after an await: a launch can
+    // still finish after the page is gone, and writing to a disposed notifier
+    // asserts. Callers that don't care can omit it.
     bool Function()? shouldContinue,
   }) async {
     bool active() => shouldContinue == null || shouldContinue();
     try {
-      // Move to the loading/init state synchronously, before any await, so a
-      // relaunch of the app-scoped SessionStore does not render the previous
-      // session's ready UI (stale graphs, live buttons wired to a not-yet-
-      // launched player) during the async launch window.
-      sessionStore.setSessionState(SessionState.init);
-
-      // The settings are frozen here, so what the user does on the config page
-      // later cannot reach a session that is already running.
-      final settings = sessionParameter.snapshot();
-
-      // Reset Session
-      _rounds = null;
-      sessionStore.resetPickerValue();
-      sessionStore.setResults(SessionResults.empty());
+      // Move to the loading/init state synchronously, before any await, so the
+      // UI never renders ready buttons wired to a not-yet-launched player
+      // during the async launch window.
+      _store.setSessionState(SessionState.init);
 
       // Load enabled audio clip absolute paths
-      final paths = await clipLibrary.enabledClipPaths();
+      final paths = await _clipLibrary.enabledClipPaths();
       if (!active()) return;
-      sessionStore.setPlaylistPaths(paths);
-
-      // Q is fixed for the whole session; capture it once so a track switch
-      // can re-apply it to the fresh player.
-      _qFactor = settings.qFactor;
+      _store.setPlaylistPaths(paths);
 
       // If List of Audio clips for Session is Not Empty
-      if (sessionStore.playlistPaths.isNotEmpty) {
+      if (_store.playlistPaths.isNotEmpty) {
         // Open First AudioClip
-        await player.launch(
-          androidBackend: audioState.androidBackend,
-          outputDevice: audioState.outputDevice,
-          path: sessionStore.playlistPaths[0],
-          volumeCompensation: volumeCompensation,
+        await _player.launch(
+          androidBackend: _audioState.androidBackend,
+          outputDevice: _audioState.outputDevice,
+          path: _store.playlistPaths[0],
+          volumeCompensation: _volumeCompensation,
         );
         if (!active()) return;
-        // Apply the session's EQ bandwidth once on the fresh player.
-        player.setEQQ(_qFactor);
+        // Q is fixed for the whole session, so it is applied once on the fresh
+        // player here and re-applied only after a track switch.
+        _player.setEQQ(_settings.qFactor);
       } else {
         // ... else notify the playlist is empty.
-        if (active()) sessionStore.setSessionState(SessionState.playlistEmpty);
+        if (active()) _store.setSessionState(SessionState.playlistEmpty);
         return;
       }
 
       // The first round is picked as the rounds are made.
-      final rounds = SessionRounds(settings, random: _random);
+      final rounds = SessionRounds(_settings, random: _random);
       _rounds = rounds;
-      sessionStore.applyLayout(rounds.layout);
-      await _tune(player, rounds.current);
+      _store.applyLayout(rounds.layout);
+      await _tune(rounds.current);
       if (!active()) return;
 
       // Notify the Session is Ready
-      sessionStore.setSessionState(SessionState.ready);
+      _store.setSessionState(SessionState.ready);
     } catch (e) {
-      if (active()) sessionStore.setSessionState(SessionState.error);
+      if (active()) _store.setSessionState(SessionState.error);
       throw Exception(e.toString());
     }
   }
@@ -111,8 +109,8 @@ class SessionController {
   // it: [PlayerService.setEQParams] owns that ordering, and it is the one EQ
   // call that genuinely awaits. (Q is session-constant and applied at launch,
   // not per round.)
-  Future<void> _tune(PlayerService player, Round round) {
-    return player.setEQParams(
+  Future<void> _tune(Round round) {
+    return _player.setEQParams(
       enableEQ: false,
       frequency: round.frequency,
       gainDb: round.gainDb,
@@ -127,14 +125,14 @@ class SessionController {
   /// land on the new handle. [eqEnabled] is the enabled state from before the
   /// switch, so a manually-toggled "Filtered" view doesn't silently revert to
   /// "Original".
-  void updatePlayerState(PlayerService player, {required bool eqEnabled}) {
-    player.setEQQ(_qFactor);
+  void updatePlayerState({required bool eqEnabled}) {
+    _player.setEQQ(_settings.qFactor);
     final round = _rounds?.current;
     if (round != null) {
-      player.setEQFreq(round.frequency);
-      player.setEQGain(round.gainDb);
+      _player.setEQFreq(round.frequency);
+      _player.setEQGain(round.gainDb);
     }
-    player.setEQ(eqEnabled);
+    _player.setEQ(eqEnabled);
   }
 
   /// Scores the graph the picker is on and moves to the next round.
@@ -143,8 +141,6 @@ class SessionController {
   /// [onResult] gets whether it was right and the 0-based index of the right
   /// graph, before the next round is set up.
   Future<RoundOutcome?> submitAnswer({
-    required PlayerService player,
-    required SessionStore sessionStore,
     void Function(bool isCorrect, int correctGraphIndex)? onResult,
   }) async {
     final rounds = _rounds;
@@ -152,35 +148,37 @@ class SessionController {
     // submitted. A double-tap within one frame (before InteractionLock's
     // rebuild absorbs the second tap) would otherwise score the same round
     // twice and move the session point by ±2.
-    if (rounds == null || sessionStore.sessionState != SessionState.ready) {
+    if (rounds == null || _store.sessionState != SessionState.ready) {
       return null;
     }
 
     // Mark loading
-    sessionStore.setSessionState(SessionState.loading);
+    _store.setSessionState(SessionState.loading);
 
     try {
-      final outcome = rounds.submit(sessionStore.currentGraphIndex);
+      final outcome = rounds.submit(_store.currentGraphIndex);
 
       // Notify caller (e.g. to show a toast) without coupling to widget layer
       onResult?.call(outcome.isCorrect, outcome.correctGraphIndex);
 
-      sessionStore.setResults(rounds.results);
+      _store.setResults(rounds.results);
       if (outcome.bandCountChanged) {
         // The graph layout changed size and meaning, so the picker goes back
         // to the first graph along with it.
-        sessionStore.applyLayout(rounds.layout);
+        _store.applyLayout(rounds.layout);
       }
 
-      await _tune(player, outcome.next);
+      await _tune(outcome.next);
 
-      sessionStore.setSessionState(SessionState.ready);
+      // The page can close while the band is being retuned.
+      if (_store.isDisposed) return null;
+      _store.setSessionState(SessionState.ready);
       return outcome;
     } catch (e) {
       // A throw here (e.g. from setEQParams) would otherwise leave
       // sessionState stuck at `loading`, and InteractionLock would freeze the
       // session permanently.
-      sessionStore.setSessionState(SessionState.error);
+      if (!_store.isDisposed) _store.setSessionState(SessionState.error);
       return null;
     }
   }
