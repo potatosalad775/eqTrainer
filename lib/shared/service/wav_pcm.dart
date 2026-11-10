@@ -31,14 +31,13 @@ class WavParseException implements Exception {
 
 /// Parses a RIFF/WAVE buffer into interleaved float PCM.
 ///
-/// This exists because the offline encoder takes float PCM, while
-/// `audio_decoder` hands back WAV bytes — so every foreign-format import and
-/// every trim that targets FLAC or Opus has to cross that gap.
+/// This exists for the WAV to FLAC recompress, which reads clips the app already
+/// holds as WAV and hands them to the offline encoder, which takes float PCM.
 ///
 /// Chunks are walked rather than assumed to sit at fixed offsets: real files
 /// carry `LIST`/`fact`/`bext` chunks before `data`, and the 44-byte layout is
 /// only the simplest case. Supports 8/16/24/32-bit integer and 32/64-bit float
-/// PCM, which covers everything the platform decoders emit.
+/// PCM.
 WavPcm parseWav(Uint8List bytes) {
   final data = ByteData.sublistView(bytes);
 

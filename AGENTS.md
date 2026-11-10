@@ -166,7 +166,11 @@ would be lost:
 |---|---|
 | Peaking EQ filter | A bandpass-refactored biquad whose poles don't depend on gain, so sweeping dry/wet moves no recursive coefficient. This is what makes the Original/Filtered toggle click-free by construction. |
 | Android backend override | Upstream prefers AAudio on API ≥ 30; several DAP devices misbehave on it. |
-| Offline PCM-to-file encode | `encodePcmToFile` — Ogg Opus / FLAC / WAV from a float buffer. Runs on a `compute()` isolate and touches no engine state, so it is safe to call while audio is playing and two encodes may overlap. `ClipEncoder` is built on it. |
+| Offline PCM-to-file encode | `encodePcmToFile` — Ogg Opus / FLAC / WAV from a float buffer. Runs on a `compute()` isolate and touches no engine state, so it is safe to call while audio is playing and two encodes may overlap. `ClipEncoder.encodeWavBytes` is built on it. |
+| Offline file-to-PCM decode | `decodeFileToPcm`: a whole file or a frame-exact time range, with no engine running. Refuses files with no recognised signature, because `dr_mp3` otherwise turns them into a moment of noise and reports success. Looks past ID3v2 tags of any size at what follows, since that can be AAC as well as MP3. MP3 alone is also found behind junk in the first 4 KB, where it takes four consecutive frames to count, since one header turns up by chance. Memory follows the range, except for platform-decoded formats such as M4A, which only decode whole. |
+| Offline file-to-file convert | `convertFile`: decodes straight into the encoder, so memory does not follow the length of the audio, except for platform-decoded formats. A whole file or a frame-exact range, and `ClipEncoder.convertFile` and `trimFile` are both built on it. Because a source can now fail after output has begun, a failure removes the output, and a file that cannot be read never touches it. Refuses to write over its own source. |
+| Windows ADTS through the AAC transform | `decodeFileToPcm` and `convertFile` skip Media Foundation's source reader for ADTS. It sniffs only the first 2048 bytes, so it refuses audio behind an ID3 tag longer than that, and it believes a `.mp3` extension over the contents, reporting success on 1152 frames of an ADTS file named that way. The transform is the same decoder, and its samples match to the bit. |
+| Windows format from the first sample | Media Foundation guesses double the rate in stereo for AAC at 24 kHz and below, and corrects it with the first sample. Believing the guess turned mono 22.05 kHz into 44.1 kHz stereo, a quarter of the length, reported as a success, which a migration would then delete the source over. |
 | Opus bitrate + complexity | Upstream ran libopus defaults with no `OPUS_SET_BITRATE`. |
 | Kaiser-windowed sinc polyphase resampler | Replaced a linear-interpolation 44.1→48 kHz resampler. Opus mandates 48 kHz, so *every* Opus encode went through it — on the exact top-octave material users train against. |
 | Bisected `seekOpus` | Was a linear rewind-and-decode, i.e. O(position), and `PlayerService.seek` is a synchronous FFI call. Deep seeks in long Opus files blocked. |
@@ -179,11 +183,21 @@ Measured, on the fork's own test material:
   24.7 dB down.
 - **Seek** — seeking to 115 s in a two-minute file went from 71.77 ms to
   0.45 ms, and is now flat in position rather than linear.
+- **Memory** — peak native memory converting an hour of stereo at 44.1 kHz on
+  Windows, where one copy of the PCM is 1214 MB:
+
+  | Source | Decode then encode | `convertFile` |
+  |---|---|---|
+  | WAV, FLAC, MP3 | 3641 MB | under 1 MB |
+  | Ogg Opus | | 7.5 MB |
+  | ADTS | | 6 MB |
+  | M4A | 3644 MB | 2554 MB |
 
 Three upstream bugs were found and fixed along the way: OpusHead advertised a
 pre-skip of 0, granulepos was written before being advanced (truncating ~20 ms
 off every file), and FLAC never declared `total_samples`, so every decoder
-reported an unknown duration.
+reported an unknown duration. `convertFile` only knows that count at the end, so
+it patches `STREAMINFO` in the finished file.
 
 MP3 output was considered and dropped: it was the only target needing a new
 codec (LAME) and an LGPL dependency. WAV remains the zero-work fallback.
@@ -192,10 +206,43 @@ codec (LAME) and an LGPL dependency. WAV remains the zero-work fallback.
 
 Clips are app-owned copies, converted once at import rather than on every load.
 `AudioFormatHelper` holds the mapping and is the single source of truth for
-which extensions the engine plays natively — `PlayerService` shares that set
-rather than restating it, because the two drifting apart is what breaks Ogg on
-Apple platforms (the `audio_decoder` fallback is AVFoundation, which cannot
-open an Ogg container at all).
+which extensions the engine streams — `PlayerService` shares that set rather than
+restating it, and loads anything else whole in `LoadMode.memory`.
+
+The import picker's list is per platform, from what each was measured to read. It
+removes known failures but cannot promise a file works, since `.m4a` does not identify
+its codec. A file nothing can read is refused with its own dialog, and on Linux that
+is also what a missing FFmpeg looks like, so the Linux message says to install it, and so
+do the playback errors on an old `.m4a` or `.aac` clip, which is how an upgraded install
+with no FFmpeg finds out. The offline encoder takes mono and stereo only, so a file with
+more channels plays but is refused when something has to convert or trim it. It is not
+mixed down, because channel order depends on the decoder.
+
+SoLoud is the only decoder. On Linux, M4A, AAC, AIFF and WMA go through a system
+FFmpeg that it opens with `dlopen`, measured on 6.1, 7.1, 8.1 and 9.0. The packages
+recommend FFmpeg rather than depend on it, since the core formats need nothing. `caf`
+is left out of the Linux picker because CAF ALAC decodes about 70 ms short on 8.1 and 9.0.
+
+A trim reads the file the user picked rather than the converted temp file, so a lossy
+import is not encoded twice. It falls back to the temp file only if the original can no
+longer be read, for example because it was on a drive that has been removed.
+
+**What memory a conversion still takes.** WAV, FLAC, MP3 and Ogg stream everywhere, so
+an hour costs what a minute does. Formats only a platform codec reads cannot, and hold
+the decoded PCM, about 1.2 GB per hour of stereo:
+
+- M4A, AIFF, WMA and CAF, everywhere, and ADTS on everything but Windows. Android holds
+  one copy, planar and sized from the container, and fails rather than truncates past
+  2 GiB, about 1.7 hours of stereo at 44.1 kHz, or 512 MiB on a 32-bit device. So an
+  hour of M4A is improved but may still not fit on a small DAP.
+- Windows peaks at about twice that, because the source reader's interleaved buffer and
+  the planar copy exist together for a moment.
+- `ClipRecompressService` does not use `convertFile`. It reads the WAV into Dart and goes
+  through `encodeWavBytes`, so a long WAV still costs several copies.
+
+Android, iOS and macOS have `NativeStream`, which decodes M4A a piece at a time for
+playback, and ADTS has a stream decoder on every platform. Either could feed the encoder
+and remove these copies, but neither has been tested on a device for this use.
 
 Two background passes rewrite clips in an existing library:
 
@@ -213,8 +260,7 @@ adopted with the 5.2.2 fork because of what is still unknown or awkward:
 - A streamed voice can underrun if decoding falls behind, which has not been tested
   on a slow DAP.
 - `.m4a` does not identify the codec. On an Android 17 (API 37) emulator, AAC
-  plays but ALAC has no decoder, through SoLoud and `audio_decoder` alike, so this
-  varies by device. Adopting it needs a load that handles that failure, not just a
+  plays but ALAC has no decoder, so this varies by device. Adopting it needs a load that handles that failure, not just a
   per-platform extension set.
 
 Both passes keep the record and the basename and change only the extension. The
@@ -226,7 +272,7 @@ relies on to follow a clip that moved underneath a live session.
 decode-plus-encode is CPU-seconds per clip on a phone or a DAP — the hardware
 where libraries are largest and the contention is audible. `ClipFormatMigration`
 exposes `pause()`/`resume()`, and the screens that play audio (`SessionPage`,
-`PlaylistControlView`) hold it while they are open; the checkpoint is between
+`PlaylistControlView`, `ImportPage`) hold it while they are open; the checkpoint is between
 clips, which the per-clip commit makes free. Disabling the UI instead was
 considered and rejected: a large library on a slow device is minutes of a dead
 Start button, and legacy clips still play through `PlayerService`'s
@@ -403,7 +449,7 @@ scaffolding is in `test/helpers/`:
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
 
-Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
+Platform channels (`path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
 `import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
 so use its `setMockInitialValues`.
@@ -519,7 +565,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
 | `lib/shared/service/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
 | `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
+| `lib/shared/service/clip_encoder.dart` | Convert or trim through SoLoud to Opus/FLAC/WAV |
 | `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
 | `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
 | `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
@@ -537,7 +583,6 @@ so both downloads carry them. The build fails if they cannot be found.
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
-| `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. Formats like WMA and AIFF are why it is still here: SoLoud cannot open them |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
 | `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |

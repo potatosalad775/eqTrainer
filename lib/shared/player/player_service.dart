@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:audio_decoder/audio_decoder.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
@@ -206,33 +205,19 @@ class PlayerService extends ChangeNotifier {
   /// native audio thread, so a full song costs a file handle rather than the
   /// ~21 MB per stereo minute that fully-decoded float PCM would take in RAM.
   ///
-  /// The fallback exists for one case. The app plays wav/mp3/flac/ogg/opus/oga
-  /// through SoLoud and the importer converts everything else
-  /// (`audio_format_helper.dart`), but libraries created before that policy
-  /// hold `.m4a` and `.aac` clips. Those are converted once at startup by
-  /// `ClipFormatMigration`; this catches the ones it could not convert, so a
-  /// clip that fails migration still plays instead of failing to load. It
-  /// holds the whole file in memory, which is what disk mode exists to avoid —
-  /// so it is a fallback, not a supported format.
-  ///
-  /// The fallback must never be reached for an Ogg-family file. It decodes
-  /// through `audio_decoder`, which on Apple platforms is AVFoundation, and
-  /// AVFoundation cannot open an Ogg container at all — so routing `.opus` or
-  /// `.ogg` here would fail outright on macOS and iOS. That is why the
-  /// playable set is shared with the import policy rather than restated: the
-  /// two drifting apart is exactly what breaks.
-  Future<AudioSource> _loadSource(String path) async {
+  /// The other path exists for one case. The importer converts everything the
+  /// app does not stream (`audio_format_helper.dart`), but libraries created
+  /// before that policy hold `.m4a` and `.aac` clips. Those are converted once
+  /// at startup by `ClipFormatMigration`; this plays the ones not converted yet
+  /// or that it could not convert. [LoadMode.memory] holds the whole file, but a
+  /// streamed voice of these formats could underrun on a slow device. A file
+  /// SoLoud cannot read fails here, and the caller reports it.
+  Future<AudioSource> _loadSource(String path) {
     final ext = p.extension(path).toLowerCase();
-    if (isNativelyPlayable(ext)) {
-      return _soloud.loadFile(path, mode: LoadMode.disk);
-    }
-    final wav = await AudioDecoder.convertToWavBytes(
-      await File(path).readAsBytes(),
-      formatHint: ext.replaceFirst('.', ''),
+    return _soloud.loadFile(
+      path,
+      mode: isNativelyPlayable(ext) ? LoadMode.disk : LoadMode.memory,
     );
-    // Still LoadMode.disk: the buffer is already plain PCM, so SoLoud reads
-    // it straight through rather than expanding it again into float PCM.
-    return _soloud.loadMem(path, wav, mode: LoadMode.disk);
   }
 
 

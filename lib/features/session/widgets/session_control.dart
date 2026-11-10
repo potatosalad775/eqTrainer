@@ -61,6 +61,7 @@ class _SessionControlState extends State<SessionControl> {
             Navigator.of(context).pop();
           },
           error: e,
+          path: path,
         );
       }
     }

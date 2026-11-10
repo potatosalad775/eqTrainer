@@ -1,24 +1,39 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:audio_decoder/audio_decoder.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/shared/service/wav_pcm.dart';
 
+/// Whether [error] means nothing on this platform can read the file, as opposed
+/// to the conversion failing for some other reason. On Linux this is also what a
+/// missing FFmpeg looks like. Covers both ways in: the offline decoder behind a
+/// conversion or trim, and `loadFile`, which a file that skips conversion reaches
+/// first.
+bool isUnreadableAudioError(Object error) =>
+    error is SoLoudFileLoadFailedException ||
+    (error is SoLoudOfflineDecodeCppException &&
+        error.result == OfflineDecodeResult.unsupportedFormat);
+
+/// The offline encoder only takes mono and stereo.
+///
+/// Refused rather than mixed down: channel order depends on the decoder that
+/// produced the PCM (Vorbis and Opus put centre second, WAV and FLAC third), so a
+/// mixdown here could silently pan the wrong channels.
+class UnsupportedChannelCountException implements Exception {
+  const UnsupportedChannelCountException(this.channels);
+
+  final int channels;
+
+  @override
+  String toString() => 'UnsupportedChannelCountException: $channels channels';
+}
+
 /// Encodes clip files into the app's storage formats.
 ///
-/// Two decoders are in play and they do not overlap:
-///
-/// - `audio_decoder` reaches platform codecs, and is the only thing that can
-///   open a foreign format (m4a/aac/wma/alac/aiff). It emits WAV.
-/// - SoLoud's offline encoder writes Ogg Opus, FLAC and WAV, but takes float
-///   PCM, not files.
-///
-/// So a foreign import is: platform decode to WAV bytes, parse to float PCM,
-/// encode to the target. WAV targets skip the last step, since the bytes are
-/// already what we want.
+/// Decoding goes through SoLoud, which can also write the result: its offline
+/// encoder takes float PCM and writes Ogg Opus, FLAC and WAV.
 class ClipEncoder {
   ClipEncoder({SoLoud? soloud}) : _soloud = soloud ?? SoLoud.instance;
 
@@ -31,21 +46,51 @@ class ClipEncoder {
   /// must not be the thing they end up hearing.
   static const int opusBitrate = 192000;
 
-  /// Decodes [sourcePath] and writes it to [destPath] in the format implied by
-  /// [destPath]'s extension.
+  /// Writes [sourcePath] to [destPath] in the format implied by [destPath]'s
+  /// extension.
   ///
-  /// [formatHint] is the source extension without the dot, which the platform
-  /// decoders need when the container is ambiguous.
+  /// The audio goes straight from the decoder to the encoder, so a long file costs
+  /// no more memory than a short one, except for formats that SoLoud decodes
+  /// through a platform codec, which hold the whole file once.
+  ///
+  /// Throws [SoLoudOfflineDecodeCppException] if the file cannot be read, and
+  /// [UnsupportedChannelCountException] if it has more than two channels. Nothing
+  /// is left at [destPath] on failure.
   Future<void> convertFile({
     required String sourcePath,
     required String destPath,
+  }) => _convert(sourcePath, destPath);
+
+  /// Writes the range [start] to [end] of [sourcePath] to [destPath], in the
+  /// format implied by [destPath]'s extension. Otherwise as [convertFile].
+  ///
+  /// An editor's untouched selection is the whole file, so this needs the same
+  /// memory behaviour as [convertFile] and not just a small range's.
+  Future<void> trimFile({
+    required String sourcePath,
+    required String destPath,
+    required Duration start,
+    required Duration end,
+  }) => _convert(sourcePath, destPath, start: start, end: end);
+
+  Future<void> _convert(
+    String sourcePath,
+    String destPath, {
+    Duration start = Duration.zero,
+    Duration? end,
   }) async {
-    final sourceExt = p.extension(sourcePath).toLowerCase();
-    final wavBytes = await AudioDecoder.convertToWavBytes(
-      await File(sourcePath).readAsBytes(),
-      formatHint: sourceExt.replaceFirst('.', ''),
-    );
-    await encodeWavBytes(wavBytes: wavBytes, destPath: destPath);
+    try {
+      await _soloud.convertFile(
+        sourcePath,
+        destPath,
+        format: _formatFor(p.extension(destPath).toLowerCase()),
+        bitrate: opusBitrate,
+        start: start,
+        end: end,
+      );
+    } on SoLoudOfflineChannelCountCppException catch (e) {
+      throw UnsupportedChannelCountException(e.channels);
+    }
   }
 
   /// Writes already-decoded [wavBytes] to [destPath] in the target format.

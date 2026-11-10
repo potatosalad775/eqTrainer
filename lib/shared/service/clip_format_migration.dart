@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:audio_decoder/audio_decoder.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:path/path.dart' as p;
@@ -219,7 +218,7 @@ class ClipFormatMigration extends ChangeNotifier {
       // is a partial file, not a usable clip.
       if (await dest.exists()) await dest.delete();
 
-      await _convert(source.path, dest.path, targetExt);
+      await _encoder.convertFile(sourcePath: source.path, destPath: dest.path);
 
       if (!await dest.exists() || await dest.length() < _minOutputBytes) {
         throw const FileSystemException('converted file is empty or missing');
@@ -253,20 +252,5 @@ class ClipFormatMigration extends ChangeNotifier {
       } catch (_) {}
       return false;
     }
-  }
-
-  /// Writes [sourcePath] to [destPath] in the format [targetExt] names.
-  ///
-  /// WAV goes through audio_decoder's file-based path, which is what it writes
-  /// natively and never holds the clip in memory. Every other target has to go
-  /// through [ClipEncoder] — audio_decoder is the only thing that can open a
-  /// foreign container, and SoLoud's offline encoder the only thing that can
-  /// write Opus or FLAC. That path does buffer the whole clip as float PCM,
-  /// which is why this stays a background task rather than blocking startup.
-  Future<void> _convert(String sourcePath, String destPath, String targetExt) {
-    if (targetExt == '.wav') {
-      return AudioDecoder.convertToWav(sourcePath, destPath);
-    }
-    return _encoder.convertFile(sourcePath: sourcePath, destPath: destPath);
   }
 }

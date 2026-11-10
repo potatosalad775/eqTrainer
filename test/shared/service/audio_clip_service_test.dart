@@ -1,12 +1,14 @@
 import 'dart:io';
-import 'package:flutter/services.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/shared/model/audio_clip.dart';
 import 'package:eq_trainer/shared/service/audio_clip_service.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
+import 'package:eq_trainer/shared/service/clip_encoder.dart';
 
+import '../../helpers/fake_encoder.dart';
 import '../../helpers/mocks.dart';
 
 void main() {
@@ -34,31 +36,9 @@ void main() {
 
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
       when(() => mockRepo.addClip(any())).thenAnswer((_) async {});
-
-      // Mock the audio_decoder platform channel so convertToWav works in unit
-      // tests by simply copying the source file to the destination.
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('audio_decoder'),
-        (MethodCall call) async {
-          if (call.method == 'convertToWav') {
-            final args = call.arguments as Map;
-            final input = args['inputPath'] as String;
-            final output = args['outputPath'] as String;
-            await File(input).copy(output);
-            return output;
-          }
-          return null;
-        },
-      );
     });
 
     tearDown(() async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('audio_decoder'),
-        null,
-      );
       await tmpSrc.delete(recursive: true);
       await tmpClips.delete(recursive: true);
     });
@@ -181,9 +161,107 @@ void main() {
       });
     });
 
-    // Note: createClip (isTrimmed: true) invokes AudioDecoder.trimAudio() which
-    // is a native platform channel and cannot run in a unit test environment.
-    // The full trim+persist pipeline is covered by the integration tests in
-    // integration_test/audio_clip_service_integration_test.dart.
+    // The real decode and encode are covered by the integration tests in
+    // integration_test/audio_clip_service_integration_test.dart. This is about
+    // which file a trim reads, and what it does when it cannot.
+    group('createClip (isTrimmed: true)', () {
+      const converted = '/tmp/converted.opus';
+      const original = '/tmp/original.m4a';
+
+      Future<FakeClipEncoder> trim({
+        Set<String> unreadable = const {},
+        String? originalPath = original,
+      }) async {
+        final encoder = FakeClipEncoder(unreadable: unreadable);
+        await AudioClipService(mockRepo, mockDirs, encoder: encoder).createClip(
+          sourcePath: converted,
+          originalPath: originalPath,
+          startSec: 1.0,
+          endSec: 3.5,
+          isTrimmed: true,
+          importFormat: ImportFormat.smart,
+        );
+        return encoder;
+      }
+
+      test('reads the original, not the converted file', () async {
+        final encoder = await trim();
+        expect(encoder.trimmedFrom, [original]);
+
+        final clip = verify(() => mockRepo.addClip(captureAny())).captured.single
+            as AudioClip;
+        expect(clip.fileName, endsWith('.opus'));
+        expect(clip.ogAudioName, 'converted.opus');
+        expect(clip.duration, 2.5);
+        expect(File(p.join(tmpClips.path, clip.fileName)).existsSync(), isTrue);
+      });
+
+      test('reads the source when nothing was converted', () async {
+        final encoder = await trim(originalPath: null);
+        expect(encoder.trimmedFrom, [converted]);
+      });
+
+      test('falls back to the converted file if SoLoud cannot read the original',
+          () async {
+        final encoder = await trim(unreadable: {original});
+        expect(encoder.trimmedFrom, [original, converted]);
+        verify(() => mockRepo.addClip(any())).called(1);
+      });
+
+      test('fails, and saves nothing, if neither can be read', () async {
+        await expectLater(
+          trim(unreadable: {original, converted}),
+          throwsException,
+        );
+        verifyNever(() => mockRepo.addClip(any()));
+      });
+
+      Future<void> trimFailingWith(Object failure) =>
+          AudioClipService(
+            mockRepo,
+            mockDirs,
+            encoder: FakeClipEncoder(trimFailure: failure),
+          ).createClip(
+            sourcePath: converted,
+            startSec: 1.0,
+            endSec: 3.5,
+            isTrimmed: true,
+            importFormat: ImportFormat.smart,
+          );
+
+      test('an encode that dies partway leaves no file behind', () async {
+        await expectLater(
+          trimFailingWith(StateError('disk full')),
+          throwsA(isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Audio trim failed'),
+          )),
+        );
+        expect(tmpClips.listSync(), isEmpty);
+        verifyNever(() => mockRepo.addClip(any()));
+      });
+
+      test('keeps the reason a retry cannot help', () async {
+        const channels = UnsupportedChannelCountException(6);
+        await expectLater(trimFailingWith(channels), throwsA(same(channels)));
+        expect(tmpClips.listSync(), isEmpty);
+
+        const unreadable = SoLoudOfflineDecodeCppException(
+          OfflineDecodeResult.unsupportedFormat,
+        );
+        await expectLater(
+          trimFailingWith(unreadable),
+          throwsA(predicate(isUnreadableAudioError)),
+        );
+        expect(tmpClips.listSync(), isEmpty);
+      });
+
+      test('a record that cannot be saved leaves no file behind', () async {
+        when(() => mockRepo.addClip(any())).thenThrow(StateError('write failed'));
+        await expectLater(trim(), throwsStateError);
+        expect(tmpClips.listSync(), isEmpty);
+      });
+    });
   });
 }

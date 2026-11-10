@@ -8,4 +8,7 @@ import 'package:eq_trainer/shared/player/player_service.dart';
 /// under coast_audio this class had to track it separately.
 class ImportPlayer extends PlayerService {
   ImportPlayer();
+
+  /// The file the user picked, when what is loaded is a conversion of it.
+  String? originalPath;
 }

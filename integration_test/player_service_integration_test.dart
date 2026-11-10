@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:eq_trainer/shared/player/player_service.dart';
 
+import 'helpers/fixture_formats.dart';
 import 'helpers/fixtures.dart';
 
 /// Exercises [PlayerService] against a real SoLoud engine and a real output
@@ -60,6 +63,24 @@ void main() {
       expect(player.fetchDuration.inMilliseconds, closeTo(2000, 50));
       expect(player.filePath, endsWith('silence_2s.wav'));
     });
+
+    // Clips from older libraries that ClipFormatMigration has not converted.
+    for (final name in const ['m4a_aac', 'aac_adts']) {
+      testWidgets('launch loads a legacy $name clip', (_) async {
+        final format = formatFixtures.firstWhere((f) => f.name == name);
+        final path = fixture(format.fileName);
+        await File(path).writeAsBytes(base64Decode(format.base64Data));
+
+        await player.launch(
+          androidBackend: defaultAndroidBackend,
+          outputDevice: null,
+          path: path,
+          volumeCompensation: true,
+        );
+
+        expect(player.fetchDuration.inMilliseconds, closeTo(325, 50));
+      });
+    }
 
     testWidgets('starts paused at position zero', (_) async {
       await launch('sine_440hz_3s.mp3');

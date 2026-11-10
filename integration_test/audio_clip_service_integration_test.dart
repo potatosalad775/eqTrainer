@@ -129,7 +129,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // isTrimmed: true — trim path (AudioDecoder.trimAudio)
+  // isTrimmed: true — trim path (decode the range, then encode)
   // ---------------------------------------------------------------------------
   group('createClip (isTrimmed: true)', () {
     testWidgets('trims WAV and stores duration = endSec - startSec', (tester) async {

@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
@@ -29,12 +28,6 @@ void main() {
     late MockAppDirectories mockDirs;
     late Directory tmpClips;
 
-    /// What the mocked WAV converter writes. Bigger than the 64-byte gate the
-    /// migration uses as its "did this decode?" check.
-    var convertedBytes = List<int>.filled(128, 0);
-    var convertShouldThrow = false;
-    var convertCalls = <String>[];
-
     /// Builds a migration for [importFormat] over [encoder].
     ClipFormatMigration migrationFor({
       int importFormat = ImportFormat.smart,
@@ -52,34 +45,12 @@ void main() {
       mockDirs = MockAppDirectories();
       tmpClips = await Directory.systemTemp.createTemp('cfm_clips_');
 
-      convertedBytes = List<int>.filled(128, 0);
-      convertShouldThrow = false;
-      convertCalls = <String>[];
-
       when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
       when(() => mockRepo.updateFileNameById(any(), any()))
           .thenAnswer((_) async {});
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-        const MethodChannel('audio_decoder'),
-        (MethodCall call) async {
-          if (call.method != 'convertToWav') return null;
-          final args = call.arguments as Map;
-          final output = args['outputPath'] as String;
-          convertCalls.add(args['inputPath'] as String);
-          if (convertShouldThrow) {
-            throw PlatformException(code: 'CONVERSION_FAILED');
-          }
-          await File(output).writeAsBytes(convertedBytes);
-          return output;
-        },
-      );
     });
 
     tearDown(() async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(const MethodChannel('audio_decoder'), null);
       await tmpClips.delete(recursive: true);
     });
 
@@ -134,8 +105,7 @@ void main() {
       expect(encoder.encoded.single, endsWith('1000.flac'));
     });
 
-    test('honours an explicit All-WAV setting, through the file-based path',
-        () async {
+    test('honours an explicit All-WAV setting', () async {
       final clip = await writeClip('1000.m4a');
       when(() => mockRepo.getAllClips()).thenReturn([clip]);
       final encoder = FakeClipEncoder();
@@ -149,10 +119,7 @@ void main() {
       );
 
       verify(() => mockRepo.updateFileNameById(any(), '1000.wav')).called(1);
-      // WAV must not go through the encoder: audio_decoder already writes it,
-      // and its file-based path never buffers the clip in memory.
-      expect(encoder.encoded, isEmpty);
-      expect(convertCalls, hasLength(1));
+      expect(encoder.encoded.single, endsWith('1000.wav'));
     });
 
     test('maps a retired stored ordinal onto Smart rather than falling through',
@@ -181,7 +148,6 @@ void main() {
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
 
-      expect(convertCalls, isEmpty);
       expect(encoder.encoded, isEmpty);
       verifyNever(() => mockRepo.updateFileNameById(any(), any()));
       for (final clip in clips) {

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 /// Import format setting values stored by `MiscSettingsProvider.importFormat`.
@@ -75,24 +76,36 @@ const _nativePlayableExts = {
   '.oga',
 };
 
-/// Extensions offered in the import file picker: everything the engine plays,
-/// plus the foreign formats audio_decoder can convert through platform codecs.
-const importPickerExtensions = [
-  'wav',
-  'mp3',
-  'flac',
-  'ogg',
-  'opus',
-  'oga',
-  'm4a',
-  'aac',
-  'mp4',
-  'wma',
-  'aiff',
-  'aif',
-  'alac',
-  'caf',
-];
+/// Extensions offered in the import file picker on [platform], by default the
+/// one running: everything the engine plays, plus the formats the platform's
+/// codecs were measured to read.
+///
+/// This removes known failures but cannot promise a file works: `.m4a` does not
+/// identify its codec, and ALAC varies by Android device. A file that still
+/// cannot be read is refused at import ([isUnreadableAudioError]).
+///
+/// Linux offers what FFmpeg reads, except `.caf`: CAF ALAC came back about 70 ms
+/// short on FFmpeg 8.1 and 9.0, and silently losing audio is worse than not
+/// offering a format that is rare there.
+List<String> importPickerExtensions({TargetPlatform? platform}) => [
+      'wav',
+      'mp3',
+      'flac',
+      'ogg',
+      'opus',
+      'oga',
+      'm4a',
+      'aac',
+      'mp4',
+      ...switch (platform ?? defaultTargetPlatform) {
+        TargetPlatform.windows => const ['wma'],
+        TargetPlatform.macOS ||
+        TargetPlatform.iOS =>
+          const ['aiff', 'aif', 'caf'],
+        TargetPlatform.linux => const ['wma', 'aiff', 'aif'],
+        TargetPlatform.android || TargetPlatform.fuchsia => const <String>[],
+      },
+    ];
 
 /// Returns `true` if [ext] (with leading dot, lowercase) is a lossless format.
 bool isLossless(String ext) => _losslessExts.contains(ext);
@@ -100,6 +113,13 @@ bool isLossless(String ext) => _losslessExts.contains(ext);
 /// Returns `true` if [ext] is one SoLoud can decode without conversion.
 bool isNativelyPlayable(String ext) =>
     _nativePlayableExts.contains(ext.toLowerCase());
+
+/// Whether playing [path] depends on FFmpeg, which the Linux packages only
+/// recommend. An upgraded install can have an old `.m4a` or `.aac` clip and no
+/// FFmpeg, so errors on those clips say to install it.
+bool mayNeedFfmpeg(String path, {TargetPlatform? platform}) =>
+    (platform ?? defaultTargetPlatform) == TargetPlatform.linux &&
+    !isNativelyPlayable(p.extension(path));
 
 /// Returns the target extension for an import, or `null` to keep the file
 /// as-is.

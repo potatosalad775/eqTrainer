@@ -42,7 +42,7 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 |----------|-----------------|---------------------------------------------------------------------------------------------------|
 | Windows  | 10+             | Works with WASAPI <br/> <sub>*For devices older than Windows 10, please use [v2.3.0][VERSION_2.3.0]*</sub>                             |
 | MacOS    | 12 Monterey     | Supports Intel & Apple Silicon as Universal App                                                                         |
-| Linux    | -               | Works with ALSA & JACK <br/> <sub>*PulseAudio / PipeWire systems are supported through their ALSA compatibility layer.*</sub> <br/> <sub>*GStreamer 1.0+ required for audio format conversion.*</sub> |
+| Linux    | -               | Works with ALSA & JACK <br/> <sub>*PulseAudio / PipeWire systems are supported through their ALSA compatibility layer.*</sub> <br/> <sub>*FFmpeg required for M4A, AAC, AIFF and WMA files.*</sub> |
 | Android  | 7.0             | Works with OpenSL ES & AAudio                                                                     |
 | iOS      | 15.0            | Manual Sideload Required. <br/> Use [Sideloadly][SIDELOADLY] or [Altstore][ALTSTORE].             |
 
@@ -63,11 +63,9 @@ With **Multilingual Support**, anyone can train their listening skills. The beau
 >
 > ### Linux
 >
-> Please note that `GStreamer` is required on Linux for format conversion. While most distros should already have it preinstalled, you can manually install it if needed.
+> WAV, MP3, FLAC and Ogg files work out of the box. M4A, AAC, AIFF and WMA files need `FFmpeg`, which the `.deb` and `.rpm` packages recommend, so most package managers install it for you. If it's missing, you can install it yourself.
 > ```bash
-> sudo apt install \
-> libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-> gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+> sudo apt install ffmpeg
 > ```
 
 

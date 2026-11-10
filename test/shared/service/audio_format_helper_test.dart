@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eq_trainer/shared/service/audio_format_helper.dart';
 
@@ -273,25 +274,72 @@ void main() {
   // importPickerExtensions
   // ---------------------------------------------------------------------------
   group('importPickerExtensions', () {
-    test('offers every natively playable format', () {
-      for (final ext in _native) {
-        expect(
-          importPickerExtensions,
-          contains(ext.replaceFirst('.', '')),
-          reason: '$ext plays natively and should be offerable',
-        );
-      }
-    });
+    for (final platform in TargetPlatform.values) {
+      group(platform.name, () {
+        final offered = importPickerExtensions(platform: platform);
 
-    test('carries no leading dots', () {
-      for (final ext in importPickerExtensions) {
-        expect(ext.startsWith('.'), isFalse);
-      }
-    });
+        test('offers every natively playable format', () {
+          for (final ext in _native) {
+            expect(
+              offered,
+              contains(ext.replaceFirst('.', '')),
+              reason: '$ext plays natively and should be offerable',
+            );
+          }
+        });
 
-    test('has no duplicates', () {
-      expect(importPickerExtensions.toSet().length,
-          equals(importPickerExtensions.length));
+        test('offers M4A and AAC, which every platform can read', () {
+          expect(offered, containsAll(['m4a', 'aac', 'mp4']));
+        });
+
+        test('carries no leading dots', () {
+          for (final ext in offered) {
+            expect(ext.startsWith('.'), isFalse);
+          }
+        });
+
+        test('has no duplicates', () {
+          expect(offered.toSet().length, equals(offered.length));
+        });
+
+        test('never offers .alac, which nothing was tested against', () {
+          expect(offered, isNot(contains('alac')));
+        });
+      });
+    }
+
+    // What the format matrix measured as failing on each platform.
+    test('leaves out what the platform cannot read', () {
+      const aiffAndCaf = ['aiff', 'aif', 'caf'];
+      List<String> on(TargetPlatform platform) =>
+          importPickerExtensions(platform: platform);
+
+      expect(on(TargetPlatform.windows), contains('wma'));
+      for (final ext in aiffAndCaf) {
+        expect(on(TargetPlatform.windows), isNot(contains(ext)));
+        expect(on(TargetPlatform.android), isNot(contains(ext)));
+        expect(on(TargetPlatform.macOS), contains(ext));
+        expect(on(TargetPlatform.iOS), contains(ext));
+      }
+      expect(on(TargetPlatform.macOS), isNot(contains('wma')));
+      expect(on(TargetPlatform.iOS), isNot(contains('wma')));
+      expect(on(TargetPlatform.android), isNot(contains('wma')));
+
+      // CAF ALAC decodes short on FFmpeg 8.1 and 9.0.
+      expect(on(TargetPlatform.linux), containsAll(['wma', 'aiff', 'aif']));
+      expect(on(TargetPlatform.linux), isNot(contains('caf')));
+    });
+  });
+
+  group('mayNeedFfmpeg', () {
+    test('is only Linux, and only what the engine does not read itself', () {
+      for (final path in ['/clips/1.m4a', '/clips/1.AAC']) {
+        expect(mayNeedFfmpeg(path, platform: TargetPlatform.linux), isTrue);
+        expect(mayNeedFfmpeg(path, platform: TargetPlatform.windows), isFalse);
+      }
+      for (final path in ['/clips/1.wav', '/clips/1.opus', '/clips/1.mp3']) {
+        expect(mayNeedFfmpeg(path, platform: TargetPlatform.linux), isFalse);
+      }
     });
   });
 
