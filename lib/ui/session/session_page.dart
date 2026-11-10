@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/result/result_page.dart';
 import 'package:eq_trainer/data/player_service.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
@@ -24,7 +24,7 @@ class _SessionPageState extends State<SessionPage> {
   // A session's state lives exactly as long as this page: made here when the
   // session starts and dropped in dispose(), so nothing carries over to the
   // next one.
-  final player = PlayerService();
+  late final PlayerService player;
   final _store = SessionStore();
   late final SessionController _controller;
 
@@ -39,11 +39,11 @@ class _SessionPageState extends State<SessionPage> {
     // or a DAP, and the session is the one screen where that matters. The
     // migration holds at its next clip boundary until this page is gone.
     _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
+    player = PlayerService(context.read<OutputSelection>());
     _controller = SessionController(
       player: player,
       sessionStore: _store,
       clipLibrary: context.read<ClipLibrary>(),
-      audioState: context.read<AudioState>(),
       // Frozen now: what the user does on the config page later cannot reach
       // this session.
       settings: context.read<SessionParameter>().snapshot(),

@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/session/clip_queue.dart';
@@ -66,14 +65,12 @@ class SessionController {
     required PlayerService player,
     required SessionStore sessionStore,
     required ClipLibrary clipLibrary,
-    required AudioState audioState,
     required SessionSettings settings,
     required bool volumeCompensation,
     Random? random,
   })  : _player = player,
         _store = sessionStore,
         _clipLibrary = clipLibrary,
-        _audioState = audioState,
         _settings = settings,
         _volumeCompensation = volumeCompensation,
         _random = random;
@@ -81,7 +78,6 @@ class SessionController {
   final PlayerService _player;
   final SessionStore _store;
   final ClipLibrary _clipLibrary;
-  final AudioState _audioState;
   final SessionSettings _settings;
   final bool _volumeCompensation;
   final Random? _random;
@@ -143,8 +139,6 @@ class SessionController {
       for (var attempt = 0; attempt < attempts; attempt++) {
         try {
           await _player.launch(
-            androidBackend: _audioState.androidBackend,
-            outputDevice: _audioState.outputDevice,
             path: _queue.current,
             volumeCompensation: _volumeCompensation,
           );
@@ -295,8 +289,6 @@ class SessionController {
     // the engine and its output device open, so a track switch no longer pays
     // a device re-open.
     await _player.launch(
-      androidBackend: _audioState.androidBackend,
-      outputDevice: _audioState.outputDevice,
       path: path,
       volumeCompensation: _volumeCompensation,
     );

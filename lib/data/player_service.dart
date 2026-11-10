@@ -6,6 +6,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path/path.dart' as p;
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 
 /// Snapshot of the player's transport state, polled for the UI.
@@ -50,6 +51,13 @@ class PlayerPositionResponse extends Equatable {
 /// which awaits the band's fade-out before retuning it. Everything else is
 /// `void`, so a call site can tell at a glance which ones it has to sequence.
 class PlayerService extends ChangeNotifier {
+  /// Where the Android backend and the output device come from. Read at each
+  /// [launch], so a change made while this player is open applies from the next
+  /// clip.
+  PlayerService(this.output);
+
+  final OutputSelection output;
+
   /// How often the transport state is polled for the UI. Unlike the old
   /// isolate poll this is a plain synchronous read, so it cannot back up.
   static const Duration _pollInterval = Duration(milliseconds: 50);
@@ -150,8 +158,6 @@ class PlayerService extends ChangeNotifier {
   /// compensation volume has to be re-applied here — the new voice is a fresh
   /// handle at volume 1.0.
   Future<void> launch({
-    required AndroidAudioBackend androidBackend,
-    required PlaybackDevice? outputDevice,
     required String? path,
     bool volumeCompensation = true,
   }) async {
@@ -164,10 +170,7 @@ class PlayerService extends ChangeNotifier {
     _lastDuration = null;
     notifyListeners();
 
-    await _ensureEngine(
-      androidBackend: androidBackend,
-      outputDevice: outputDevice,
-    );
+    await _ensureEngine();
     await _disposeSource();
 
     // Take the band out on every launch, not just the first.
@@ -225,10 +228,8 @@ class PlayerService extends ChangeNotifier {
   ///
   /// Re-initializing per track would be both slow and pointless: the engine
   /// stops the output device on its own once no voice is playing.
-  Future<void> _ensureEngine({
-    required AndroidAudioBackend androidBackend,
-    required PlaybackDevice? outputDevice,
-  }) async {
+  Future<void> _ensureEngine() async {
+    final outputDevice = output.device;
     if (_soloud.isInitialized) {
       // The device can change while the engine is up (user picks another
       // output). changeDevice reuses the context, so the Android backend
@@ -242,7 +243,7 @@ class PlayerService extends ChangeNotifier {
 
     await _soloud.init(
       device: outputDevice,
-      androidBackend: androidBackend,
+      androidBackend: output.androidBackend,
     );
     _activeDeviceId = outputDevice?.id;
 

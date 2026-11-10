@@ -6,9 +6,8 @@ import 'package:eq_trainer/data/clips/clip_library.dart';
 
 /// The mocktail doubles shared across the unit suites.
 ///
-/// `AudioState` is deliberately absent: it is a `final class`, so it cannot be
-/// mocked. Construct a real one — `AudioState(androidBackend: ..., outputDevice:
-/// null)` needs no engine.
+/// `OutputSelection` is deliberately absent: construct a real one over a
+/// `FakeOutputDevices` (`fake_output_devices.dart`), which needs no engine.
 class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
 
 class MockAppDirectories extends Mock implements AppDirectories {}

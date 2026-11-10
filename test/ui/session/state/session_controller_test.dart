@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
-import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/audio_clip.dart';
@@ -26,14 +24,12 @@ import '../../../helpers/scripted_random.dart';
 // reaches the store, and in what order.
 void main() {
   setUpAll(() {
-    registerFallbackValue(AndroidAudioBackend.openSles);
     registerFallbackValue(Duration.zero);
   });
 
   group('SessionController', () {
     late MockPlayerService player;
     late MockClipLibrary library;
-    late AudioState audioState;
     late SessionStore store;
     late SessionParameter parameter;
 
@@ -44,10 +40,6 @@ void main() {
     setUp(() {
       player = MockPlayerService();
       library = MockClipLibrary();
-      audioState = AudioState(
-        androidBackend: AndroidAudioBackend.openSles,
-        outputDevice: null,
-      );
       store = SessionStore();
       parameter = SessionParameter()..filterType = FilterType.peak;
 
@@ -63,8 +55,6 @@ void main() {
       when(() => player.setEQGain(any())).thenReturn(null);
       when(() => player.setEQQ(any())).thenReturn(null);
       when(() => player.launch(
-            androidBackend: any(named: 'androidBackend'),
-            outputDevice: null,
             path: any(named: 'path'),
             volumeCompensation: any(named: 'volumeCompensation'),
           )).thenAnswer((_) async {});
@@ -81,7 +71,6 @@ void main() {
 
     tearDown(() {
       store.dispose();
-      audioState.dispose();
     });
 
     /// A controller whose rounds come up in [script]: first the launch's
@@ -96,7 +85,6 @@ void main() {
           player: player,
           sessionStore: sessionStore ?? store,
           clipLibrary: clipLibrary ?? library,
-          audioState: audioState,
           settings: parameter.snapshot(),
           volumeCompensation: true,
           random: ScriptedRandom(script),
@@ -371,16 +359,12 @@ void main() {
 
       /// The paths the player was asked to load, in order.
       List<String> loaded() => verify(() => player.launch(
-            androidBackend: any(named: 'androidBackend'),
-            outputDevice: any(named: 'outputDevice'),
             path: captureAny(named: 'path'),
             volumeCompensation: any(named: 'volumeCompensation'),
           )).captured.cast<String>();
 
       void launchThrowsFor(String path, [Object error = 'cannot decode']) {
         when(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: null,
               path: path,
               volumeCompensation: any(named: 'volumeCompensation'),
             )).thenThrow(error);
@@ -400,8 +384,6 @@ void main() {
             () => player.fetchEQState,
             () => player.pause(),
             () => player.launch(
-                  androidBackend: AndroidAudioBackend.openSles,
-                  outputDevice: null,
                   path: '/b',
                   volumeCompensation: true,
                 ),
@@ -428,8 +410,6 @@ void main() {
           // launch() takes the band out, so the player reports it off by the
           // time the round is re-applied. What counts is what it said before.
           when(() => player.launch(
-                androidBackend: any(named: 'androidBackend'),
-                outputDevice: null,
                 path: any(named: 'path'),
                 volumeCompensation: any(named: 'volumeCompensation'),
               )).thenAnswer((_) async {
@@ -483,8 +463,6 @@ void main() {
           expect(result.status, TrackSwitchStatus.restarted);
           verify(() => player.seek(Duration.zero)).called(1);
           verifyNever(() => player.launch(
-                androidBackend: any(named: 'androidBackend'),
-                outputDevice: any(named: 'outputDevice'),
                 path: any(named: 'path'),
                 volumeCompensation: any(named: 'volumeCompensation'),
               ));
@@ -590,8 +568,6 @@ void main() {
           verify(() => library.resolvePath(any())).called(3);
           verifyNever(() => player.pause());
           verifyNever(() => player.launch(
-                androidBackend: any(named: 'androidBackend'),
-                outputDevice: any(named: 'outputDevice'),
                 path: any(named: 'path'),
                 volumeCompensation: any(named: 'volumeCompensation'),
               ));
@@ -613,8 +589,6 @@ void main() {
         final controller = await launched(['/a', '/b', '/c']);
         final loading = Completer<void>();
         when(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: null,
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             )).thenAnswer((_) => loading.future);
@@ -643,8 +617,6 @@ void main() {
         clearInteractions(player);
         final loading = Completer<void>();
         when(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: null,
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             )).thenAnswer((_) => loading.future);
@@ -749,8 +721,6 @@ void main() {
           final controller = await launched(['/a', '/b', '/c']);
           when(() => player.fetchEQState).thenReturn(true);
           when(() => player.launch(
-                androidBackend: any(named: 'androidBackend'),
-                outputDevice: null,
                 path: '/b',
                 volumeCompensation: any(named: 'volumeCompensation'),
               )).thenAnswer((_) async {
@@ -829,8 +799,6 @@ void main() {
         expect(store.sessionState, equals(SessionState.ready));
         expect(controller.clipPaths, equals(['/a.flac', '/b.flac']));
         verify(() => player.launch(
-              androidBackend: AndroidAudioBackend.openSles,
-              outputDevice: null,
               path: '/a.flac',
               volumeCompensation: true,
             )).called(1);
@@ -846,16 +814,12 @@ void main() {
       group('a clip that fails to load at the start', () {
         void launchThrowsFor(String path, [Object error = 'cannot decode']) {
           when(() => player.launch(
-                androidBackend: any(named: 'androidBackend'),
-                outputDevice: null,
                 path: path,
                 volumeCompensation: any(named: 'volumeCompensation'),
               )).thenThrow(error);
         }
 
         List<String> loaded() => verify(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: any(named: 'outputDevice'),
               path: captureAny(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             )).captured.cast<String>();
@@ -952,8 +916,6 @@ void main() {
           when(library.enabledClipPaths)
               .thenAnswer((_) async => ['/a', '/b', '/c']);
           when(() => player.launch(
-                androidBackend: any(named: 'androidBackend'),
-                outputDevice: null,
                 path: '/a',
                 volumeCompensation: any(named: 'volumeCompensation'),
               )).thenAnswer((_) async {
@@ -1001,8 +963,6 @@ void main() {
 
         expect(store.sessionState, equals(SessionState.playlistEmpty));
         verifyNever(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: any(named: 'outputDevice'),
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             ));
@@ -1058,8 +1018,6 @@ void main() {
         expect(store.sessionState, equals(SessionState.init));
         expect(controller.clipPaths, isEmpty);
         verifyNever(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: any(named: 'outputDevice'),
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             ));
@@ -1067,8 +1025,6 @@ void main() {
 
       test('a player that fails to open reports error and rethrows', () async {
         when(() => player.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: null,
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             )).thenThrow(StateError('no device'));

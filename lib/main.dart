@@ -4,7 +4,6 @@ import 'package:eq_trainer/ui/core/third_party_licenses.dart';
 import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -13,7 +12,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/main_page.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/locale_provider.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
@@ -46,6 +45,9 @@ Future<void> main() async {
   await migrateLegacySettings(prefs);
   final localeProvider = await LocaleProvider.load();
   final miscSettings = await MiscSettingsProvider.load();
+
+  // The one instance everything shares: the engine reads it at each launch
+  final outputSelection = OutputSelection(prefs: prefs);
 
   // Load Playlist Data - the one instance everything shares, see AudioClipRepository
   final clipRepository = await AudioClipRepository.open(
@@ -91,7 +93,7 @@ Future<void> main() async {
         clipFormatMigration: clipFormatMigration,
         localeProvider: localeProvider,
         miscSettings: miscSettings,
-        androidBackend: readAndroidBackend(prefs),
+        outputSelection: outputSelection,
         clipRepository: clipRepository,
         clipLibrary: clipLibrary,
       ),
@@ -106,7 +108,7 @@ class App extends StatefulWidget {
     required this.clipFormatMigration,
     required this.localeProvider,
     required this.miscSettings,
-    required this.androidBackend,
+    required this.outputSelection,
     required this.clipRepository,
     required this.clipLibrary,
   });
@@ -115,38 +117,31 @@ class App extends StatefulWidget {
   final ClipFormatMigration clipFormatMigration;
   final LocaleProvider localeProvider;
   final MiscSettingsProvider miscSettings;
-  final AndroidAudioBackend androidBackend;
+  /// Made in main() and owned there, so the app only starts and stops its
+  /// device watching.
+  final OutputSelection outputSelection;
   final AudioClipRepository clipRepository;
   final ClipLibrary clipLibrary;
-
-  static AppState of(BuildContext context) {
-    return context.findAncestorStateOfType<AppState>()!;
-  }
 
   @override
   State<App> createState() => AppState();
 }
 
 class AppState extends State<App> with WidgetsBindingObserver {
-  late AudioState _audioState;
-
   @override
   void initState() {
     super.initState();
-    _audioState = AudioState.initialize(androidBackend: widget.androidBackend);
-    _audioState.startDevicePolling();
+    widget.outputSelection.startWatching();
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Device polling itself is already desktop-only (see
-    // AudioState.startDevicePolling) because creating a parallel
-    // AudioDeviceContext can interfere with an active AAudio playback device
-    // on Android. This resume-triggered refresh needs the same gate.
+    // Watching is desktop-only (see OutputSelection.watchesDevices), and this
+    // resume-triggered refresh needs the same gate.
     if (state == AppLifecycleState.resumed &&
-        (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
-      _audioState.refreshDevices();
+        widget.outputSelection.watchesDevices) {
+      widget.outputSelection.refresh();
     }
   }
 
@@ -179,7 +174,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _audioState.dispose();
+    widget.outputSelection.stopWatching();
     super.dispose();
   }
 
@@ -192,7 +187,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
 
         // UI-level
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
-        ChangeNotifierProvider<AudioState>.value(value: _audioState),
+        ChangeNotifierProvider<OutputSelection>.value(value: widget.outputSelection),
 
         // Repository
         Provider<IAudioClipRepository>.value(value: widget.clipRepository),
@@ -232,18 +227,6 @@ class AppState extends State<App> with WidgetsBindingObserver {
         debugShowCheckedModeBanner: false,
       ),
     );
-  }
-
-  void applyAudioState(AudioState newState) {
-    final oldState = _audioState;
-    oldState.stopDevicePolling();
-    setState(() {
-      _audioState = newState;
-    });
-    _audioState.startDevicePolling();
-    // Deferred so Provider<AudioState>.value has rebuilt and detached its
-    // listener from oldState before we dispose it.
-    WidgetsBinding.instance.addPostFrameCallback((_) => oldState.dispose());
   }
 }
 

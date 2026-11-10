@@ -10,6 +10,7 @@ import 'package:eq_trainer/data/player_service.dart';
 
 import 'helpers/fixture_formats.dart';
 import 'helpers/fixtures.dart';
+import 'helpers/output.dart';
 
 /// Exercises [PlayerService] against a real SoLoud engine and a real output
 /// device. The native filter's own correctness (response vs RBJ, fade
@@ -35,8 +36,8 @@ void main() {
 
   tearDownAll(() => fixtures.dispose());
 
-  setUp(() {
-    player = PlayerService();
+  setUp(() async {
+    player = PlayerService(await testOutputSelection());
   });
 
   tearDown(() async {
@@ -46,8 +47,6 @@ void main() {
 
   Future<void> launch(String name, {bool volumeCompensation = true}) async {
     await player.launch(
-      androidBackend: defaultAndroidBackend,
-      outputDevice: null,
       path: fixture(name),
       volumeCompensation: volumeCompensation,
     );
@@ -72,8 +71,6 @@ void main() {
         await File(path).writeAsBytes(base64Decode(format.base64Data));
 
         await player.launch(
-          androidBackend: defaultAndroidBackend,
-          outputDevice: null,
           path: path,
           volumeCompensation: true,
         );

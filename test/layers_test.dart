@@ -21,14 +21,9 @@ const _knownViolations = <String>{
   'lib/ui/settings/audio_settings_page.dart -> dart:io',
   // Rule 1: ui must not import package:path.
   'lib/ui/import/import_page.dart -> package:path/path.dart',
-  // Rule 1: ui must not import shared_preferences.
-  'lib/ui/settings/audio_backend_page.dart -> package:shared_preferences/shared_preferences.dart',
   // Rule 4: domain and data take only package:flutter/foundation.dart.
   'lib/data/misc_settings_provider.dart -> package:flutter/material.dart',
   'lib/data/clips/clip_format_migration.dart -> package:flutter/scheduler.dart',
-  // Rule 5: nothing in the layers imports main.dart.
-  'lib/ui/core/widget/device_dropdown.dart -> package:eq_trainer/main.dart',
-  'lib/ui/settings/audio_backend_page.dart -> package:eq_trainer/main.dart',
 };
 
 const _mainUri = 'package:eq_trainer/main.dart';

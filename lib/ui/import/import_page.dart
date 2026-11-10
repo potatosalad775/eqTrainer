@@ -10,7 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/import/import_audio_data.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/import_player.dart';
 import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
@@ -30,7 +30,7 @@ class _ImportPageState extends State<ImportPage> {
   final importPageState =
       ValueNotifier<ImportPageState>(ImportPageState.loading);
   final clipDivProvider = ImportAudioData();
-  final importPlayer = ImportPlayer();
+  late final ImportPlayer importPlayer;
   bool _importing = false;
   // Path of a temp file created by format conversion (see importFile), if
   // any. Cleaned up on dispose regardless of whether the import completed or
@@ -47,6 +47,7 @@ class _ImportPageState extends State<ImportPage> {
     // The editor plays audio, and an import decodes and encodes on the same
     // whole-file path as the migration, so running both doubles the memory peak.
     _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
+    importPlayer = ImportPlayer(context.read<OutputSelection>());
     _init();
   }
 
@@ -192,7 +193,6 @@ class _ImportPageState extends State<ImportPage> {
     if (_importing) return;
     _importing = true;
 
-    final audioState = Provider.of<AudioState>(context, listen: false);
     final workflow = context.read<ImportWorkflowService>();
 
     final List<PlatformFile> importResult;
@@ -260,7 +260,6 @@ class _ImportPageState extends State<ImportPage> {
 
     try {
       final duration = await workflow.loadAudioFile(
-        audioState: audioState,
         importPlayer: importPlayer,
         filePath: filePath,
         originalPath: originalPath,

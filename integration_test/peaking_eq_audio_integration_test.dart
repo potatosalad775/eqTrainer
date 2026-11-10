@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:eq_trainer/data/player_service.dart';
 
 import 'helpers/fixtures.dart';
+import 'helpers/output.dart';
 
 /// End-to-end check that the peaking EQ actually shapes eqTrainer's audio.
 ///
@@ -55,13 +56,11 @@ void main() {
     required double gainDb,
     double q = 1,
   }) async {
-    final player = PlayerService();
+    final player = PlayerService(await testOutputSelection());
     final chunks = <Uint8List>[];
     StreamSubscription<Uint8List>? sub;
     try {
       await player.launch(
-        androidBackend: defaultAndroidBackend,
-        outputDevice: null,
         path: fixtures.path(TestFixtures.sine440hz3sFlac),
         volumeCompensation: false,
       );

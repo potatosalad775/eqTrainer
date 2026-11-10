@@ -4,9 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
-import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
 
-import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/import_player.dart';
 import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 
@@ -27,8 +25,6 @@ void main() {
   late Directory srcDir;
   late FakeClipEncoder encoder;
   late ImportWorkflowService service;
-
-  setUpAll(() => registerFallbackValue(AndroidAudioBackend.openSles));
 
   setUp(() async {
     tmpRoot = await Directory.systemTemp.createTemp('eqt_import_tmp_');
@@ -112,38 +108,26 @@ void main() {
 
   group('loadAudioFile', () {
     late _MockImportPlayer player;
-    late AudioState audioState;
 
     setUp(() {
       player = _MockImportPlayer();
-      audioState = AudioState(
-        androidBackend: AndroidAudioBackend.openSles,
-        outputDevice: null,
-      );
       when(() => player.launch(
-            androidBackend: any(named: 'androidBackend'),
-            outputDevice: null,
             path: any(named: 'path'),
             volumeCompensation: any(named: 'volumeCompensation'),
           )).thenAnswer((_) async {});
     });
-
-    tearDown(() => audioState.dispose());
 
     test('returns the duration the player reports once loaded', () async {
       when(() => player.fetchDuration)
           .thenReturn(const Duration(seconds: 42));
 
       final duration = await service.loadAudioFile(
-        audioState: audioState,
         importPlayer: player,
         filePath: '/x.flac',
       );
 
       expect(duration, equals(const Duration(seconds: 42)));
       verify(() => player.launch(
-            androidBackend: AndroidAudioBackend.openSles,
-            outputDevice: null,
             path: '/x.flac',
             volumeCompensation: any(named: 'volumeCompensation'),
           )).called(1);
@@ -154,7 +138,6 @@ void main() {
 
       await expectLater(
         service.loadAudioFile(
-          audioState: audioState,
           importPlayer: player,
           filePath: '/empty.flac',
         ),

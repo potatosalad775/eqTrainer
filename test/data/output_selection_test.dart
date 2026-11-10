@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eq_trainer/data/output_selection.dart';
 
+import '../helpers/fake_output_devices.dart';
+
 /// eqTrainer has always pinned Android to OpenSL ES because several Digital
 /// Audio Players accept an AAudio stream and then glitch on it, while SoLoud's
 /// own default prefers AAudio on API >= 30. Reading the setting wrong therefore
@@ -35,23 +37,20 @@ void main() {
   });
 
   group('OutputSelection', () {
-    // PlaybackDevice's constructor is @internal to flutter_soloud; tests build
-    // them by hand since no engine is up.
     PlaybackDevice dev(int id, String name, {bool isDefault = false}) =>
-        // ignore: invalid_use_of_internal_member
-        PlaybackDevice(id, isDefault, name);
+        playbackDevice(id, name, isDefault: isDefault);
 
     final speakers = dev(1, 'Speakers', isDefault: true);
     final dac = dev(2, 'DAC');
     final usb = dev(3, 'USB Headset');
 
     late SharedPreferences prefs;
-    late _FakeDevices fake;
+    late FakeOutputDevices fake;
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
-      fake = _FakeDevices([speakers, dac]);
+      fake = FakeOutputDevices([speakers, dac]);
     });
 
     OutputSelection make({bool isAndroid = false, bool watches = false}) =>
@@ -213,17 +212,4 @@ void main() {
       });
     });
   });
-}
-
-class _FakeDevices implements OutputDevices {
-  _FakeDevices(this.devices);
-
-  List<PlaybackDevice> devices;
-  Object? error;
-
-  @override
-  List<PlaybackDevice> list() {
-    if (error != null) throw error!;
-    return devices;
-  }
 }

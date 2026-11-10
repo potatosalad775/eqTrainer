@@ -2,10 +2,8 @@ import 'package:eq_trainer/ui/core/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
-import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 
 /// Picks the native backend the engine opens the Android output device with.
 ///
@@ -39,15 +37,17 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
   @override
   void initState() {
     super.initState();
-    _selected = context.read<AudioState>().androidBackend;
+    _selected = context.read<OutputSelection>().androidBackend;
   }
 
   Future<void> _apply() async {
-    // Keep whatever output device is in effect: this page only changes which
-    // API opens it, and dropping the selection here would silently undo the
-    // user's choice in the device dropdown.
-    final outputDevice = context.read<AudioState>().outputDevice;
-    await saveAndroidBackend(await SharedPreferences.getInstance(), _selected);
+    // Read before the await: the page may be gone by the time it ends.
+    final selection = context.read<OutputSelection>();
+    final l10n = context.l10n;
+    final backend = _selected;
+    // Only the backend changes. The device choice stays as it is, so what the
+    // user picked in the device dropdown is not undone here.
+    await selection.setAndroidBackend(backend);
 
     if (!mounted) return;
     // The engine reads the backend at init only, so a change taken now would
@@ -55,15 +55,9 @@ class _AudioBackendPageState extends State<AudioBackendPage> {
     // switch happened.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(context.l10n.audioSettingBackendSnackbarNotify(
-          backend: _backendName(context.l10n, _selected),
+        content: Text(l10n.audioSettingBackendSnackbarNotify(
+          backend: _backendName(l10n, backend),
         )),
-      ),
-    );
-    App.of(context).applyAudioState(
-      AudioState(
-        androidBackend: _selected,
-        outputDevice: outputDevice,
       ),
     );
   }
