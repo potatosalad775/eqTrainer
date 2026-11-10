@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:eq_trainer/ui/import/widget/editor_clip_button_group.dart';
 import 'package:eq_trainer/ui/import/widget/editor_clip_save_button.dart';
 import 'package:eq_trainer/ui/import/widget/editor_control_button_group.dart';
@@ -12,15 +11,23 @@ import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/import/import_audio_data.dart';
 import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/import_player.dart';
-import 'package:eq_trainer/data/clips/import_workflow_service.dart';
-import 'package:eq_trainer/domain/audio_format_helper.dart';
-import 'package:eq_trainer/data/clips/clip_encoder.dart';
+import 'package:eq_trainer/data/clips/audio_clip_service.dart';
+import 'package:eq_trainer/data/clips/clip_import.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
-import 'package:path/path.dart' as p;
+import 'package:eq_trainer/domain/audio_format_helper.dart';
+import 'package:eq_trainer/ui/import/import_failure_message.dart';
 
 class ImportPage extends StatefulWidget {
-  const ImportPage({super.key});
+  const ImportPage({super.key, this.createImport, this.createPlayer});
+
+  /// Replaces the [ClipImport] and the [ImportPlayer] the page builds, so a test
+  /// can reach neither the engine nor the encoder.
+  @visibleForTesting
+  final ClipImport Function(BuildContext context)? createImport;
+
+  @visibleForTesting
+  final ImportPlayer Function(BuildContext context)? createPlayer;
 
   @override
   State<ImportPage> createState() => _ImportPageState();
@@ -31,21 +38,26 @@ class _ImportPageState extends State<ImportPage> {
       ValueNotifier<ImportPageState>(ImportPageState.loading);
   final clipDivProvider = ImportAudioData();
   late final ImportPlayer importPlayer;
+  late final ClipImport clipImport;
   bool _importing = false;
-  // Path of a temp file created by format conversion (see importFile), if
-  // any. Cleaned up on dispose regardless of whether the import completed or
-  // was aborted, so it doesn't linger in the temp dir forever.
-  String? _tempConvertedPath;
+  // Why the page is in [ImportPageState.failed]. Set just before the state.
+  ImportFailure _failure = ImportFailure.other;
 
   @override
   void initState() {
     super.initState();
     // The editor plays audio, and an import decodes and encodes on the same
     // whole-file path as the migration, so running both doubles the memory peak.
-    importPlayer = ImportPlayer(
-      context.read<OutputSelection>(),
-      hold: context.read<ClipFormatMigration>(),
-    );
+    importPlayer = widget.createPlayer?.call(context) ??
+        ImportPlayer(
+          context.read<OutputSelection>(),
+          hold: context.read<ClipFormatMigration>(),
+        );
+    clipImport = widget.createImport?.call(context) ??
+        ClipImport(
+          clips: context.read<AudioClipService>(),
+          importFormat: context.read<MiscSettingsProvider>().importFormat,
+        );
     _init();
   }
 
@@ -53,30 +65,17 @@ class _ImportPageState extends State<ImportPage> {
   void dispose() {
     clipDivProvider.dispose();
     importPlayer.dispose();
-    final tempPath = _tempConvertedPath;
-    if (tempPath != null) unawaited(_deleteTemp(tempPath));
+    clipImport.dispose();
     super.dispose();
-  }
-
-  /// Best-effort: dispose() can't await it, and an orphaned temp file is a
-  /// smaller problem than blocking teardown on disk I/O.
-  Future<void> _deleteTemp(String path) async {
-    try {
-      await File(path).delete();
-    } catch (_) {}
   }
 
   Future<void> _init() async {
     await importFile();
   }
 
-  ImportPageState _failureState(Object error) {
-    if (error is UnsupportedChannelCountException) {
-      return ImportPageState.tooManyChannels;
-    }
-    return isUnreadableAudioError(error)
-        ? ImportPageState.unsupported
-        : ImportPageState.error;
+  void _fail(ImportFailure failure) {
+    _failure = failure;
+    importPageState.value = ImportPageState.failed;
   }
 
   @override
@@ -85,6 +84,7 @@ class _ImportPageState extends State<ImportPage> {
       providers: [
         ChangeNotifierProvider<ImportAudioData>.value(value: clipDivProvider),
         ChangeNotifierProvider<ImportPlayer>.value(value: importPlayer),
+        Provider<ClipImport>.value(value: clipImport),
       ],
       child: PopScope(
         canPop: false,
@@ -102,21 +102,15 @@ class _ImportPageState extends State<ImportPage> {
                 child: ValueListenableBuilder<ImportPageState>(
                   valueListenable: importPageState,
                   builder: (context, value, _) {
-                    final failure = switch (value) {
-                      ImportPageState.error ||
-                      ImportPageState.timeout =>
-                        context.l10n.importAlertErrorContent,
-                      ImportPageState.unsupported => Platform.isLinux
-                          ? context.l10n.importAlertUnsupportedContentLinux
-                          : context.l10n.importAlertUnsupportedContent,
-                      ImportPageState.tooManyChannels =>
-                        context.l10n.importAlertTooManyChannelsContent,
-                      _ => null,
-                    };
-                    if (failure != null) {
+                    if (value == ImportPageState.failed ||
+                        value == ImportPageState.timeout) {
                       return AlertDialog(
                         title: Text(context.l10n.importAlertErrorTitle),
-                        content: Text(failure),
+                        content: Text(importFailureMessage(
+                          context.l10n,
+                          _failure,
+                          other: context.l10n.importAlertErrorContent,
+                        )),
                         actions: [
                           TextButton(
                             onPressed: () {
@@ -190,8 +184,6 @@ class _ImportPageState extends State<ImportPage> {
     if (_importing) return;
     _importing = true;
 
-    final workflow = context.read<ImportWorkflowService>();
-
     final List<PlatformFile> importResult;
     try {
       importResult = await FilePicker.pickFiles(
@@ -202,7 +194,7 @@ class _ImportPageState extends State<ImportPage> {
       );
     } catch (e) {
       debugPrint("Error picking file: $e");
-      if (mounted) importPageState.value = ImportPageState.error;
+      if (mounted) _fail(ImportFailure.other);
       return;
     }
 
@@ -214,58 +206,44 @@ class _ImportPageState extends State<ImportPage> {
     }
 
     final pickedFile = importResult.first;
-    final String? originalPath = pickedFile.path;
-    if (originalPath == null) {
-      importPageState.value = ImportPageState.error;
+    final String? pickedPath = pickedFile.path;
+    if (pickedPath == null) {
+      _fail(ImportFailure.other);
       return;
     }
-    String filePath = originalPath;
 
-    final fileName = p.basenameWithoutExtension(pickedFile.name);
-    final fileExtension = pickedFile.extension?.toLowerCase();
-
-    // Determine target format based on user's import format setting
-    final sourceExt = '.${fileExtension ?? ''}';
-    final importFormat = context.read<MiscSettingsProvider>().importFormat;
-    final targetExt = targetExtForImport(sourceExt, importFormat);
-
-    if (targetExt != null) {
+    if (clipImport.needsConversion(pickedFile.name)) {
       importPageState.value = ImportPageState.converting;
-      try {
-        filePath = await workflow.convertTo(
-          fileNameWithoutExt: fileName,
-          sourcePath: filePath,
-          targetExt: targetExt,
-        );
-        // A conversion cannot be cancelled, so the user may have left while it
-        // ran, and dispose() has already looked for this file.
-        if (!mounted) {
-          await _deleteTemp(filePath);
-          return;
-        }
-        // Track the converted temp file so it's cleaned up on dispose,
-        // whether the import completes or is aborted.
-        _tempConvertedPath = filePath;
-      } catch (e) {
-        debugPrint("Error converting audio file: $e");
-        importPageState.value = _failureState(e);
-        return;
-      }
+    }
+    final String filePath;
+    try {
+      filePath = await clipImport.prepare(
+        pickedPath: pickedPath,
+        pickedName: pickedFile.name,
+      );
+    } catch (e) {
+      debugPrint("Error converting audio file: $e");
+      _fail(importFailureOf(e));
+      return;
     }
 
     if (!mounted) return;
 
     try {
-      final duration = await workflow.loadAudioFile(
-        importPlayer: importPlayer,
-        filePath: filePath,
-        originalPath: originalPath,
-      );
+      // No polling: SoLoud knows a source's length as soon as it is loaded, so
+      // launch() already has it by the time it returns. A zero duration means
+      // the file decoded to nothing and there is nothing to trim, so it is an
+      // error rather than a "not ready yet" to wait out.
+      await importPlayer.launch(path: filePath);
+      final duration = importPlayer.fetchDuration;
+      if (duration == Duration.zero) {
+        throw Exception('Audio file reported a zero duration: $filePath');
+      }
       clipDivProvider.clipEndTime = duration;
       importPageState.value = ImportPageState.ready;
     } catch (e) {
       debugPrint("Error loading audio file: $e");
-      importPageState.value = _failureState(e);
+      _fail(importFailureOf(e));
     }
   }
 
@@ -300,9 +278,7 @@ enum ImportPageState {
   ready,
   loading,
   converting,
-  error,
-  unsupported,
-  tooManyChannels,
+  failed,
   timeout,
   aborted,
   noedit
