@@ -34,12 +34,13 @@ class AppStorage {
 
 /// Opens the app's storage and migrates what older versions kept in Hive.
 ///
-/// [dataDirectory], [separateDebugData] and [devices] are for tests; each
-/// defaults to the real platform.
+/// [dataDirectory], [separateDebugData], [devices] and [isAndroid] are for
+/// tests; each defaults to the real platform.
 Future<AppStorage> openAppStorage({
   Directory? dataDirectory,
   bool? separateDebugData,
   OutputDevices? devices,
+  bool? isAndroid,
 }) async {
   // Everything below lives in, or is keyed to, this directory
   final dir = dataDirectory ?? await resolveAppDataDir();
@@ -55,15 +56,20 @@ Future<AppStorage> openAppStorage({
   await Hive.initFlutter(dir.path);
 
   // Load Settings - older versions kept these in Hive, so move them first.
-  // Must come before the three below read them: it writes what they read,
-  // including the Android backend.
+  // Must come before OutputSelection is built: it reads the Android backend
+  // once, and the migration is what writes it. The two providers read
+  // preferences live, apart from the import-format tidy-up at construction.
   final prefs = await SharedPreferences.getInstance();
   await migrateLegacySettings(prefs);
   final locale = await LocaleProvider.load();
   final miscSettings = await MiscSettingsProvider.load();
 
   // The one instance everything shares: the engine reads it at each launch
-  final outputSelection = OutputSelection(prefs: prefs, devices: devices);
+  final outputSelection = OutputSelection(
+    prefs: prefs,
+    devices: devices,
+    isAndroid: isAndroid,
+  );
 
   // Load Playlist Data - the one instance everything shares, see AudioClipRepository
   final clipRepository = await AudioClipRepository.open(

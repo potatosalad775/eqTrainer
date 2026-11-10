@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
 import 'package:eq_trainer/data/app_storage.dart';
 import 'package:eq_trainer/data/legacy/legacy_audio_clip.dart';
 import 'package:eq_trainer/data/legacy/setting_data.dart';
@@ -21,10 +22,15 @@ void main() {
 
   late Directory dir;
 
-  Future<AppStorage> open({bool separateDebugData = false}) => openAppStorage(
+  Future<AppStorage> open({
+    bool separateDebugData = false,
+    bool? isAndroid,
+  }) =>
+      openAppStorage(
         dataDirectory: dir,
         separateDebugData: separateDebugData,
         devices: FakeOutputDevices(),
+        isAndroid: isAndroid,
       );
 
   // Written the way older versions did. The names are spelled out because they
@@ -97,16 +103,15 @@ void main() {
   test('what comes back already holds the migrated settings and clips', () async {
     await seedLegacy();
 
-    final storage = await open();
+    final storage = await open(isAndroid: true);
 
     expect(storage.miscSettings.themeMode, ThemeMode.dark);
     expect(storage.miscSettings.importFormat, ImportFormat.allWav);
     expect(storage.miscSettings.frequencyToolTip, isTrue);
     expect(storage.miscSettings.volumeCompensation, isFalse);
-    // OutputSelection ignores the saved backend off Android, so the migrated
-    // value is checked where it is saved.
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('androidBackend'), 'aaudio');
+    // The one value read once at construction, so the one that proves the
+    // settings migration ran before its reader was built.
+    expect(storage.outputSelection.androidBackend, AndroidAudioBackend.aaudio);
 
     final names = storage.clipRepository.getAllClips().map((c) => c.fileName);
     expect(names, ['1000.flac', '2000.wav']);

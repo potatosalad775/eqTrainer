@@ -380,7 +380,7 @@ once `openAppStorage` has loaded it.
 `openAppStorage` (`data/app_storage.dart`) is the one place that knows the load order,
 and `test/data/app_storage_test.dart` checks it: resolve the data directory, set the
 `debug.` preferences prefix before the first `getInstance`, init Hive, migrate settings
-before anything reads them, open the one repository, migrate clips before anything
+before `OutputSelection` is built (it reads the Android backend once), open the one repository, migrate clips before anything
 uses the library. It calls `Hive.initFlutter`, which for an absolute directory also
 registers Hive's Color and TimeOfDay adapters and a flush-on-pause observer.
 
