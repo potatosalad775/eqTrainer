@@ -237,6 +237,39 @@ void main() {
     expect(converted.existsSync(), isFalse);
   });
 
+  testWidgets('leaving mid-save keeps the converted file until it settles',
+      (tester) async {
+    final finish = Completer<void>();
+    bool? existedWhenRead;
+    when(() => clips.createClip(
+          sourcePath: any(named: 'sourcePath'),
+          originalPath: any(named: 'originalPath'),
+          startSec: any(named: 'startSec'),
+          endSec: any(named: 'endSec'),
+          isTrimmed: any(named: 'isTrimmed'),
+          importFormat: any(named: 'importFormat'),
+        )).thenAnswer((invocation) async {
+      await finish.future;
+      existedWhenRead =
+          File(invocation.namedArguments[#sourcePath] as String).existsSync();
+    });
+    await pumpPage(tester, pick: 'song.m4a');
+    final converted = File(p.join(tmp.path, 'temp', 'song.opus'));
+
+    await tester.tap(find.byType(EditorClipSaveButton));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+    expect(converted.existsSync(), isTrue);
+
+    finish.complete();
+    await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump();
+
+    expect(existedWhenRead, isTrue);
+    expect(converted.existsSync(), isFalse);
+  });
+
   testWidgets('a save that fails says why in a snackbar', (tester) async {
     when(() => clips.createClip(
           sourcePath: any(named: 'sourcePath'),
