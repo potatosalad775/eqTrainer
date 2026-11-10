@@ -15,10 +15,19 @@ class PlaylistItemTile extends StatelessWidget {
     super.key,
     required this.index,
     required this.currentClip,
+    required this.isMissing,
+    required this.onRefreshMissing,
   });
 
   final int index;
   final AudioClip currentClip;
+
+  /// The clip's file cannot be found. Its record is kept, so deleting and
+  /// reordering still work, but there is nothing to play or enable.
+  final bool isMissing;
+
+  /// Asks the page to check again, for when the tile finds out first.
+  final VoidCallback onRefreshMissing;
 
   @override
   Widget build(BuildContext context) {
@@ -40,15 +49,22 @@ class PlaylistItemTile extends StatelessWidget {
           softWrap: false,
           overflow: TextOverflow.fade,
         ),
-        subtitle: Text(
-          Duration(milliseconds: (currentClip.duration * 1000).toInt()).toString().substring(2, 10)
-        ),
+        subtitle: isMissing
+            ? Text(
+                context.l10n.playlistAudioFileMissing,
+                style: TextStyle(color: context.colors.error),
+              )
+            : Text(
+                Duration(milliseconds: (currentClip.duration * 1000).toInt()).toString().substring(2, 10)
+              ),
         leading: ReorderableDragStartListener(
           index: index,
           child: IconButton(
-            onPressed: () async {
-              await repo.toggleEnabledById(currentClip.id);
-            },
+            onPressed: isMissing
+                ? null
+                : () async {
+                    await repo.toggleEnabledById(currentClip.id);
+                  },
             icon: Icon(currentClip.isEnabled
                 ? Icons.radio_button_checked
                 : Icons.radio_button_unchecked),
@@ -58,20 +74,26 @@ class PlaylistItemTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              onPressed: () async {
-                final filePath = await library.pathOf(currentClip.id);
-                // A missing file shows nothing for now. The playlist will
-                // show such a clip as not found in a follow-up.
-                if (filePath == null || !context.mounted) return;
-                unawaited(showModalBottomSheet(
-                  isDismissible: false,
-                  enableDrag: false,
-                  context: context,
-                  builder: (context) => SafeArea(
-                    child: PlaylistControlView(filePath: filePath)
-                  ),
-                ));
-              },
+              onPressed: isMissing
+                  ? null
+                  : () async {
+                      final filePath = await library.pathOf(currentClip.id);
+                      if (filePath == null) {
+                        // The file went since the page last looked, so have
+                        // the tile show it as not found.
+                        onRefreshMissing();
+                        return;
+                      }
+                      if (!context.mounted) return;
+                      unawaited(showModalBottomSheet(
+                        isDismissible: false,
+                        enableDrag: false,
+                        context: context,
+                        builder: (context) => SafeArea(
+                          child: PlaylistControlView(filePath: filePath)
+                        ),
+                      ));
+                    },
               icon: const Icon(Icons.play_arrow),
             ),
             PopupMenuButton<int>(
