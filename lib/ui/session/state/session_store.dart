@@ -1,0 +1,262 @@
+import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:eq_trainer/ui/session/state/frequency_calculator.dart';
+import 'package:eq_trainer/ui/session/state/graph_state.dart';
+import 'package:eq_trainer/ui/session/state/session_state.dart';
+import 'package:eq_trainer/domain/session_parameter.dart';
+
+/// SessionStore aggregates session-related UI state into a single source of truth.
+/// Holds frequency/graph data computed by the pure FrequencyCalculator.
+/// The bands results are grouped into, lowest first.
+enum ResultFrequencyBand {
+  subBass('20Hz ~ 80Hz'),
+  midBass('80Hz ~ 200Hz'),
+  lowerMidrange('200Hz ~ 800Hz'),
+  centreMidrange('800Hz ~ 1.5kHz'),
+  upperMidrange('1.5kHz ~ 5kHz'),
+  treble('5kHz ~ 10kHz'),
+  upperTreble('10kHz ~ 20kHz');
+
+  const ResultFrequencyBand(this.range);
+
+  final String range;
+}
+
+class SessionStore extends ChangeNotifier {
+  SessionStore();
+
+  // Session state management (replaces SessionStateData)
+  SessionState _sessionState = SessionState.init;
+  SessionState get sessionState => _sessionState;
+
+  void setSessionState(SessionState state) {
+    _sessionState = state;
+    notifyListeners();
+  }
+
+  // Graph state (loading/ready/error)
+  final ValueNotifier<GraphState> graphStateNotifier = ValueNotifier<GraphState>(GraphState.loading);
+
+  // Graph data snapshot
+  List<LineChartBarData> _graphBarDataList = const [];
+  List<LineChartBarData> get graphBarDataList => _graphBarDataList;
+
+  List<double> _centerFreqLogList = const [];
+  List<double> get centerFreqLogList => _centerFreqLogList;
+
+  List<double> _centerFreqLinearList = const [];
+  List<double> get centerFreqLinearList => _centerFreqLinearList;
+
+  // Picker value - single source of truth (replaces SessionStateData.selectedPickerNum)
+  int _currentPickerValue = 1;
+  int get currentPickerValue => _currentPickerValue;
+
+  void setPickerValue(int newValue) {
+    if (newValue == _currentPickerValue) return;
+    if (_graphBarDataList.isEmpty) return;
+    if (newValue < 1 || newValue > _graphBarDataList.length) return;
+
+    _currentPickerValue = newValue;
+    notifyListeners();
+  }
+
+  // Progress (replaces SessionStateData.currentSessionPoint)
+  int _currentSessionPoint = 0;
+  int get currentSessionPoint => _currentSessionPoint;
+
+  void setCurrentSessionPoint(int point) {
+    _currentSessionPoint = point;
+    notifyListeners();
+  }
+
+  void incrementSessionPoint() {
+    setCurrentSessionPoint(_currentSessionPoint + 1);
+  }
+
+  void decrementSessionPoint() {
+    setCurrentSessionPoint(_currentSessionPoint - 1);
+  }
+
+  void resetSessionPoint() {
+    setCurrentSessionPoint(0);
+  }
+
+  // Session Results (replaces SessionResultData functionality)
+  int _elapsedSession = 0;
+  int get elapsedSession => _elapsedSession;
+
+  List<int> _elapsedSessionPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
+  List<int> get elapsedSessionPerFreq => List<int>.from(_elapsedSessionPerFreq);
+
+  int _resultCorrect = 0;
+  int get resultCorrect => _resultCorrect;
+
+  List<int> _correctAnswerPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
+  List<int> get correctAnswerPerFreq => List<int>.from(_correctAnswerPerFreq);
+
+  int _resultIncorrect = 0;
+  int get resultIncorrect => _resultIncorrect;
+
+  // Reset Session Results
+  void resetResult() {
+    _elapsedSession = 0;
+    _elapsedSessionPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
+    _resultCorrect = 0;
+    _correctAnswerPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
+    _resultIncorrect = 0;
+    notifyListeners();
+  }
+
+  // Consolidated submission update to minimize intermediate rebuilds
+  void applySubmission({required double centerFreq, required bool isCorrect}) {
+    final idx = _getFrequencyBandIndex(centerFreq);
+    _elapsedSession++;
+    _elapsedSessionPerFreq[idx]++;
+    if (isCorrect) {
+      _resultCorrect++;
+      _correctAnswerPerFreq[idx]++;
+      _currentSessionPoint += 1;
+    } else {
+      _resultIncorrect++;
+      _currentSessionPoint -= 1;
+    }
+    notifyListeners();
+  }
+
+  // Get frequency band index based on center frequency
+  int _getFrequencyBandIndex(double centerFreq) {
+    // Sub-Bass - 20 ~ 80
+    if (20 <= centerFreq && centerFreq < 80) { return 0; }
+    // Mid-Bass :: 80 ~ 200
+    else if (80 <= centerFreq && centerFreq < 200) { return 1; }
+    // Lower-Midrange :: 200 ~ 800
+    else if (200 <= centerFreq && centerFreq < 800) { return 2; }
+    // Centre-Midrange :: 800 ~ 1.5k
+    else if (800 <= centerFreq && centerFreq < 1500) { return 3; }
+    // Upper-Midrange :: 1.5k ~ 5k
+    else if (1500 <= centerFreq && centerFreq < 5000) { return 4; }
+    // Treble :: 5k ~ 10k
+    else if (5000 <= centerFreq && centerFreq < 10000) { return 5; }
+    // Upper-Treble :: 10k ~ 20k
+    else { return 6; }
+  }
+
+  // Calculate overall result percentage
+  double get resultPercentage => _elapsedSession > 0 ? _resultCorrect * 100 / _elapsedSession : 0;
+
+  // Get result percentage for specific frequency band
+  String getResultPercentagePerFreq(int index) {
+    if (index < 0 || index >= _elapsedSessionPerFreq.length) return "-";
+    if (_elapsedSessionPerFreq[index] == 0) {
+      return "-";
+    } else {
+      return "${(_correctAnswerPerFreq[index] * 100 / _elapsedSessionPerFreq[index]).toStringAsFixed(2)}%";
+    }
+  }
+
+
+  // Playlist paths and index
+  List<String> _playlistPaths = const [];
+  List<String> get playlistPaths => _playlistPaths;
+
+  int _currentPlayingAudioIndex = 0;
+  int get currentPlayingAudioIndex => _currentPlayingAudioIndex;
+
+  String? get currentClipPath =>
+      (_playlistPaths.isNotEmpty && _currentPlayingAudioIndex >= 0 && _currentPlayingAudioIndex < _playlistPaths.length)
+          ? _playlistPaths[_currentPlayingAudioIndex]
+          : null;
+
+  // --- Frequency/Graph lifecycle ---
+  Future<void> initFrequency({required SessionParameter sessionParameter}) async {
+    graphStateNotifier.value = GraphState.loading;
+    try {
+      final computed = FrequencyCalculator.compute(sessionParameter: sessionParameter);
+
+      _centerFreqLogList = List<double>.from(computed.centerFreqLogList);
+      _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
+      _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
+
+      // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
+      resetPickerValue();
+
+      // Notify listeners so widgets that depend on the graph data (e.g. the
+      // picker's max value) rebuild — resetPickerValue() alone early-returns
+      // without notifying when the picker was already at 1, which would leave
+      // the picker range stale after a threshold-driven band count change.
+      notifyListeners();
+
+      graphStateNotifier.value = GraphState.ready;
+    } catch (_) {
+      graphStateNotifier.value = GraphState.error;
+      rethrow;
+    }
+  }
+
+  void updatePickerValue(int newValue) {
+    setPickerValue(newValue);
+  }
+
+  void resetPickerValue() {
+    setPickerValue(1);
+  }
+
+  @override
+  void dispose() {
+    graphStateNotifier.dispose();
+    super.dispose();
+  }
+
+  // --- Playlist controls ---
+  void setPlaylistPaths(List<String> paths) {
+    _playlistPaths = List<String>.from(paths);
+    _currentPlayingAudioIndex = 0;
+    notifyListeners();
+  }
+
+  void clearPlaylist() {
+    _playlistPaths = const [];
+    _currentPlayingAudioIndex = 0;
+    notifyListeners();
+  }
+
+  /// Repoints the entry at [index] at [path].
+  ///
+  /// The snapshot taken at launch goes stale when a background task rewrites
+  /// a clip to another format mid-session (see
+  /// `PlaylistService.resolveClipPath`). Writing the resolved path back means
+  /// the lookup is paid once per clip rather than on every visit to it.
+  void updatePathAt(int index, String path) {
+    if (index < 0 || index >= _playlistPaths.length) return;
+    if (_playlistPaths[index] == path) return;
+    _playlistPaths = List<String>.from(_playlistPaths)..[index] = path;
+    notifyListeners();
+  }
+
+  void setCurrentPlayingIndex(int index) {
+    if (_playlistPaths.isEmpty) {
+      _currentPlayingAudioIndex = 0;
+    } else {
+      _currentPlayingAudioIndex = index.clamp(0, _playlistPaths.length - 1);
+    }
+    notifyListeners();
+  }
+
+  void nextTrack() {
+    if (_playlistPaths.isEmpty) return;
+    _currentPlayingAudioIndex = (_currentPlayingAudioIndex + 1) % _playlistPaths.length;
+    notifyListeners();
+  }
+
+  void previousTrack({Duration threshold = const Duration(seconds: 3), Duration? currentPosition}) {
+    if (_playlistPaths.isEmpty) return;
+    // If we're past the threshold into the current track, restart it rather than go back.
+    if (currentPosition != null && currentPosition > threshold) return;
+    if (_currentPlayingAudioIndex == 0) {
+      _currentPlayingAudioIndex = _playlistPaths.length - 1;
+    } else {
+      _currentPlayingAudioIndex -= 1;
+    }
+    notifyListeners();
+  }
+}

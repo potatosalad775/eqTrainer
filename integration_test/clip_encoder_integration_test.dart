@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:eq_trainer/shared/player/player_service.dart';
-import 'package:eq_trainer/shared/service/clip_encoder.dart';
-import 'package:eq_trainer/shared/service/wav_pcm.dart';
+import 'package:eq_trainer/data/player_service.dart';
+import 'package:eq_trainer/data/clips/clip_encoder.dart';
+import 'package:eq_trainer/domain/wav_pcm.dart';
 
 import 'helpers/fixture_adts.dart';
 import 'helpers/fixture_formats.dart';

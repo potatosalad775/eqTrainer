@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:eq_trainer/shared/service/clip_encoder.dart';
+import 'package:eq_trainer/data/clips/clip_encoder.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 /// Stands in for [ClipEncoder] so the library-rewrite suites stay headless.
