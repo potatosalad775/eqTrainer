@@ -334,6 +334,9 @@ which keep the record and the file in step. Plain record edits (reorder, enable,
 **A missing clip's record is kept.** `enabledClipPaths` skips a clip whose file is
 gone and never deletes its record, and `rewrite` reports `sourceMissing` and leaves
 it alone. Only the user deletes it. See `docs/adr/0003-missing-clips-are-never-auto-deleted.md`.
+The playlist shows such a clip as not found, with preview and the enable toggle
+disabled. It derives that from `ClipLibrary.missingClipIds`, held apart from the
+list the repository stream draws, and never saves it.
 
 Hive CE is only read now, to migrate what older versions stored. Both migrations
 run in `main()` before anything reads the data, and people can skip releases, so
