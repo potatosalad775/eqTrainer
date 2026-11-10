@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/settings/widget/audio_import_format_card.dart';
 import 'package:eq_trainer/ui/settings/widget/clip_recompress_card.dart';
@@ -6,6 +5,7 @@ import 'package:eq_trainer/ui/settings/audio_backend_page.dart';
 import 'package:eq_trainer/ui/settings/widget/settings_card.dart';
 import 'package:eq_trainer/ui/settings/widget/volume_compensation_card.dart';
 import 'package:eq_trainer/ui/core/app_dimens.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AudioSettingsPage extends StatelessWidget {
@@ -54,7 +54,7 @@ class AudioSettingsPage extends StatelessWidget {
               // platform and gives Dart no way to override it (Windows and
               // Linux never create an explicit miniaudio context at all), so
               // there would be nothing behind this card to choose.
-              if (Platform.isAndroid) ...[
+              if (defaultTargetPlatform == TargetPlatform.android) ...[
                 const Divider(indent: 6, endIndent: 6, height: 32),
                 GestureDetector(
                   child: SettingsCard(
