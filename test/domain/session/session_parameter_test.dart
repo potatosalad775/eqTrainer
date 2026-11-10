@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_settings.dart';
 
 void main() {
   group('SessionParameter', () {

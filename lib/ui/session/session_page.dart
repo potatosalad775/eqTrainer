@@ -8,7 +8,7 @@ import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 

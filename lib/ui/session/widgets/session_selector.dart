@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:toastification/toastification.dart';
 
 class SessionSelector extends StatelessWidget {

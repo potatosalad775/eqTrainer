@@ -2,7 +2,8 @@ import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_settings.dart';
 
 class ConfigCard extends StatelessWidget {
   const ConfigCard({

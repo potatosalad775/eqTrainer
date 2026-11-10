@@ -26,7 +26,7 @@ import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 import 'package:eq_trainer/data/legacy/legacy_clip_migration.dart';
 import 'package:eq_trainer/data/legacy/legacy_settings_migration.dart';
 import 'package:eq_trainer/ui/core/upgrader_service.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 
