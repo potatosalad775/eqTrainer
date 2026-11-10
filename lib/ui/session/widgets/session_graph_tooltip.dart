@@ -1,5 +1,3 @@
-import 'package:eq_trainer/domain/session/session_parameter.dart';
-import 'package:eq_trainer/domain/session/session_settings.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -9,33 +7,26 @@ class SessionGraphTooltip extends StatelessWidget {
   const SessionGraphTooltip({
     super.key,
     required this.constraints,
-    required this.pickerValue,
+    required this.graphIndex,
   });
 
   final BoxConstraints constraints;
-  final int pickerValue;
+
+  /// 0-based, as the domain counts graphs.
+  final int graphIndex;
 
   @override
   Widget build(BuildContext context) {
     final store = context.read<SessionStore>();
-    final filterType = context.read<SessionParameter>().filterType;
-    
-    // In peakDip mode, odd picker values are the peak variant and even are
-    // dip (mirrors the answer-gain inversion in SessionController). In pure
-    // peak/dip mode every graph is that one type regardless of parity.
-    final isPeakPick = filterType == FilterType.peak ||
-        (filterType == FilterType.peakDip && pickerValue % 2 == 1);
-    final isDipPick = filterType == FilterType.dip ||
-        (filterType == FilterType.peakDip && pickerValue % 2 == 0);
-    final top = isPeakPick ? (constraints.maxHeight / 12) - 22 : null;
-    final bottom = isDipPick ? (constraints.maxHeight / 12) : null;
-    final leftPx = filterType == FilterType.peakDip
-        ? store.centerFreqLinearList[(pickerValue - 1) ~/ 2]
-        : store.centerFreqLinearList[pickerValue - 1];
+    final layout = store.layout;
+
+    // A peak's label sits above the axis and a dip's below it.
+    final isDip = layout.isDip(graphIndex);
+    final top = !isDip ? (constraints.maxHeight / 12) - 22 : null;
+    final bottom = isDip ? (constraints.maxHeight / 12) : null;
+    final leftPx = store.centerFreqLinearList[layout.bandOf(graphIndex)];
     final left = leftPx * constraints.maxWidth / 60 - 42;
-    final text = filterType == FilterType.peakDip
-        ? flattenFreq(store.centerFreqLogList[(pickerValue - 1) ~/ 2].toInt())
-        : flattenFreq(store.centerFreqLogList[pickerValue - 1].toInt());
+    final text = flattenFreq(layout.frequencyOf(graphIndex).toInt());
 
     return Positioned(
       top: top,

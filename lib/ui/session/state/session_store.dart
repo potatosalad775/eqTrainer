@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:eq_trainer/ui/session/state/frequency_calculator.dart';
 import 'package:eq_trainer/ui/session/state/graph_state.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
+import 'package:eq_trainer/domain/session/band_layout.dart';
 import 'package:eq_trainer/domain/session/session_parameter.dart';
 
 /// SessionStore aggregates session-related UI state into a single source of truth.
@@ -41,8 +42,12 @@ class SessionStore extends ChangeNotifier {
   List<LineChartBarData> _graphBarDataList = const [];
   List<LineChartBarData> get graphBarDataList => _graphBarDataList;
 
-  List<double> _centerFreqLogList = const [];
-  List<double> get centerFreqLogList => _centerFreqLogList;
+  BandLayout? _layout;
+
+  /// What the graphs currently on screen mean. Only valid once
+  /// [initFrequency] has run.
+  BandLayout get layout =>
+      _layout ?? (throw StateError('the layout is not set before initFrequency'));
 
   List<double> _centerFreqLinearList = const [];
   List<double> get centerFreqLinearList => _centerFreqLinearList;
@@ -50,6 +55,14 @@ class SessionStore extends ChangeNotifier {
   // Picker value - single source of truth (replaces SessionStateData.selectedPickerNum)
   int _currentPickerValue = 1;
   int get currentPickerValue => _currentPickerValue;
+
+  // The picker counts from 1 and graph indices from 0. These two are the only
+  // places that offset is written.
+  static int graphIndexOf(int pickerValue) => pickerValue - 1;
+  static int pickerValueOf(int graphIndex) => graphIndex + 1;
+
+  /// The picked graph, 0-based, as the domain counts them.
+  int get currentGraphIndex => graphIndexOf(_currentPickerValue);
 
   void setPickerValue(int newValue) {
     if (newValue == _currentPickerValue) return;
@@ -171,9 +184,13 @@ class SessionStore extends ChangeNotifier {
   Future<void> initFrequency({required SessionParameter sessionParameter}) async {
     graphStateNotifier.value = GraphState.loading;
     try {
-      final computed = FrequencyCalculator.compute(sessionParameter: sessionParameter);
+      final layout = BandLayout(
+        sessionParameter.startingBand,
+        sessionParameter.filterType,
+      );
+      final computed = FrequencyCalculator.compute(layout);
 
-      _centerFreqLogList = List<double>.from(computed.centerFreqLogList);
+      _layout = layout;
       _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
       _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
 

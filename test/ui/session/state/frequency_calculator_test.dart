@@ -2,77 +2,20 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eq_trainer/ui/session/state/frequency_calculator.dart';
-import 'package:eq_trainer/domain/session/session_parameter.dart';
+import 'package:eq_trainer/domain/session/band_layout.dart';
 import 'package:eq_trainer/domain/session/session_settings.dart';
 
 void main() {
+  FrequencyGraphData compute(int bands, FilterType type) =>
+      FrequencyCalculator.compute(BandLayout(bands, type));
+
   group('FrequencyCalculator.compute', () {
-    late SessionParameter param;
-
-    setUp(() {
-      param = SessionParameter();
-    });
-
-    test('centerFreqLogList has exactly startingBand entries', () {
-      param.startingBand = 5;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      expect(result.centerFreqLogList.length, equals(5));
-    });
-
-    test('centerFreqLinearList has exactly startingBand entries', () {
-      param.startingBand = 4;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      expect(result.centerFreqLinearList.length, equals(4));
-    });
-
-    test('log frequencies stay within [20, 20000] Hz range', () {
-      param.startingBand = 10;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      for (final freq in result.centerFreqLogList) {
-        expect(freq, greaterThanOrEqualTo(20.0));
-        expect(freq, lessThanOrEqualTo(20000.0));
-      }
-    });
-
-    test('log frequencies follow a geometric progression at every step', () {
-      param.startingBand = 6;
-      final freqs =
-          FrequencyCalculator.compute(sessionParameter: param).centerFreqLogList;
-      expect(freqs, hasLength(6));
-      final ratio = freqs[1] / freqs[0];
-      for (var i = 1; i < freqs.length - 1; i++) {
-        expect(freqs[i + 1] / freqs[i], closeTo(ratio, 1e-6),
-            reason: 'step $i broke the progression');
-      }
-    });
-
-    // Every band gets an equal share of the 20 Hz to 20 kHz span on a log
-    // axis and sits at the centre of its slot. That fixes both ends exactly:
-    // the first centre is 20 Hz times half a slot, the last is 20 kHz divided
-    // by half a slot, and the list is geometrically symmetric about the
-    // midpoint of the span, sqrt(20 * 20000) ≈ 632 Hz.
-    test('log frequencies are the centres of equal log-width slots', () {
-      for (final bands in [2, 3, 7, 25]) {
-        param.startingBand = bands;
-        final freqs = FrequencyCalculator.compute(sessionParameter: param)
-            .centerFreqLogList;
-        final halfSlot = pow(1000, 1 / (2 * bands)).toDouble();
-
-        expect(freqs.first, closeTo(20 * halfSlot, 1e-6),
-            reason: '$bands bands: first centre');
-        expect(freqs.last, closeTo(20000 / halfSlot, 1e-6),
-            reason: '$bands bands: last centre');
-        for (var i = 0; i < bands; i++) {
-          expect(freqs[i] * freqs[bands - 1 - i], closeTo(20 * 20000, 1e-3),
-              reason: '$bands bands: pair $i is not symmetric about 632 Hz');
-        }
-      }
+    test('centerFreqLinearList has exactly one entry per band', () {
+      expect(compute(4, FilterType.peakDip).centerFreqLinearList.length, equals(4));
     });
 
     test('linear frequencies are evenly spaced', () {
-      param.startingBand = 5;
-      final linears = FrequencyCalculator.compute(sessionParameter: param)
-          .centerFreqLinearList;
+      final linears = compute(5, FilterType.peakDip).centerFreqLinearList;
       expect(linears, hasLength(5));
       final gap = linears[1] - linears[0];
       for (int i = 1; i < linears.length - 1; i++) {
@@ -85,9 +28,7 @@ void main() {
     // edges, which is what keeps the bell curves inside the chart.
     test('linear frequencies are slot centres symmetric about 30', () {
       for (final bands in [2, 3, 7, 25]) {
-        param.startingBand = bands;
-        final linears = FrequencyCalculator.compute(sessionParameter: param)
-            .centerFreqLinearList;
+        final linears = compute(bands, FilterType.peakDip).centerFreqLinearList;
         final halfSlot = 30 / bands;
 
         expect(linears.first, closeTo(halfSlot, 1e-9));
@@ -102,9 +43,7 @@ void main() {
     // The bell for band i must peak on that band's own x position; a graph
     // whose curves peaked elsewhere would be lying about which band is which.
     test('each bell peaks at its own band centre with the full height', () {
-      param.startingBand = 5;
-      param.filterType = FilterType.peak;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(5, FilterType.peak);
 
       for (var i = 0; i < 5; i++) {
         final centre = result.centerFreqLinearList[i];
@@ -120,9 +59,7 @@ void main() {
     });
 
     test('peakDip interleaves peak then dip for each band', () {
-      param.startingBand = 3;
-      param.filterType = FilterType.peakDip;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(3, FilterType.peakDip);
 
       for (var i = 0; i < 3; i++) {
         final peak = result.graphBarDataList[2 * i].spots;
@@ -137,39 +74,29 @@ void main() {
     });
 
     test('FilterType.peak produces graphBarDataList.length == startingBand', () {
-      param.startingBand = 4;
-      param.filterType = FilterType.peak;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(4, FilterType.peak);
       expect(result.graphBarDataList.length, equals(4));
     });
 
     test('FilterType.dip produces graphBarDataList.length == startingBand', () {
-      param.startingBand = 4;
-      param.filterType = FilterType.dip;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(4, FilterType.dip);
       expect(result.graphBarDataList.length, equals(4));
     });
 
     test('FilterType.peakDip produces graphBarDataList.length == 2 * startingBand', () {
-      param.startingBand = 4;
-      param.filterType = FilterType.peakDip;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(4, FilterType.peakDip);
       expect(result.graphBarDataList.length, equals(8));
     });
 
     test('each graph spot list has 61 points (j = 0..60)', () {
-      param.startingBand = 2;
-      param.filterType = FilterType.peak;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(2, FilterType.peak);
       for (final bar in result.graphBarDataList) {
         expect(bar.spots.length, equals(61));
       }
     });
 
     test('peak spots have positive y values', () {
-      param.startingBand = 2;
-      param.filterType = FilterType.peak;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(2, FilterType.peak);
       // All peak spot y values should be >= 0
       for (final bar in result.graphBarDataList) {
         for (final spot in bar.spots) {
@@ -179,9 +106,7 @@ void main() {
     });
 
     test('dip spots have non-positive y values', () {
-      param.startingBand = 2;
-      param.filterType = FilterType.dip;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
+      final result = compute(2, FilterType.dip);
       // All dip spot y values should be <= 0
       for (final bar in result.graphBarDataList) {
         for (final spot in bar.spots) {
@@ -191,16 +116,12 @@ void main() {
     });
 
     test('works for minimum startingBand of 2', () {
-      param.startingBand = 2;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      expect(result.centerFreqLogList.length, equals(2));
+      final result = compute(2, FilterType.peakDip);
       expect(result.centerFreqLinearList.length, equals(2));
     });
 
     test('works for maximum startingBand of 25', () {
-      param.startingBand = 25;
-      final result = FrequencyCalculator.compute(sessionParameter: param);
-      expect(result.centerFreqLogList.length, equals(25));
+      final result = compute(25, FilterType.peakDip);
       expect(result.centerFreqLinearList.length, equals(25));
     });
   });

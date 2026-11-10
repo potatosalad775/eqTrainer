@@ -5,7 +5,6 @@ import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
 import 'package:eq_trainer/domain/session/session_parameter.dart';
-import 'package:eq_trainer/domain/session/session_settings.dart';
 
 class SessionSubmitResult {
   const SessionSubmitResult({
@@ -25,7 +24,6 @@ class SessionController {
   final _random = Random();
   late int _answerGraphIndex;
   int _prevAnswerGraphIndex = -1;
-  late int _answerFreqIndex;
   late double _answerCenterFreq;
   late double _answerGain;
 
@@ -123,7 +121,8 @@ class SessionController {
     required SessionParameter sessionParameter,
   }) async {
     // Num of Graph
-    final int numOfGraph = sessionStore.graphBarDataList.length;
+    final layout = sessionStore.layout;
+    final int numOfGraph = layout.graphCount;
 
     // Select Random Index of Graph (Correct Answer for Session).
     // With only 2 graphs (e.g. peak-only/dip-only at band count 1), forbidding
@@ -134,21 +133,10 @@ class SessionController {
     } while (numOfGraph > 2 && _answerGraphIndex == _prevAnswerGraphIndex);
     _prevAnswerGraphIndex = _answerGraphIndex;
 
-    if (sessionParameter.filterType == FilterType.peakDip) {
-      _answerFreqIndex = (_answerGraphIndex / 2).floor();
-    } else {
-      _answerFreqIndex = _answerGraphIndex;
-    }
-    _answerCenterFreq = sessionStore.centerFreqLogList[_answerFreqIndex];
+    _answerCenterFreq = layout.frequencyOf(_answerGraphIndex);
 
-    // Determine Appropriate Gain Value
-    // if chosen graph is dip graph, invert gain value of session.
-    if (sessionParameter.filterType == FilterType.dip ||
-        (sessionParameter.filterType == FilterType.peakDip && _answerGraphIndex % 2 == 1)) {
-      _answerGain = 0 - sessionParameter.gain.toDouble();
-    } else {
-      _answerGain = sessionParameter.gain.toDouble();
-    }
+    // A dip graph inverts the session's gain.
+    _answerGain = layout.signedGain(_answerGraphIndex, sessionParameter.gain.toDouble());
 
     // Take the band out, wait for it to actually leave the signal, then
     // retune it — [PlayerService.setEQParams] owns that ordering, and it is

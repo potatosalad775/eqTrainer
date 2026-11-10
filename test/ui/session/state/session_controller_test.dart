@@ -284,7 +284,7 @@ void main() {
           sessionParameter: sessionParameter,
         );
         // For peak/dip: freqIndex == graphIndex
-        final expectedFreq = sessionStore.centerFreqLogList[controller.answerGraphIndex];
+        final expectedFreq = sessionStore.layout.frequencyOf(controller.answerGraphIndex);
         expect(controller.answerCenterFreq, equals(expectedFreq));
       });
 
@@ -298,7 +298,7 @@ void main() {
         );
         // For peakDip: freqIndex = floor(graphIndex / 2)
         final expectedFreqIndex = (controller.answerGraphIndex / 2).floor();
-        final expectedFreq = sessionStore.centerFreqLogList[expectedFreqIndex];
+        final expectedFreq = sessionStore.layout.centerFrequencies[expectedFreqIndex];
         expect(controller.answerCenterFreq, equals(expectedFreq));
       });
     });

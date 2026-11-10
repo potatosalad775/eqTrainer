@@ -19,8 +19,8 @@ class SessionGraph extends StatelessWidget {
       builder: (context, value, _) {
         if (value == GraphState.ready) {
           return Selector<SessionStore, int>(
-            selector: (context, s) => s.currentPickerValue,
-            builder: (context, pickerValue, _) {
+            selector: (context, s) => s.currentGraphIndex,
+            builder: (context, graphIndex, _) {
               return RepaintBoundary(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 5),
@@ -33,7 +33,7 @@ class SessionGraph extends StatelessWidget {
                           if (context.watch<MiscSettingsProvider>().frequencyToolTip)
                             SessionGraphTooltip(
                               constraints: constraints, 
-                              pickerValue: pickerValue
+                              graphIndex: graphIndex
                             ),
                         ],
                       );
