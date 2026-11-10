@@ -103,45 +103,6 @@ void main() {
       });
     });
 
-    group('clearPlaylist', () {
-      test('empties playlistPaths', () {
-        store.setPlaylistPaths(['/a.flac']);
-        store.clearPlaylist();
-        expect(store.playlistPaths, isEmpty);
-      });
-
-      test('currentClipPath is null after clear', () {
-        store.setPlaylistPaths(['/a.flac']);
-        store.clearPlaylist();
-        expect(store.currentClipPath, isNull);
-      });
-    });
-
-    group('setCurrentPlayingIndex', () {
-      test('clamps to 0 when playlist is empty', () {
-        store.setCurrentPlayingIndex(5);
-        expect(store.currentPlayingAudioIndex, equals(0));
-      });
-
-      test('clamps to last index when value is too large', () {
-        store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
-        store.setCurrentPlayingIndex(100);
-        expect(store.currentPlayingAudioIndex, equals(2));
-      });
-
-      test('clamps to 0 when value is negative', () {
-        store.setPlaylistPaths(['/a.flac', '/b.flac']);
-        store.setCurrentPlayingIndex(-1);
-        expect(store.currentPlayingAudioIndex, equals(0));
-      });
-
-      test('sets valid index within bounds', () {
-        store.setPlaylistPaths(['/a.flac', '/b.flac', '/c.flac']);
-        store.setCurrentPlayingIndex(2);
-        expect(store.currentPlayingAudioIndex, equals(2));
-      });
-    });
-
     // The launch snapshot goes stale when a background pass rewrites a clip
     // to another format mid-session; the resolved path is written back here
     // so the lookup is paid once per clip rather than on every visit.

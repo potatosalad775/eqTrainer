@@ -97,10 +97,6 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updatePickerValue(int newValue) {
-    setPickerValue(newValue);
-  }
-
   void resetPickerValue() {
     setPickerValue(1);
   }
@@ -125,12 +121,6 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void clearPlaylist() {
-    _playlistPaths = const [];
-    _currentPlayingAudioIndex = 0;
-    notifyListeners();
-  }
-
   /// Repoints the entry at [index] at [path].
   ///
   /// The snapshot taken at launch goes stale when a background task rewrites
@@ -141,15 +131,6 @@ class SessionStore extends ChangeNotifier {
     if (index < 0 || index >= _playlistPaths.length) return;
     if (_playlistPaths[index] == path) return;
     _playlistPaths = List<String>.from(_playlistPaths)..[index] = path;
-    notifyListeners();
-  }
-
-  void setCurrentPlayingIndex(int index) {
-    if (_playlistPaths.isEmpty) {
-      _currentPlayingAudioIndex = 0;
-    } else {
-      _currentPlayingAudioIndex = index.clamp(0, _playlistPaths.length - 1);
-    }
     notifyListeners();
   }
 
