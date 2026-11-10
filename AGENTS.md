@@ -21,7 +21,7 @@ eqTrainer/
 │   ├── ui/                    # Pages, widgets and the state they own
 │   │   ├── core/              # Shared widgets and themes, error dialog, updater, licenses
 │   │   ├── config/            # Session parameter configuration page
-│   │   ├── import/            # Audio file import workflow
+│   │   ├── import/            # Audio file import: the page, its editor widgets, import_failure_message
 │   │   ├── playlist/          # Playlist management page
 │   │   ├── result/            # Post-session results display
 │   │   ├── session/           # Core training session (page, widgets, state/)
@@ -67,7 +67,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `ClipLibrary` | Provider | Records and files together: what a session plays, deleting a clip, and the one rewrite protocol. Built in `main()` over that one repository, so provided by `.value`. See [Persistence](#persistence) |
 | `AudioClipService` | Provider | Imports a clip: picks the extension, trims or copies, and hands the file to `ClipLibrary.add` |
-| `ImportWorkflowService` | Provider | File-picker import flow |
+| `ClipImport` | Provider | One import, from the picked file to the saved clip. `ImportPage`'s State creates it, provides it by `.value` and disposes it, so each import starts from nothing. See [Clip Formats](#clip-formats) |
 | `ClipRecompressService` | Provider | User-triggered WAV→FLAC recompress |
 | `ClipFormatMigration` | ChangeNotifier | Started in `main()` before `runApp`, so provided by `.value`; playback screens pause it. See [Clip Formats](#clip-formats) |
 | `SessionParameter` | ChangeNotifier | What the config page edits (band, gain, Q, filter type, threshold). Its setters accept only the choices `SessionSettings` lists. A session takes a `SessionSettings` snapshot of it when it starts |
@@ -93,12 +93,12 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 
 | Folder | Content |
 |---|---|
-| `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState` and `FrequencyCalculator` (chart curves only); `import/` holds `ImportAudioData` |
+| `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState` and `FrequencyCalculator` (chart curves only); `import/` holds `ImportAudioData` and `importFailureMessage`, the one place a `ClipImport` failure becomes text |
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
 | `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand`, and `ClipQueue` (the clips a session plays) |
 | `data/` | `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `PlaybackHold` (what a player holds while it exists), `ImportPlayer` |
-| `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
+| `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ClipImport` (with `ImportFailure`), `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
 ---
@@ -239,6 +239,14 @@ SoLoud is the only decoder. On Linux, M4A, AAC, AIFF and WMA go through a system
 FFmpeg that it opens with `dlopen`, measured on 6.1, 7.1, 8.1 and 9.0. The packages
 recommend FFmpeg rather than depend on it, since the core formats need nothing. `caf`
 is left out of the Linux picker because CAF ALAC decodes about 70 ms short on 8.1 and 9.0.
+
+An import is a `ClipImport` (`data/clips/clip_import.dart`). `prepare` converts the
+picked file when the format policy says to and owns the temp file it makes, `save` hands
+the result to `AudioClipService`, and `dispose` deletes the temp file, also when it is
+called while a conversion is still running. The page does the picking and loads the
+result into the player, since the engine stays out of `ClipImport`. `importFailureOf`
+sorts any failure into too many channels, unreadable or other, and `ffmpegMayBeMissing`
+is the one place the Linux hint is decided.
 
 A trim reads the file the user picked rather than the converted temp file, so a lossy
 import is not encoded twice. It falls back to the temp file only if the original can no
@@ -536,9 +544,9 @@ repository. Shared scaffolding is in `test/helpers/`:
 | `recording_hold.dart` | `RecordingHold`: a `PlaybackHold` that counts its `pause` and `resume` calls, for building a `PlayerService` without a migration. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
 
-Platform channels (`path_provider`) are stubbed per test with
-`setMockMethodCallHandler` rather than by depending on the plugin; see
-`import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
+Code that needs the temp directory takes it as a parameter (`ClipImport`'s
+`tempDirectory`), so a test passes a real one from `Directory.systemTemp`; if a platform
+channel does have to be stubbed, use `setMockMethodCallHandler`. `shared_preferences` is a direct dependency,
 so use its `setMockInitialValues`.
 
 `layers_test.dart` checks the import rules of the three layers; see

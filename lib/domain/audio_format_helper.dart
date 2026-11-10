@@ -176,9 +176,3 @@ String trimOutputExt(String sourceExt, int importFormat) {
       return isLossless(sourceExt.toLowerCase()) ? '.flac' : '.opus';
   }
 }
-
-/// Convenience: extracts extension from [filePath] and calls
-/// [targetExtForImport].
-String? targetExtForPath(String filePath, int importFormat) {
-  return targetExtForImport(p.extension(filePath).toLowerCase(), importFormat);
-}

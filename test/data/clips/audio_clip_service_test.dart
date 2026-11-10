@@ -91,7 +91,7 @@ void main() {
         final captured = verify(() => mockRepo.addClip(captureAny())).captured;
         final clip = captured.single as AudioClip;
         // isTrimmed: false copies as-is, preserving the source extension. Any
-        // format conversion happened earlier, in ImportWorkflowService, so
+        // format conversion happened earlier, in ClipImport, so
         // by the time createClip sees a foreign format it has already been
         // converted to whatever the import-format setting maps it to.
         expect(clip.fileName, endsWith('.mp3'));

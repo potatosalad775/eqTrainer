@@ -21,7 +21,6 @@ import 'package:eq_trainer/data/clips/audio_clip_service.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/data/clips/clip_recompress_service.dart';
-import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 import 'package:eq_trainer/data/legacy/legacy_clip_migration.dart';
 import 'package:eq_trainer/data/legacy/legacy_settings_migration.dart';
 import 'package:eq_trainer/ui/core/upgrader_service.dart';
@@ -198,7 +197,6 @@ class AppState extends State<App> with WidgetsBindingObserver {
         Provider<AudioClipService>(create: (ctx) => AudioClipService(
           ctx.read<ClipLibrary>(),
         )),
-        Provider<ImportWorkflowService>(create: (_) => ImportWorkflowService()),
         // .value, not create: the run was started in main() before the tree
         // existed, and main() owns it — the provider must not dispose it.
         ChangeNotifierProvider<ClipFormatMigration>.value(

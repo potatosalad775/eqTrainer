@@ -16,7 +16,10 @@ import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/import_player.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
-import 'package:eq_trainer/data/clips/import_workflow_service.dart';
+import 'package:eq_trainer/data/clips/audio_clip_service.dart';
+import 'package:eq_trainer/data/clips/clip_import.dart';
+import 'package:eq_trainer/ui/import/widget/editor_clip_save_button.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/fake_encoder.dart';
 import '../../helpers/fake_output_devices.dart';
@@ -67,35 +70,30 @@ final class _FakeFile extends PlatformFile {
   readAsByteStream() => throw UnimplementedError();
 }
 
-class _FakeWorkflow implements ImportWorkflowService {
-  _FakeWorkflow({this.convert, this.loadError});
+class _MockClipService extends Mock implements AudioClipService {}
 
-  final Future<String> Function()? convert;
+/// A player whose load does what the test says, so no engine is involved.
+class _ScriptedPlayer extends ImportPlayer {
+  _ScriptedPlayer(super.output, {required super.hold, this.loadError});
+
   final Object? loadError;
 
   @override
-  Future<String> convertTo({
-    required String fileNameWithoutExt,
-    required String sourcePath,
-    required String targetExt,
-  }) =>
-      convert!();
+  Future<void> launch({required String? path, bool volumeCompensation = true}) async {
+    if (loadError != null) throw loadError!;
+  }
 
   @override
-  Future<Duration> loadAudioFile({
-    required ImportPlayer importPlayer,
-    required String filePath,
-    String? originalPath,
-  }) async {
-    throw loadError ?? StateError('not expected to load');
-  }
+  Duration get fetchDuration => const Duration(seconds: 5);
 }
 
-/// The page against a fake picker and workflow, so no engine is involved.
+/// The page against a fake picker, encoder and player, so no engine is involved.
 void main() {
   late ClipFormatMigration migration;
   late MiscSettingsProvider settings;
   late OutputSelection output;
+  late Directory tmp;
+  late _MockClipService clips;
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   setUp(() async {
@@ -110,12 +108,17 @@ void main() {
       importFormat: 0,
       encoder: FakeClipEncoder(),
     );
+    tmp = Directory.systemTemp.createTempSync('import_page_');
+    clips = _MockClipService();
   });
+
+  tearDown(() => tmp.deleteSync(recursive: true));
 
   Future<void> pumpPage(
     WidgetTester tester, {
     required String pick,
-    required ImportWorkflowService workflow,
+    FakeClipEncoder? encoder,
+    Object? loadError,
   }) async {
     FilePickerPlatform.instance = _FakePicker(pick);
     await tester.pumpWidget(MultiProvider(
@@ -123,33 +126,55 @@ void main() {
         ChangeNotifierProvider.value(value: settings),
         ChangeNotifierProvider.value(value: migration),
         ChangeNotifierProvider.value(value: output),
-        Provider<ImportWorkflowService>.value(value: workflow),
+        Provider<AudioClipService>.value(value: clips),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        locale: Locale('en'),
-        home: ImportPage(),
+        locale: const Locale('en'),
+        home: ImportPage(
+          createImport: (context) => ClipImport(
+            clips: clips,
+            importFormat: settings.importFormat,
+            encoder: encoder ?? FakeClipEncoder(),
+            tempDirectory: () async => tmp,
+          ),
+          createPlayer: (context) => _ScriptedPlayer(
+            output,
+            hold: migration,
+            loadError: loadError,
+          ),
+        ),
       ),
     ));
     await tester.pump();
-    await tester.pump();
+    // The temp directory and the fake encoder do real file I/O, which a
+    // fake-async test only sees complete if the real clock is let run, one
+    // step at a time since each await resumes on a pump.
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
   }
 
-  String unsupportedText() => Platform.isLinux
+  // Flutter tests run as Android whatever the host, so ask the same question
+  // the message does.
+  String unsupportedText() => ffmpegMayBeMissing()
       ? l10n.importAlertUnsupportedContentLinux
       : l10n.importAlertUnsupportedContent;
 
   testWidgets('holds the library migration while open', (tester) async {
-    await pumpPage(
-      tester,
-      pick: 'a.ogg',
-      workflow: _FakeWorkflow(),
-    );
+    await pumpPage(tester, pick: 'a.ogg');
     expect(migration.isPaused, isTrue);
 
     await tester.pumpWidget(const SizedBox());
     expect(migration.isPaused, isFalse);
+  });
+
+  testWidgets('a file that loads shows the editor', (tester) async {
+    await pumpPage(tester, pick: 'a.ogg');
+    expect(find.byType(EditorClipSaveButton), findsOneWidget);
   });
 
   testWidgets('a file that skips conversion and cannot load gets its own dialog',
@@ -157,7 +182,7 @@ void main() {
     await pumpPage(
       tester,
       pick: 'corrupt.ogg',
-      workflow: _FakeWorkflow(loadError: const SoLoudFileLoadFailedException()),
+      loadError: const SoLoudFileLoadFailedException(),
     );
     expect(find.text(unsupportedText()), findsOneWidget);
   });
@@ -167,7 +192,7 @@ void main() {
     await pumpPage(
       tester,
       pick: 'a.ogg',
-      workflow: _FakeWorkflow(loadError: const SoLoudFileNotFoundException()),
+      loadError: const SoLoudFileNotFoundException(),
     );
     expect(find.text(l10n.importAlertErrorContent), findsOneWidget);
   });
@@ -176,38 +201,87 @@ void main() {
     await pumpPage(
       tester,
       pick: 'surround.m4a',
-      workflow: _FakeWorkflow(
-        convert: () async => throw const UnsupportedChannelCountException(6),
-      ),
+      encoder: _FailingEncoder(const UnsupportedChannelCountException(6)),
     );
     expect(find.text(l10n.importAlertTooManyChannelsContent), findsOneWidget);
   });
 
-  testWidgets('leaving during a conversion deletes the file it finishes with',
+  testWidgets('shows the converting state, and leaving mid-conversion cleans up',
       (tester) async {
-    final conversion = Completer<String>();
+    final landing = Completer<void>();
     await pumpPage(
       tester,
       pick: 'long.m4a',
-      workflow: _FakeWorkflow(convert: () => conversion.future),
+      encoder: FakeClipEncoder(onWrite: () => landing.future),
     );
     expect(find.text(l10n.importConverting1), findsOneWidget);
 
+    // Leaving while it runs: the output is deleted when it lands.
     await tester.pumpWidget(const SizedBox());
+    landing.complete();
+    final converted = File(p.join(tmp.path, 'temp', 'long.opus'));
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
+    expect(converted.existsSync(), isFalse);
+  });
 
-    final dir = Directory.systemTemp.createTempSync('import_page_');
-    addTearDown(() => dir.deleteSync(recursive: true));
-    final converted = File(p.join(dir.path, 'long.opus'))
-      ..writeAsBytesSync([1, 2, 3]);
+  testWidgets('leaving deletes the converted file', (tester) async {
+    await pumpPage(tester, pick: 'song.m4a');
+    final converted = File(p.join(tmp.path, 'temp', 'song.opus'));
+    expect(converted.existsSync(), isTrue);
 
-    conversion.complete(converted.path);
+    await tester.pumpWidget(const SizedBox());
+    expect(converted.existsSync(), isFalse);
+  });
+
+  testWidgets('a save that fails says why in a snackbar', (tester) async {
+    when(() => clips.createClip(
+          sourcePath: any(named: 'sourcePath'),
+          originalPath: any(named: 'originalPath'),
+          startSec: any(named: 'startSec'),
+          endSec: any(named: 'endSec'),
+          isTrimmed: any(named: 'isTrimmed'),
+          importFormat: any(named: 'importFormat'),
+        )).thenAnswer(
+        (_) async => throw const UnsupportedChannelCountException(6));
+    await pumpPage(tester, pick: 'a.ogg');
+
+    await tester.tap(find.byType(EditorClipSaveButton));
     await tester.pump();
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 100 && converted.existsSync(); i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-      expect(converted.existsSync(), isFalse);
-    });
+    expect(find.text(l10n.importAlertTooManyChannelsContent), findsOneWidget);
   });
+
+  testWidgets('a save that fails for no known reason says so', (tester) async {
+    when(() => clips.createClip(
+          sourcePath: any(named: 'sourcePath'),
+          originalPath: any(named: 'originalPath'),
+          startSec: any(named: 'startSec'),
+          endSec: any(named: 'endSec'),
+          isTrimmed: any(named: 'isTrimmed'),
+          importFormat: any(named: 'importFormat'),
+        )).thenAnswer((_) async => throw Exception('disk full'));
+    await pumpPage(tester, pick: 'a.ogg');
+
+    await tester.tap(find.byType(EditorClipSaveButton));
+    await tester.pump();
+
+    expect(find.text(l10n.importEditorSaveError), findsOneWidget);
+  });
+}
+
+class _FailingEncoder extends FakeClipEncoder {
+  _FailingEncoder(this.error);
+
+  final Object error;
+
+  @override
+  Future<void> convertFile({
+    required String sourcePath,
+    required String destPath,
+  }) async =>
+      throw error;
 }
