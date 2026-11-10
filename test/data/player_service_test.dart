@@ -339,5 +339,34 @@ void main() {
       await player.launch(path: 'a.wav');
       expect(player.isLaunched, isTrue);
     });
+
+    playerTest('the fade wait gives up and steps when the fade never lands',
+        (tester) async {
+      final player = await launched(tester);
+      player.setEQ(true);
+      player.play();
+
+      final from = engine.calls.length;
+      var done = false;
+      unawaited(player
+          .setEQParams(enableEQ: true, frequency: 1000, gainDb: 6)
+          .then((_) => done = true));
+      // Stream time stops, so the fade can never land.
+      player.pause();
+
+      await elapse(tester, const Duration(milliseconds: 280));
+      expect(ops(engine.calls.skip(from).where((c) => c.op == 'stepEqWet')),
+          isEmpty);
+      expect(done, isFalse);
+
+      await elapse(tester, const Duration(milliseconds: 40));
+      final made = engine.calls.skip(from).toList();
+      final stepAt = made.indexWhere((c) => c.op == 'stepEqWet');
+      expect(stepAt, isNonNegative);
+      expect(made[stepAt].args, [0.0]);
+      expect(made.indexWhere((c) => c.op == 'setEqFrequency'),
+          greaterThan(stepAt));
+      expect(done, isTrue);
+    });
   });
 }
