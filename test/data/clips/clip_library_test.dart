@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -343,6 +344,58 @@ void main() {
       expect(library.clips, hasLength(1));
       expect(exists('1000.flac'), isTrue);
     });
+
+    test('removes the file a rewrite has produced but not yet committed',
+        () async {
+      await addClip('1000.m4a');
+      final written = Completer<void>();
+      final release = Completer<void>();
+      final rewriting = library.rewrite(
+        '1000',
+        extension: '.opus',
+        produce: (source, dest) async {
+          // A closed handle, so the delete below also works on Windows.
+          await File(dest).writeAsBytes(List<int>.filled(100, 2));
+          written.complete();
+          await release.future;
+        },
+      );
+      await written.future;
+
+      await library.delete('1000');
+
+      expect(exists('1000.opus'), isFalse);
+      expect(exists('1000.m4a'), isFalse);
+      expect(library.clips, isEmpty);
+
+      release.complete();
+      expect((await rewriting).status, RewriteStatus.clipGone);
+      expect(clipsDir.listSync(), isEmpty);
+    });
+
+    test('removes the file of a rewrite that finishes while it deletes',
+        () async {
+      await addClip('1000.m4a');
+      var rewritten = false;
+      when(() => dirs.getClipsPath()).thenAnswer((_) async {
+        if (!rewritten) {
+          rewritten = true;
+          final result = await library.rewrite(
+            '1000',
+            extension: '.opus',
+            produce: writer(100),
+          );
+          expect(result.status, RewriteStatus.committed);
+        }
+        return clipsDir.path;
+      });
+
+      await library.delete('1000');
+
+      expect(rewritten, isTrue);
+      expect(library.clips, isEmpty);
+      expect(clipsDir.listSync(), isEmpty);
+    });
   });
 
   group('rewrite', () {
@@ -599,6 +652,27 @@ void main() {
       expect(library.clips.map((c) => c.id), ['2000']);
     });
 
+    test('drops a file whose clip is deleted just before the record is '
+        'repointed', () async {
+      // The delete is already queued ahead of the repoint, so the check made
+      // before queueing it still passes.
+      await addClip('1000.m4a');
+      final racing = _RacingRepository(repo)
+        ..beforeUpdate = () => repo.deleteById('1000');
+      library = ClipLibrary(racing, dirs);
+
+      final result = await library.rewrite(
+        '1000',
+        extension: '.opus',
+        produce: writer(100),
+      );
+
+      expect(result.status, RewriteStatus.clipGone);
+      expect(library.clips, isEmpty);
+      expect(exists('1000.opus'), isFalse);
+      expect(exists('1000.m4a'), isFalse);
+    });
+
     test('removes the destination and reports both sizes when keep refuses',
         () async {
       final clip = await addClip('1000.wav', bytes: 300);
@@ -672,4 +746,35 @@ void main() {
       expect(result.error, isA<StateError>());
     });
   });
+}
+
+/// A repository that can act just before a repoint, as a delete queued ahead of
+/// it would. The real one cannot be made to interleave there.
+class _RacingRepository implements IAudioClipRepository {
+  _RacingRepository(this._inner);
+
+  final IAudioClipRepository _inner;
+  Future<void> Function()? beforeUpdate;
+
+  @override
+  Future<void> updateFileNameById(String id, String fileName) async {
+    await beforeUpdate?.call();
+    await _inner.updateFileNameById(id, fileName);
+  }
+
+  @override
+  bool get hasUnreadableData => _inner.hasUnreadableData;
+  @override
+  Future<void> addClip(AudioClip clip) => _inner.addClip(clip);
+  @override
+  List<AudioClip> getAllClips() => _inner.getAllClips();
+  @override
+  Stream<List<AudioClip>> watchClips() => _inner.watchClips();
+  @override
+  Future<void> deleteById(String id) => _inner.deleteById(id);
+  @override
+  Future<void> toggleEnabledById(String id) => _inner.toggleEnabledById(id);
+  @override
+  Future<void> reorder(int oldIndex, int newIndex) =>
+      _inner.reorder(oldIndex, newIndex);
 }

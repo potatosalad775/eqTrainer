@@ -69,6 +69,10 @@ class ClipLibrary {
   /// something" gate before an original is deleted, and needs no audio engine.
   static const _minOutputBytes = 42;
 
+  /// The destination path of each rewrite in flight, by clip id. [delete] reads
+  /// it to find a file that no record points at yet.
+  final _rewriting = <String, String>{};
+
   /// The records as they stand now.
   List<AudioClip> get clips => _repository.getAllClips();
 
@@ -165,11 +169,25 @@ class ClipLibrary {
   ///
   /// The file goes first and best-effort: an orphaned file is a smaller problem
   /// than a record that outlives its file.
+  ///
+  /// A rewrite of the same clip can be running, and its new file is not the one
+  /// removed first, so that one is removed too.
   Future<void> delete(String clipId) async {
     final clip = _clipById(clipId);
     if (clip == null) return;
     await _deleteQuietly(await _pathFor(clip));
+
+    // Both are read before the await below, because the record can change while
+    // it runs. A rewrite that has finished shows in the record, and one still
+    // running shows in the map.
+    final current = _clipById(clipId);
+    final inFlight = _rewriting[clipId];
     await _repository.deleteById(clipId);
+
+    if (current != null && current.fileName != clip.fileName) {
+      await _deleteQuietly(await _pathFor(current));
+    }
+    if (inFlight != null) await _deleteQuietly(inFlight);
   }
 
   /// Replaces a clip's file with another produced from it, keeping the record
@@ -223,6 +241,7 @@ class ClipLibrary {
         );
       }
       destPath = candidate;
+      _rewriting[clipId] = candidate;
 
       // A leftover from a run interrupted between producing and committing is
       // a partial file, not a usable clip. No record owns it, checked above.
@@ -231,6 +250,14 @@ class ClipLibrary {
 
       final sourceBytes = await File(sourcePath).length();
       await produce(sourcePath, destPath);
+
+      // The clip can be deleted while its file is being produced, and that
+      // delete may already have removed the file, so this comes before the size
+      // check.
+      if (_clipById(clipId) == null) {
+        await _deleteQuietly(destPath);
+        return const RewriteResult(RewriteStatus.clipGone);
+      }
 
       final dest = File(destPath);
       if (!await dest.exists() || await dest.length() < _minOutputBytes) {
@@ -247,7 +274,7 @@ class ClipLibrary {
         );
       }
 
-      // The clip can be deleted while its file is being produced.
+      // The clip can also be deleted while the sizes are being compared.
       // updateFileNameById no-ops on an id that is gone, so without this the
       // new file would stay on disk with no record pointing at it.
       if (_clipById(clipId) == null) {
@@ -259,6 +286,15 @@ class ClipLibrary {
       // orphaned source beside a working clip, never a record pointing at a
       // file that is gone.
       await _repository.updateFileNameById(clipId, destName);
+
+      // A delete queued ahead of the repoint makes it a no-op, and reports
+      // success all the same. Look at the record, not at the call.
+      final now = _clipById(clipId);
+      if (now == null || now.fileName != destName) {
+        await _deleteQuietly(destPath);
+        await _deleteQuietly(sourcePath);
+        return const RewriteResult(RewriteStatus.clipGone);
+      }
 
       try {
         await File(sourcePath).delete();
@@ -276,6 +312,10 @@ class ClipLibrary {
       debugPrint('[ClipLibrary] rewrite of ${clip.fileName} failed: $e');
       if (destPath != null) await _deleteQuietly(destPath);
       return RewriteResult(RewriteStatus.failed, error: e);
+    } finally {
+      // Only once this run has set it, so an early exit cannot clear the entry
+      // of another rewrite of the same clip.
+      if (destPath != null) _rewriting.remove(clipId);
     }
   }
 
