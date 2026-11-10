@@ -5,7 +5,7 @@ import 'package:eq_trainer/ui/core/error.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/player_service.dart';
-import 'package:eq_trainer/data/clips/playlist_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/ui/core/widget/player_control_buttons.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
@@ -72,7 +72,7 @@ class _SessionControlState extends State<SessionControl> {
   ///
   /// The session plays from a snapshot taken at launch, and a clip's file can
   /// be rewritten to another format underneath it while the session runs (see
-  /// `PlaylistService.resolveClipPath`). Before this, a stale entry threw out
+  /// `ClipLibrary.resolvePath`). Before this, a stale entry threw out
   /// of `launch()` into the error dialog below, which pops twice and ends the
   /// session — losing the user's score over a file that is still perfectly
   /// playable under a different extension.
@@ -81,7 +81,7 @@ class _SessionControlState extends State<SessionControl> {
   /// rather than looping.
   Future<String?> _stepToPlayable(BuildContext context, {required bool forward}) async {
     final sessionStore = context.read<SessionStore>();
-    final playlistService = context.read<PlaylistService>();
+    final clipLibrary = context.read<ClipLibrary>();
 
     for (var attempt = 0; attempt < sessionStore.playlistPaths.length; attempt++) {
       forward ? sessionStore.nextTrack() : sessionStore.previousTrack();
@@ -89,7 +89,7 @@ class _SessionControlState extends State<SessionControl> {
       final candidate = sessionStore.currentClipPath;
       if (candidate == null) return null;
 
-      final resolved = await playlistService.resolveClipPath(candidate);
+      final resolved = await clipLibrary.resolvePath(candidate);
       if (resolved != null) {
         sessionStore.updatePathAt(sessionStore.currentPlayingAudioIndex, resolved);
         return resolved;

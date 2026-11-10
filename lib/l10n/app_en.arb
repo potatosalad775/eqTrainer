@@ -68,6 +68,7 @@
   "playlistEmptyText": "No Audio Clip Found",
   "playlistFooter": "You can re-order playlist by dragging circular checkbox.",
   "playlistLibraryUnreadable": "Part of your clip library couldn't be read, so some clips may be missing from this list. Your audio files haven't been deleted.",
+  "playlistAudioFileMissing": "File not found",
   "playlistAudioActionDelete": "Delete",
   "playlistAudioAlertDeleteTitle": "Alert",
   "playlistAudioAlertDeleteContent": "Are you sure you wanna delete the audio clip?",

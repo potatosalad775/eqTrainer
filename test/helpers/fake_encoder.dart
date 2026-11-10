@@ -15,6 +15,7 @@ class FakeClipEncoder implements ClipEncoder {
     this.throwOnEncode = false,
     this.unreadable = const {},
     this.trimFailure,
+    this.onWrite,
   });
 
   /// Bytes written to every destination.
@@ -29,6 +30,10 @@ class FakeClipEncoder implements ClipEncoder {
   /// When set, [trimFile] writes a partial file and then throws this, as an
   /// encode that dies partway does.
   final Object? trimFailure;
+
+  /// Runs just before an output is written, for a test that needs something to
+  /// happen while an encode is in flight, such as the user deleting the clip.
+  final Future<void> Function()? onWrite;
 
   /// Every source [trimFile] was asked to read, in call order.
   final List<String> trimmedFrom = [];
@@ -71,6 +76,7 @@ class FakeClipEncoder implements ClipEncoder {
 
   Future<void> _write(String destPath) async {
     if (throwOnEncode) throw Exception('encoder failed');
+    await onWrite?.call();
     encoded.add(destPath);
     await File(destPath).writeAsBytes(List<int>.filled(outputSize, 0));
   }

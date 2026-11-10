@@ -29,7 +29,7 @@ eqTrainer/
 │   │   └── main_page.dart     # Root navigation/tab controller
 │   ├── domain/                # Pure Dart: AudioClip, format policy, WAV parser, SessionParameter
 │   └── data/                  # Disk, preferences and the audio engine
-│       ├── clips/             # Clip library, encoder, rewrite passes, playlist and import services
+│       ├── clips/             # Clip library, encoder, rewrite passes and import services
 │       └── legacy/            # Hive records and the migrations that read them
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
@@ -64,10 +64,9 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `MiscSettingsProvider` | ChangeNotifier | Misc settings: theme mode, frequency tooltip, import format, volume compensation. Loaded in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
 | `AudioState` | ChangeNotifier | Audio backend & output device selection |
-| `AppDirectories` | Provider | App support directory paths |
 | `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
-| `AudioClipService` | Provider | File import / clip management |
-| `PlaylistService` | Provider | Playlist operations & enabled-clip queries |
+| `ClipLibrary` | Provider | Records and files together: what a session plays, deleting a clip, and the one rewrite protocol. Built in `main()` over that one repository, so provided by `.value`. See [Persistence](#persistence) |
+| `AudioClipService` | Provider | Imports a clip: picks the extension, trims or copies, and hands the file to `ClipLibrary.add` |
 | `ImportWorkflowService` | Provider | File-picker import flow |
 | `ClipRecompressService` | Provider | User-triggered WAV→FLAC recompress |
 | `ClipFormatMigration` | ChangeNotifier | Started in `main()` before `runApp`, so provided by `.value`; playback screens pause it. See [Clip Formats](#clip-formats) |
@@ -94,8 +93,8 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 | `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState`, `GraphState` and `FrequencyCalculator`; `import/` holds `ImportAudioData` |
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser), `SessionParameter` |
-| `data/` | `AppDirectories`, `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
-| `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
+| `data/` | `AppDirectories` (used by `ClipLibrary` only), `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
+| `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
 ---
@@ -264,10 +263,15 @@ adopted with the 5.2.2 fork because of what is still unknown or awkward:
   plays but ALAC has no decoder, so this varies by device. Adopting it needs a load that handles that failure, not just a
   per-platform extension set.
 
-Both passes keep the record and the basename and change only the extension. The
-basename is the clip's identity (`AudioClipService` names imports after
-`microsecondsSinceEpoch`), which is what `PlaylistService.resolveClipPath`
-relies on to follow a clip that moved underneath a live session.
+Both passes go through `ClipLibrary.rewrite`, which is the only place a clip's
+file is replaced: it produces the new file, checks it is at least 42 bytes (the
+smallest valid output of any target), repoints the record, and only then deletes
+the old file. The passes decide which clips to rewrite and into what, and give
+`rewrite` a `produce` callback; they do not repeat the ordering or the cleanup.
+It keeps the record and the basename and changes only the extension. The
+basename is the clip's identity (`ClipLibrary.add` names imports after
+`microsecondsSinceEpoch`), which is what `ClipLibrary.resolvePath` relies on to
+follow a clip that moved underneath a live session.
 
 **Anything that rewrites the library must yield to playback, not block it.** A
 decode-plus-encode is CPU-seconds per clip on a phone or a DAP — the hardware
@@ -283,7 +287,7 @@ decode-on-load fallback meanwhile, so there is nothing to wait for.
 
 ```
 SessionController.launchSession()
-  → playlistService.listEnabledClipPaths()
+  → clipLibrary.enabledClipPaths()   ← skips a missing clip, keeps its record
   → player.launch()
   → sessionStore.initFrequency()     ← FrequencyCalculator.compute()
   → SessionController.initSession()  ← picks random answer freq
@@ -308,16 +312,31 @@ easy to break:
 
 - **Open exactly one repository.** Each instance keeps its own copy, so a second
   would overwrite the first's changes. That includes `ClipFormatMigration`, which
-  gets the same instance as the widget tree. It is also why only one copy of the
+  gets the one `ClipLibrary` built over the same instance as the widget tree. It is also why only one copy of the
   app may run: see [the desktop runners](#dependencies-worth-knowing).
-- **A finished write is on disk, and a failed one rolled back.** The rewrite
-  passes delete a clip's source file straight after repointing its record, so
-  this is what stops a record ever pointing at a file that is gone.
+- **A finished write is on disk, and a failed one rolled back.** `ClipLibrary.rewrite`
+  deletes a clip's source file straight after repointing its record, so this is
+  what stops a record ever pointing at a file that is gone.
 - **Writes are atomic and queued**: a flushed temp file renamed over the real one,
   strictly one at a time.
 
 A clip's `id` is what identifies it, not its position. For anything imported now
 it is the file's basename, which format rewrites preserve.
+
+**Anything that needs a clip's file asks `ClipLibrary`.** Nothing else joins a file
+name onto the clips directory: `pathOf`, `fileSizeOf`, `enabledClipPaths` and
+`resolvePath` look the clip up by id in the library as it stands now, because a
+record a caller captured earlier can name a file a rewrite has since replaced.
+Adding, deleting and rewriting a clip go through `add`, `delete` and `rewrite`,
+which keep the record and the file in step. Plain record edits (reorder, enable,
+`watchClips`) still go straight to the repository.
+
+**A missing clip's record is kept.** `enabledClipPaths` skips a clip whose file is
+gone and never deletes its record, and `rewrite` reports `sourceMissing` and leaves
+it alone. Only the user deletes it. See `docs/adr/0003-missing-clips-are-never-auto-deleted.md`.
+The playlist shows such a clip as not found, with preview and the enable toggle
+disabled. It derives that from `ClipLibrary.missingClipIds`, held apart from the
+list the repository stream draws, and never saves it.
 
 Hive CE is only read now, to migrate what older versions stored. Both migrations
 run in `main()` before anything reads the data, and people can skip releases, so
@@ -441,14 +460,16 @@ excluded from analysis. No `custom_lint`.
 ### Testing
 
 Unit tests live in `test/`, mirroring `lib/` (`flutter_test` + `mocktail`).
-The session math, store, controller, format policy, WAV parser, repository
-and the three library-rewrite services are all covered there. Shared
-scaffolding is in `test/helpers/`:
+The session math, store, controller, format policy, WAV parser, repository,
+`ClipLibrary`, the two rewrite passes and `AudioClipService` are all covered there.
+The passes keep only what is theirs (which clips, which format, progress); the
+rewrite protocol is tested once, in `clip_library_test.dart`, against the real
+repository. Shared scaffolding is in `test/helpers/`:
 
 | Helper | Use it for |
 |---|---|
-| `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
-| `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
+| `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `ClipLibrary`, `PlayerService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
+| `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
 
 Platform channels (`path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
@@ -573,7 +594,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `lib/domain/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
 | `lib/data/clips/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
 | `lib/data/legacy/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
-| `lib/data/clips/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
+| `lib/data/clips/clip_library.dart` | Records and files together; see [Persistence](#persistence). `resolvePath` follows a clip whose file was rewritten mid-session |
 | `lib/data/audio_state.dart` | Output device + Android backend state |
 | `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
 | `lib/data/locale_provider.dart` | The language picked in settings |

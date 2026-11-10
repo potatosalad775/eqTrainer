@@ -10,7 +10,7 @@ abstract class IAudioClipRepository {
   /// may be incomplete.
   bool get hasUnreadableData;
   Future<void> addClip(AudioClip clip);
-  // Return all clips (synchronous). PlaylistService will filter/map.
+  // Return all clips (synchronous). ClipLibrary pairs them with files.
   List<AudioClip> getAllClips();
   // Subscribe to changes as a stream, including initial snapshot.
   Stream<List<AudioClip>> watchClips();

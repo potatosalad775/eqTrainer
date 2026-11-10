@@ -60,6 +60,7 @@
   "playlistEmptyText": "Аудиоклипы не найдены",
   "playlistFooter": "Вы можете изменить порядок плейлиста, перетаскивая круговой флажок.",
   "playlistLibraryUnreadable": "Не удалось прочитать часть библиотеки клипов, поэтому некоторые клипы могут отсутствовать в этом списке. Ваши аудиофайлы не удалены.",
+  "playlistAudioFileMissing": "Файл не найден",
   "playlistAudioActionDelete": "Удалить",
   "playlistAudioAlertDeleteTitle": "Внимание",
   "playlistAudioAlertDeleteContent": "Вы уверены, что хотите удалить аудиоклип?",

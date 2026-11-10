@@ -2,7 +2,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/app_directories.dart';
-import 'package:eq_trainer/data/clips/playlist_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 
 /// The mocktail doubles shared across the unit suites.
 ///
@@ -13,6 +13,6 @@ class MockIAudioClipRepository extends Mock implements IAudioClipRepository {}
 
 class MockAppDirectories extends Mock implements AppDirectories {}
 
-class MockPlayerService extends Mock implements PlayerService {}
+class MockClipLibrary extends Mock implements ClipLibrary {}
 
-class MockPlaylistService extends Mock implements PlaylistService {}
+class MockPlayerService extends Mock implements PlayerService {}

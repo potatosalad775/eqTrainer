@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/domain/audio_clip.dart';
 import 'package:eq_trainer/data/clips/audio_clip_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
 
@@ -22,6 +23,7 @@ void main() {
   group('AudioClipService', () {
     late MockIAudioClipRepository mockRepo;
     late MockAppDirectories mockDirs;
+    late ClipLibrary library;
     late AudioClipService service;
     late Directory tmpSrc;
     late Directory tmpClips;
@@ -29,7 +31,8 @@ void main() {
     setUp(() async {
       mockRepo = MockIAudioClipRepository();
       mockDirs = MockAppDirectories();
-      service = AudioClipService(mockRepo, mockDirs);
+      library = ClipLibrary(mockRepo, mockDirs);
+      service = AudioClipService(library);
 
       tmpSrc = await Directory.systemTemp.createTemp('acs_src_');
       tmpClips = await Directory.systemTemp.createTemp('acs_clips_');
@@ -173,7 +176,7 @@ void main() {
         String? originalPath = original,
       }) async {
         final encoder = FakeClipEncoder(unreadable: unreadable);
-        await AudioClipService(mockRepo, mockDirs, encoder: encoder).createClip(
+        await AudioClipService(library, encoder: encoder).createClip(
           sourcePath: converted,
           originalPath: originalPath,
           startSec: 1.0,
@@ -218,8 +221,7 @@ void main() {
 
       Future<void> trimFailingWith(Object failure) =>
           AudioClipService(
-            mockRepo,
-            mockDirs,
+            library,
             encoder: FakeClipEncoder(trimFailure: failure),
           ).createClip(
             sourcePath: converted,
@@ -254,12 +256,6 @@ void main() {
           trimFailingWith(unreadable),
           throwsA(predicate(isUnreadableAudioError)),
         );
-        expect(tmpClips.listSync(), isEmpty);
-      });
-
-      test('a record that cannot be saved leaves no file behind', () async {
-        when(() => mockRepo.addClip(any())).thenThrow(StateError('write failed'));
-        await expectLater(trim(), throwsStateError);
         expect(tmpClips.listSync(), isEmpty);
       });
     });

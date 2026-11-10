@@ -1,15 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/domain/audio_clip.dart';
-import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
-import 'package:eq_trainer/data/app_directories.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 
 /// Converts a library's legacy `.m4a` and `.aac` clips, which the app does not
 /// play through SoLoud, into a format it does, once.
@@ -53,15 +51,13 @@ import 'package:eq_trainer/data/clips/clip_encoder.dart';
 /// meantime, so there is nothing to wait for.
 class ClipFormatMigration extends ChangeNotifier {
   ClipFormatMigration(
-    this._repository,
-    this._dirs, {
+    this._library, {
     required int importFormat,
     ClipEncoder? encoder,
   })  : _importFormat = importFormat,
         _encoder = encoder ?? ClipEncoder();
 
-  final IAudioClipRepository _repository;
-  final AppDirectories _dirs;
+  final ClipLibrary _library;
   final int _importFormat;
   final ClipEncoder _encoder;
 
@@ -132,14 +128,6 @@ class ClipFormatMigration extends ChangeNotifier {
   /// re-encoding those would only lose a generation.
   static const _legacyExts = {'.m4a', '.aac'};
 
-  /// An output file this small carries no audio in any container we write:
-  /// a WAV header is 44 bytes, FLAC's magic plus STREAMINFO 42, and an Ogg
-  /// Opus page header plus OpusHead 46. Whatever the converter reported, a
-  /// file under this did not decode. This is the "verifiably produced
-  /// something" gate before the original is deleted: cheap, and it needs no
-  /// audio engine, which is not necessarily up when this runs.
-  static const _minOutputBytes = 64;
-
   /// Converts every legacy clip it can and returns how many it converted.
   ///
   /// Never throws: a clip that fails is left exactly as it was, keeps its
@@ -154,8 +142,7 @@ class ClipFormatMigration extends ChangeNotifier {
     // The scan is synchronous, so this whole prologue runs before the first
     // await. _running has to be set inside it: yielding first would let a
     // second run() past the guard and race this one over the same files.
-    final legacy = _repository
-        .getAllClips()
+    final legacy = _library.clips
         .where((clip) => _legacyExts.contains(p.extension(clip.fileName).toLowerCase()))
         .toList(growable: false);
     if (legacy.isEmpty) return 0;
@@ -166,7 +153,7 @@ class ClipFormatMigration extends ChangeNotifier {
     notifyListeners();
 
     try {
-      return await _convertAll(legacy, await _dirs.getClipsPath());
+      return await _convertAll(legacy);
     } finally {
       _running = false;
       _done = 0;
@@ -175,7 +162,7 @@ class ClipFormatMigration extends ChangeNotifier {
     }
   }
 
-  Future<int> _convertAll(List<AudioClip> legacy, String clipsPath) async {
+  Future<int> _convertAll(List<AudioClip> legacy) async {
     var converted = 0;
 
     for (final clip in legacy) {
@@ -183,7 +170,7 @@ class ClipFormatMigration extends ChangeNotifier {
       // either "committed" or "untouched" before anything else looks at it.
       await _waitWhilePaused();
 
-      if (await _convertOne(clip, clipsPath)) converted++;
+      if (await _convertOne(clip)) converted++;
 
       _done++;
       notifyListeners();
@@ -193,15 +180,7 @@ class ClipFormatMigration extends ChangeNotifier {
   }
 
   /// Converts one clip, returning whether it was committed.
-  Future<bool> _convertOne(AudioClip clip, String clipsPath) async {
-    final source = File(p.join(clipsPath, clip.fileName));
-    if (!await source.exists()) {
-      // A record whose file is already gone. Deleting the record here would
-      // be a surprising side effect of a format migration, so leave it for
-      // the playlist to surface as it does today.
-      return false;
-    }
-
+  Future<bool> _convertOne(AudioClip clip) async {
     final sourceExt = p.extension(clip.fileName).toLowerCase();
     final targetExt = targetExtForImport(sourceExt, _importFormat);
     if (targetExt == null) {
@@ -210,47 +189,14 @@ class ClipFormatMigration extends ChangeNotifier {
       return false;
     }
 
-    final destName = '${p.basenameWithoutExtension(clip.fileName)}$targetExt';
-    final dest = File(p.join(clipsPath, destName));
-
-    try {
-      // A leftover from a run interrupted between converting and committing
-      // is a partial file, not a usable clip.
-      if (await dest.exists()) await dest.delete();
-
-      await _encoder.convertFile(sourcePath: source.path, destPath: dest.path);
-
-      if (!await dest.exists() || await dest.length() < _minOutputBytes) {
-        throw const FileSystemException('converted file is empty or missing');
-      }
-
-      // The clip can be deleted from the playlist while we are converting it.
-      // updateFileNameById no-ops on an id that is gone, so without this the
-      // file we just wrote would stay on disk with no record pointing at it.
-      if (!_repository.getAllClips().any((c) => c.id == clip.id)) {
-        await dest.delete();
-        return false;
-      }
-
-      // Commit before deleting: if the process dies here the worst case is
-      // an orphaned .m4a next to a working clip, never a record pointing at
-      // a file that no longer exists.
-      await _repository.updateFileNameById(clip.id, destName);
-
-      try {
-        await source.delete();
-      } catch (e) {
-        // The clip may be open in the player. The record already points at
-        // the new file, so this only leaks the old file's disk space.
-        debugPrint('[ClipFormatMigration] kept ${clip.fileName}: $e');
-      }
-      return true;
-    } catch (e) {
-      debugPrint('[ClipFormatMigration] failed on ${clip.fileName}: $e');
-      try {
-        if (await dest.exists()) await dest.delete();
-      } catch (_) {}
-      return false;
-    }
+    // A record whose file is already gone comes back as sourceMissing and is
+    // left for the playlist to show, not deleted by a format migration.
+    final result = await _library.rewrite(
+      clip.id,
+      extension: targetExt,
+      produce: (sourcePath, destPath) =>
+          _encoder.convertFile(sourcePath: sourcePath, destPath: destPath),
+    );
+    return result.status == RewriteStatus.committed;
   }
 }

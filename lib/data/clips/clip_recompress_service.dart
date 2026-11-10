@@ -4,9 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:eq_trainer/domain/audio_clip.dart';
-import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
-import 'package:eq_trainer/data/app_directories.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 
 /// How much disk a recompress pass would reclaim, and over how many clips.
 @immutable
@@ -57,29 +56,22 @@ class RecompressResult {
 /// irreversibly — on exactly the material they are training their ears
 /// against.
 class ClipRecompressService {
-  ClipRecompressService(this._repository, this._dirs, {ClipEncoder? encoder})
+  ClipRecompressService(this._library, {ClipEncoder? encoder})
       : _encoder = encoder ?? ClipEncoder();
 
-  final IAudioClipRepository _repository;
-  final AppDirectories _dirs;
+  final ClipLibrary _library;
   final ClipEncoder _encoder;
-
-  /// A FLAC file smaller than its own magic plus STREAMINFO did not encode,
-  /// whatever the encoder reported. This is the "verifiably wrote something"
-  /// gate before the original is deleted.
-  static const _minFlacBytes = 42;
 
   /// Reports how much a pass would reclaim, without changing anything.
   Future<RecompressEstimate> estimate() async {
-    final clipsPath = await _dirs.getClipsPath();
     var count = 0;
     var bytes = 0;
 
     for (final clip in _candidates()) {
-      final file = File(p.join(clipsPath, clip.fileName));
-      if (!file.existsSync()) continue;
+      final size = await _library.fileSizeOf(clip.id);
+      if (size == null) continue;
       count++;
-      bytes += file.lengthSync();
+      bytes += size;
     }
 
     return RecompressEstimate(clipCount: count, totalBytes: bytes);
@@ -92,75 +84,34 @@ class ClipRecompressService {
   /// called with (done, total) after each clip.
   Future<RecompressResult> run({void Function(int done, int total)? onProgress}) async {
     final candidates = _candidates();
-    if (candidates.isEmpty) {
-      return const RecompressResult(converted: 0, failed: 0, bytesSaved: 0);
-    }
-
-    final clipsPath = await _dirs.getClipsPath();
     var converted = 0;
     var failed = 0;
     var saved = 0;
     var done = 0;
 
     for (final clip in candidates) {
-      final source = File(p.join(clipsPath, clip.fileName));
-      if (!source.existsSync()) {
-        done++;
-        onProgress?.call(done, candidates.length);
-        continue;
-      }
-
-      final destName = '${p.basenameWithoutExtension(clip.fileName)}.flac';
-      final dest = File(p.join(clipsPath, destName));
-
-      try {
-        final sourceBytes = source.lengthSync();
-
-        // A leftover from an interrupted run is a partial file, not a clip.
-        if (dest.existsSync()) dest.deleteSync();
-
-        await _encoder.encodeWavBytes(
-          wavBytes: await source.readAsBytes(),
-          destPath: dest.path,
-        );
-
-        if (!dest.existsSync() || dest.lengthSync() < _minFlacBytes) {
-          throw const FileSystemException('encoded file is empty or missing');
-        }
-
-        final destBytes = dest.lengthSync();
-
+      final result = await _library.rewrite(
+        clip.id,
+        extension: '.flac',
+        produce: (sourcePath, destPath) async => _encoder.encodeWavBytes(
+          wavBytes: await File(sourcePath).readAsBytes(),
+          destPath: destPath,
+        ),
         // If FLAC came out no smaller there is nothing to gain, and swapping
         // would only churn the file. Keep the WAV.
-        if (destBytes >= sourceBytes) {
-          dest.deleteSync();
-          done++;
-          onProgress?.call(done, candidates.length);
-          continue;
-        }
+        keep: (sourceBytes, destBytes) => destBytes < sourceBytes,
+      );
 
-        // Commit before deleting: if the process dies here the worst case is
-        // an orphaned .wav beside a working .flac, never a record pointing at
-        // a file that is gone.
-        await _repository.updateFileNameById(clip.id, destName);
-        converted++;
-        saved += sourceBytes - destBytes;
-
-        try {
-          source.deleteSync();
-        } catch (e) {
-          // The clip may be open in the player. The record already points at
-          // the FLAC, so this only leaks the old file's disk space.
-          debugPrint('[ClipRecompress] kept ${clip.fileName}: $e');
-        }
-      } catch (e) {
-        failed++;
-        debugPrint('[ClipRecompress] failed on ${clip.fileName}: $e');
-        try {
-          if (dest.existsSync()) dest.deleteSync();
-        } catch (_) {
-          // Nothing more to do; the original is untouched either way.
-        }
+      switch (result.status) {
+        case RewriteStatus.committed:
+          converted++;
+          saved += result.sourceBytes - result.destBytes;
+        case RewriteStatus.failed:
+          failed++;
+        case RewriteStatus.declined:
+        case RewriteStatus.sourceMissing:
+        case RewriteStatus.clipGone:
+          break;
       }
 
       done++;
@@ -174,8 +125,7 @@ class ClipRecompressService {
     );
   }
 
-  List<AudioClip> _candidates() => _repository
-      .getAllClips()
+  List<AudioClip> _candidates() => _library.clips
       .where((clip) => p.extension(clip.fileName).toLowerCase() == '.wav')
       .toList(growable: false);
 }

@@ -7,7 +7,7 @@ import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
-import 'package:eq_trainer/data/clips/playlist_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/session_parameter.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
@@ -48,7 +48,7 @@ class _SessionPageState extends State<SessionPage> {
     final audioState = Provider.of<AudioState>(context, listen: false);
     final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
     final sessionStore = Provider.of<SessionStore>(context, listen: false);
-    final playlistService = Provider.of<PlaylistService>(context, listen: false);
+    final clipLibrary = Provider.of<ClipLibrary>(context, listen: false);
     final sessionController = Provider.of<SessionController>(context, listen: false);
     final volumeCompensation = Provider.of<MiscSettingsProvider>(context, listen: false).volumeCompensation;
 
@@ -58,7 +58,7 @@ class _SessionPageState extends State<SessionPage> {
         audioState: audioState,
         sessionStore: sessionStore,
         sessionParameter: sessionParameter,
-        playlistService: playlistService,
+        clipLibrary: clipLibrary,
         volumeCompensation: volumeCompensation,
         shouldContinue: () => mounted,
       );
