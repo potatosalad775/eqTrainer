@@ -118,14 +118,19 @@ void main() {
 
     test('dispose during a conversion deletes the output once it lands',
         () async {
+      final entered = Completer<void>();
       final landing = Completer<void>();
       final import = make(
-        encoder: FakeClipEncoder(onWrite: () => landing.future),
+        encoder: FakeClipEncoder(onWrite: () {
+          entered.complete();
+          return landing.future;
+        }),
       );
 
       final prepared = import.prepare(
           pickedPath: '/picked/long.m4a', pickedName: 'long.m4a');
-      await pumpEventQueue();
+      // Wait until the encoder is running, so dispose lands mid-conversion.
+      await entered.future;
 
       import.dispose();
       landing.complete();
