@@ -165,7 +165,7 @@ void main() {
   }
 
   /// True once a pick that converts has landed its file and shown the editor.
-  bool Function() convertedAndShown(WidgetTester tester, File converted) =>
+  bool Function() convertedAndShown(File converted) =>
       () =>
           converted.existsSync() &&
           find.byType(EditorClipSaveButton).evaluate().isNotEmpty;
@@ -243,17 +243,18 @@ void main() {
   testWidgets('leaving deletes the converted file', (tester) async {
     final converted = File(p.join(tmp.path, 'temp', 'song.opus'));
     await pumpPage(tester,
-        pick: 'song.m4a', settled: convertedAndShown(tester, converted));
+        pick: 'song.m4a', settled: convertedAndShown(converted));
     expect(converted.existsSync(), isTrue);
 
     await tester.pumpWidget(const SizedBox());
-    // The delete is one synchronous call, but a slow runner can still have the
-    // conversion or its continuation in flight, which only finishes on the real
-    // clock. Wait for the file to go rather than checking at once.
+    // Normally gone at once. A slow runner can still have the conversion in
+    // flight, which finishes on the real clock, and on Windows the first
+    // delete can find the file still open, which ClipImport retries on timers
+    // that only a pump with a duration fires. So wait on both clocks.
     for (var i = 0; i < 100 && converted.existsSync(); i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 20)));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
     }
     expect(converted.existsSync(), isFalse);
   });
@@ -276,7 +277,7 @@ void main() {
     });
     final converted = File(p.join(tmp.path, 'temp', 'song.opus'));
     await pumpPage(tester,
-        pick: 'song.m4a', settled: convertedAndShown(tester, converted));
+        pick: 'song.m4a', settled: convertedAndShown(converted));
 
     await tester.tap(find.byType(EditorClipSaveButton));
     await tester.pump();
