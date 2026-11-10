@@ -28,7 +28,6 @@ void main() {
     await tester.pumpWidget(MultiProvider(
       providers: [
         Provider<IAudioClipRepository>.value(value: repo),
-        Provider<AppDirectories>.value(value: dirs),
         Provider<ClipLibrary>.value(value: ClipLibrary(repo, dirs)),
       ],
       child: const MaterialApp(

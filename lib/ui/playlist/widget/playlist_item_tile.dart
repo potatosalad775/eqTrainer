@@ -5,11 +5,9 @@ import 'package:eq_trainer/ui/playlist/widget/playlist_control_view.dart';
 import 'package:eq_trainer/ui/playlist/widget/playlist_delete_dialog.dart';
 import 'package:eq_trainer/domain/audio_clip.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
-import 'package:eq_trainer/data/app_directories.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
 class PlaylistItemTile extends StatelessWidget {
@@ -25,7 +23,6 @@ class PlaylistItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repo = context.read<IAudioClipRepository>();
-    final dirs = context.read<AppDirectories>();
     final library = context.read<ClipLibrary>();
 
     return Card(
@@ -62,9 +59,10 @@ class PlaylistItemTile extends StatelessWidget {
           children: [
             IconButton(
               onPressed: () async {
-                final base = await dirs.getClipsPath();
-                final filePath = p.join(base, currentClip.fileName);
-                if (!context.mounted) return;
+                final filePath = await library.pathOf(currentClip.id);
+                // A missing file shows nothing for now. The playlist will
+                // show such a clip as not found in a follow-up.
+                if (filePath == null || !context.mounted) return;
                 unawaited(showModalBottomSheet(
                   isDismissible: false,
                   enableDrag: false,

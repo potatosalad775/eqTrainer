@@ -196,9 +196,6 @@ class AppState extends State<App> with WidgetsBindingObserver {
         ChangeNotifierProvider<NavBarProvider>(create: (_) => NavBarProvider()),
         ChangeNotifierProvider<AudioState>.value(value: _audioState),
 
-        // Directories
-        Provider<AppDirectories>(create: (_) => AppDirectories()),
-
         // Repository
         Provider<IAudioClipRepository>.value(value: widget.clipRepository),
         // Built over the repository above, so there is still exactly one.
