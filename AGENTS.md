@@ -63,7 +63,7 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `NavBarProvider` | ChangeNotifier | Bottom nav state |
 | `MiscSettingsProvider` | ChangeNotifier | Misc settings: theme mode, frequency tooltip, import format, volume compensation. Loaded in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
-| `AudioState` | ChangeNotifier | Audio backend & output device selection |
+| `OutputSelection` | ChangeNotifier | The Android backend and output device the engine opens. Made in `main()` before `runApp` (it needs `prefs`), so provided by `.value`; `App` only starts and stops its device watching. One instance for the whole app, which every `PlayerService` is built with. See [Audio Engine](#audio-engine-playerservice) |
 | `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
 | `ClipLibrary` | Provider | Records and files together: what a session plays, deleting a clip, and the one rewrite protocol. Built in `main()` over that one repository, so provided by `.value`. See [Persistence](#persistence) |
 | `AudioClipService` | Provider | Imports a clip: picks the extension, trims or copies, and hands the file to `ClipLibrary.add` |
@@ -97,7 +97,7 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
 | `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand`, and `ClipQueue` (the clips a session plays) |
-| `data/` | `AppDirectories` (used by `ClipLibrary` only), `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
+| `data/` | `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
@@ -122,6 +122,13 @@ by timer clocks, and the stutter that caused is what the migration removed.
 Never call `SoLoud` APIs directly from the UI. Always go through
 `PlayerService` (`launch`, `setEQ`, `setEQFreq`, `setEQGain`, `setEQParams`,
 `seek`, …).
+
+A player is built with the app's one `OutputSelection` and reads its backend and
+device at each `launch`, so a device picked mid-session is the one the next clip
+opens. Nothing holds a copy of the choice. The device list comes through the
+`OutputDevices` seam, which `SoLoudOutputDevices` implements; the UI lists
+devices with `OutputSelection.availableDevices()`, and tests give it a
+`FakeOutputDevices`.
 
 **The signatures mean something.** Only `launch`, `shutdown`, `seek` and
 `setEQParams` return a `Future`; everything else is a synchronous FFI write and
@@ -516,7 +523,8 @@ repository. Shared scaffolding is in `test/helpers/`:
 
 | Helper | Use it for |
 |---|---|
-| `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `ClipLibrary`, `PlayerService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
+| `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `ClipLibrary`, `PlayerService`. `OutputSelection` is not here: construct a real one over a `FakeOutputDevices`, it needs no engine. |
+| `fake_output_devices.dart` | `FakeOutputDevices`: the device list an `OutputSelection` reads, set by the test, or made to throw. `playbackDevice(id, name)` builds a `PlaybackDevice` without an engine. |
 | `scripted_random.dart` | `ScriptedRandom`: a `Random` that returns given numbers, for tests where which graph comes up matters. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
 
@@ -546,7 +554,7 @@ fvm flutter test integration_test/  # integration tests — local only, see belo
 |---|---|
 | `audio_clip_service_integration_test.dart` | native decode/convert only |
 | `clip_encoder_integration_test.dart` | the offline encoder, plus an engine to load the result back |
-| `audio_state_integration_test.dart` | a real device list, enumerated *before* the engine starts. Android reports no default device, so those checks are skipped there |
+| `output_selection_integration_test.dart` | a real device list, enumerated *before* the engine starts. Android reports no default device, so those checks are skipped there |
 | `player_service_integration_test.dart` | an output device (engine init) |
 | `peaking_eq_audio_integration_test.dart` | an output device that actually renders — stream time has to advance for fades to land |
 
@@ -649,7 +657,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `lib/data/clips/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
 | `lib/data/legacy/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
 | `lib/data/clips/clip_library.dart` | Records and files together; see [Persistence](#persistence). `resolvePath` follows a clip whose file was rewritten mid-session |
-| `lib/data/audio_state.dart` | Output device + Android backend state |
+| `lib/data/output_selection.dart` | Output device + Android backend; see [Audio Engine](#audio-engine-playerservice) |
 | `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
 | `lib/data/locale_provider.dart` | The language picked in settings |
 
