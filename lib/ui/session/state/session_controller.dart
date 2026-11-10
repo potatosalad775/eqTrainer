@@ -48,11 +48,6 @@ class SessionController {
   /// How the session is going. This is what the result page shows.
   SessionResults get results => _rounds?.results ?? SessionResults.empty();
 
-  /// Toggle peaking EQ on the player via controller to keep UI logic thin.
-  void setEqEnabled(bool enabled) {
-    _player.setEQ(enabled);
-  }
-
   Future<void> launch({
     // Checked before each write to the store after an await: a launch can
     // still finish after the page is gone, and writing to a disposed notifier

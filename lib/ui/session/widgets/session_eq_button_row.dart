@@ -1,5 +1,4 @@
 import 'package:eq_trainer/l10n/l10n.dart';
-import 'package:eq_trainer/ui/session/state/session_controller.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +9,7 @@ class SessionEqButtonRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sessionController = context.read<SessionController>();
+    final player = context.read<PlayerService>();
     final pEQState = context.select<PlayerService, bool>((p) => p.fetchEQState);
 
     return Row(
@@ -19,7 +18,7 @@ class SessionEqButtonRow extends StatelessWidget {
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: pEQState ? () { sessionController.setEqEnabled(false); } : null,
+            onPressed: pEQState ? () { player.setEQ(false); } : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: context.colors.primary,
               foregroundColor: context.colors.onPrimary,
@@ -30,7 +29,7 @@ class SessionEqButtonRow extends StatelessWidget {
         ),
         Expanded(
           child: ElevatedButton(
-            onPressed: !pEQState ? () { sessionController.setEqEnabled(true); } : null,
+            onPressed: !pEQState ? () { player.setEQ(true); } : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: context.colors.primary,
               foregroundColor: context.colors.onPrimary,
