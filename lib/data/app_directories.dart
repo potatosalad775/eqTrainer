@@ -28,6 +28,10 @@ Future<Directory> resolveAppDataDir() async {
 /// AppDirectories centralizes filesystem paths used by the app.
 /// It lazily resolves and creates necessary directories.
 class AppDirectories {
+  /// [dataDirectory] replaces the platform's data directory, for tests and for
+  /// `openAppStorage`, which resolves it once and hands it on.
+  AppDirectories({Directory? dataDirectory}) : _appSupportDir = dataDirectory;
+
   Directory? _appSupportDir;
   Directory? _clipsDir;
 
