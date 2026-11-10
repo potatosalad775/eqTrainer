@@ -28,6 +28,10 @@ Replacing a clip's file with the same audio in another format while keeping its 
 **Library-rewrite pass**:
 A background job that rewrites many clips. There are two: the format migration (automatic, legacy formats) and the recompress (user-triggered, WAV to FLAC).
 
+**Import**:
+One pass from picking a file to saving a clip. It converts the file if the format policy says to, lets the user trim it, and ends in a clip or in nothing. It is owned by `ClipImport`.
+_Avoid_: Import session ("session" is a training run)
+
 **Missing clip**:
 A clip whose record exists but whose file cannot be found. It is derived and never saved. See ADR 0003.
 _Avoid_: Dangling record, orphan (an orphan is the reverse: a file with no record)
