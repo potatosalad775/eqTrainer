@@ -103,6 +103,56 @@ void main() {
     });
   });
 
+  group('missingClipIds', () {
+    test('is empty for an empty library', () async {
+      expect(await library.missingClipIds(), isEmpty);
+    });
+
+    test('is empty when every clip has its file', () async {
+      await addClip('1000.flac');
+      await addClip('2000.wav', enabled: false);
+
+      expect(await library.missingClipIds(), isEmpty);
+    });
+
+    test('names the clips whose file is not there, enabled or not', () async {
+      await addClip('present.flac');
+      await addClip('gone.flac', file: false);
+      await addClip('off.wav', file: false, enabled: false);
+
+      expect(await library.missingClipIds(), {'gone', 'off'});
+    });
+
+    test('goes by the id, which can differ from the file name', () async {
+      await addClip('1000.opus', file: false, id: '1000-2');
+
+      expect(await library.missingClipIds(), {'1000-2'});
+    });
+
+    test('follows the file as it stands now', () async {
+      await addClip('1000.flac');
+      expect(await library.missingClipIds(), isEmpty);
+
+      File(path('1000.flac')).deleteSync();
+      expect(await library.missingClipIds(), {'1000'});
+
+      File(path('1000.flac')).writeAsBytesSync([1]);
+      expect(await library.missingClipIds(), isEmpty);
+    });
+
+    test('leaves the record of a missing clip alone, in memory and on disk',
+        () async {
+      await addClip('present.flac');
+      final missing = await addClip('gone.flac', file: false);
+
+      await library.missingClipIds();
+
+      expect(library.clips, contains(missing));
+      final saved = (await AudioClipRepository.open(libraryFile)).getAllClips();
+      expect(saved, contains(missing));
+    });
+  });
+
   group('enabledClipPaths', () {
     test('is empty for an empty library', () async {
       expect(await library.enabledClipPaths(), isEmpty);

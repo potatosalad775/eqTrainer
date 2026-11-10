@@ -86,6 +86,20 @@ class ClipLibrary {
     return path == null ? null : File(path).length();
   }
 
+  /// The ids of the clips whose file cannot be found.
+  ///
+  /// This is derived by looking at the disk each time it is asked and is never
+  /// saved, so a clip whose file comes back stops being missing, and nothing is
+  /// removed on the strength of one failed check (ADR 0003). Only the user
+  /// deletes a missing clip.
+  Future<Set<String>> missingClipIds() async {
+    final missing = <String>{};
+    for (final clip in clips) {
+      if (!await File(await _pathFor(clip)).exists()) missing.add(clip.id);
+    }
+    return missing;
+  }
+
   /// Paths of the enabled clips whose file exists, in library order.
   ///
   /// A missing clip is skipped and its record is kept: one failed existence
