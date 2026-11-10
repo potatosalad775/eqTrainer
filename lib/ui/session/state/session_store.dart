@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:eq_trainer/ui/session/state/frequency_calculator.dart';
-import 'package:eq_trainer/ui/session/state/graph_state.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
 import 'package:eq_trainer/domain/session/band_layout.dart';
 import 'package:eq_trainer/domain/session/session_results.dart';
@@ -20,9 +19,6 @@ class SessionStore extends ChangeNotifier {
     _sessionState = state;
     notifyListeners();
   }
-
-  // Graph state (loading/ready/error)
-  final ValueNotifier<GraphState> graphStateNotifier = ValueNotifier<GraphState>(GraphState.loading);
 
   // Graph data snapshot
   List<LineChartBarData> _graphBarDataList = const [];
@@ -85,28 +81,20 @@ class SessionStore extends ChangeNotifier {
 
   /// Shows [layout]'s graphs and puts the picker back on the first.
   void applyLayout(BandLayout layout) {
-    graphStateNotifier.value = GraphState.loading;
-    try {
-      final computed = FrequencyCalculator.compute(layout);
+    final computed = FrequencyCalculator.compute(layout);
 
-      _layout = layout;
-      _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
-      _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
+    _layout = layout;
+    _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
+    _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
 
-      // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
-      resetPickerValue();
+    // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
+    resetPickerValue();
 
-      // Notify listeners so widgets that depend on the graph data (e.g. the
-      // picker's max value) rebuild: resetPickerValue() alone early-returns
-      // without notifying when the picker was already at 1, which would leave
-      // the picker range stale after a band count change.
-      notifyListeners();
-
-      graphStateNotifier.value = GraphState.ready;
-    } catch (_) {
-      graphStateNotifier.value = GraphState.error;
-      rethrow;
-    }
+    // Notify listeners so widgets that depend on the graph data (e.g. the
+    // picker's max value) rebuild: resetPickerValue() alone early-returns
+    // without notifying when the picker was already at 1, which would leave
+    // the picker range stale after a band count change.
+    notifyListeners();
   }
 
   void updatePickerValue(int newValue) {
@@ -127,7 +115,6 @@ class SessionStore extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    graphStateNotifier.dispose();
     super.dispose();
   }
 
