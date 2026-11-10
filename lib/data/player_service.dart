@@ -92,6 +92,9 @@ class PlayerService extends ChangeNotifier {
   /// lands on a mix-block boundary — ~46 ms at the default 2048-frame buffer,
   /// more if the device period is larger. This is a safety net, not the
   /// expected wait: the poll below normally returns well inside it.
+  ///
+  /// Counted in poll intervals, not read off the wall clock, so a test clock
+  /// that drives the polls drives the timeout too.
   static const Duration _fadeWaitTimeout = Duration(milliseconds: 300);
 
   /// How often [_awaitWet] re-reads the applied value while waiting.
@@ -447,9 +450,11 @@ class PlayerService extends ChangeNotifier {
   /// fixed [_fadeDuration] in Dart would return while the band was still
   /// audible and the retune below it would click.
   Future<void> _awaitWet(double target) async {
-    final deadline = DateTime.now().add(_fadeWaitTimeout);
+    final maxWaits =
+        _fadeWaitTimeout.inMicroseconds ~/ _fadeWaitPollInterval.inMicroseconds;
+    var waits = 0;
     while ((_engine.eqWet - target).abs() > _wetEpsilon) {
-      if (DateTime.now().isAfter(deadline)) {
+      if (waits++ >= maxWaits) {
         // Fall through rather than hang the round. Snapping the coefficients
         // now may be audible, but a session that never advances is worse.
         _engine.stepEqWet(target);

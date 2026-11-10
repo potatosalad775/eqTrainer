@@ -556,8 +556,14 @@ repository. Shared scaffolding is in `test/helpers/`:
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `ClipLibrary`, `PlayerService`. `OutputSelection` is not here: construct a real one over a `FakeOutputDevices`, it needs no engine. |
 | `fake_output_devices.dart` | `FakeOutputDevices`: the device list an `OutputSelection` reads, set by the test, or made to throw. `playbackDevice(id, name)` builds a `PlaybackDevice` without an engine. |
 | `scripted_random.dart` | `ScriptedRandom`: a `Random` that returns given numbers, for tests where which graph comes up matters. |
+| `fake_audio_engine.dart` | `FakeAudioEngine`: an in-memory `AudioEngine` for building a real `PlayerService`. Stream time moves only through `advance`, and only while a voice is rendering. Its `calls` log snapshots `eqWet` and whether anything was rendering at each call, so assert order on those, not on live values. |
 | `recording_hold.dart` | `RecordingHold`: a `PlaybackHold` that counts its `pause` and `resume` calls, for building a `PlayerService` without a migration. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
+
+`PlayerService`'s rules (fade or step, the round transition, end of clip, compensation
+volume, the band reset on launch) are unit-tested against `FakeAudioEngine`, with
+`testWidgets` and `tester.pump` as the clock. That proves the Dart sequencing. Whether the
+fake behaves like SoLoud is checked by nothing but the integration suites.
 
 Code that needs the temp directory takes it as a parameter (`ClipImport`'s
 `tempDirectory`), so a test passes a real one from `Directory.systemTemp`; if a platform
