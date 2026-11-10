@@ -41,7 +41,7 @@ A file in the clips directory that no record points at.
 One run of training, from Start until the user leaves.
 
 **Round**:
-One question within a session: one answer band to identify.
+One question within a session: one graph to identify as the one being applied to the audio.
 
 **Band**:
 One of the frequency bands a round can ask about. The band count belongs to the session: it starts at the configured value and moves along the band ladder.

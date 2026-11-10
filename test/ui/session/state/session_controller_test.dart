@@ -365,9 +365,9 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
-    // launchSession — the one path that touches every collaborator
+    // launch: the one path that touches every collaborator
     // -------------------------------------------------------------------------
-    group('launchSession', () {
+    group('launch', () {
       test('opens the first enabled clip and reports ready', () async {
         when(library.enabledClipPaths)
             .thenAnswer((_) async => ['/a.flac', '/b.flac']);
