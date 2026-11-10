@@ -56,7 +56,7 @@ void main() {
     required double gainDb,
     double q = 1,
   }) async {
-    final player = PlayerService(await testOutputSelection());
+    final player = PlayerService(await testOutputSelection(), hold: const NoHold());
     final chunks = <Uint8List>[];
     StreamSubscription<Uint8List>? sub;
     try {

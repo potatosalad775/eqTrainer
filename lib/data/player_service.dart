@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/data/output_selection.dart';
+import 'package:eq_trainer/data/playback_hold.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 
 /// Snapshot of the player's transport state, polled for the UI.
@@ -54,9 +55,15 @@ class PlayerService extends ChangeNotifier {
   /// Where the Android backend and the output device come from. The device is
   /// read at each [launch], so a change made while this player is open applies
   /// from the next clip. The backend is read only when the engine starts.
-  PlayerService(this.output);
+  ///
+  /// [hold] is paused here and resumed in [dispose], so whatever must stand
+  /// aside for playback does so for exactly as long as a player exists.
+  PlayerService(this.output, {required PlaybackHold hold}) : _hold = hold {
+    _hold.pause();
+  }
 
   final OutputSelection output;
+  final PlaybackHold _hold;
 
   /// How often the transport state is polled for the UI. Unlike the old
   /// isolate poll this is a plain synchronous read, so it cannot back up.
@@ -297,6 +304,7 @@ class PlayerService extends ChangeNotifier {
     // Fire-and-forget: dispose() cannot await, and the engine outlives the
     // page anyway.
     unawaited(_disposeSource());
+    _hold.resume();
     super.dispose();
   }
 

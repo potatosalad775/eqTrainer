@@ -1,4 +1,5 @@
 import 'package:eq_trainer/data/output_selection.dart';
+import 'package:eq_trainer/data/playback_hold.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,4 +20,15 @@ Future<OutputSelection> testOutputSelection() async {
     prefs: await SharedPreferences.getInstance(),
     devices: const _NoDevices(),
   );
+}
+
+/// A [PlaybackHold] for suites that have no migration to stand aside.
+class NoHold implements PlaybackHold {
+  const NoHold();
+
+  @override
+  void pause() {}
+
+  @override
+  void resume() {}
 }

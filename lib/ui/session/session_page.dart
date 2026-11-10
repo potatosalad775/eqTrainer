@@ -28,18 +28,16 @@ class _SessionPageState extends State<SessionPage> {
   final _store = SessionStore();
   late final SessionController _controller;
 
-  /// Captured in initState rather than read in dispose, where the element is
-  /// already detached from the tree.
-  late final ClipFormatMigration _clipFormatMigration;
-
   @override
   void initState() {
     super.initState();
     // A decode-and-encode pass competing with playback is audible on a phone
     // or a DAP, and the session is the one screen where that matters. The
     // migration holds at its next clip boundary until this page is gone.
-    _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
-    player = PlayerService(context.read<OutputSelection>());
+    player = PlayerService(
+      context.read<OutputSelection>(),
+      hold: context.read<ClipFormatMigration>(),
+    );
     _controller = SessionController(
       player: player,
       sessionStore: _store,
@@ -54,7 +52,6 @@ class _SessionPageState extends State<SessionPage> {
 
   @override
   void dispose() {
-    _clipFormatMigration.resume();
     player.dispose();
     _store.dispose();
     super.dispose();

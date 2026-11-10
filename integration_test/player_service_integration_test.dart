@@ -37,7 +37,7 @@ void main() {
   tearDownAll(() => fixtures.dispose());
 
   setUp(() async {
-    player = PlayerService(await testOutputSelection());
+    player = PlayerService(await testOutputSelection(), hold: const NoHold());
   });
 
   tearDown(() async {
