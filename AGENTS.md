@@ -16,7 +16,7 @@ This document provides AI assistants with an overview of the eqTrainer codebase,
 ```
 eqTrainer/
 ├── lib/
-│   ├── main.dart              # App bootstrap, provider wiring, legacy data migrations
+│   ├── main.dart              # App bootstrap and provider wiring; storage is opened by data/app_storage.dart
 │   ├── l10n/                  # ARB translations, context.l10n (generated/ is gitignored)
 │   ├── ui/                    # Pages, widgets and the state they own
 │   │   ├── core/              # Shared widgets and themes, error dialog, updater, licenses
@@ -61,11 +61,11 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | Provider | Type | Purpose |
 |---|---|---|
 | `NavBarProvider` | ChangeNotifier | Bottom nav state |
-| `MiscSettingsProvider` | ChangeNotifier | Misc settings: theme mode, frequency tooltip, import format, volume compensation. Loaded in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
-| `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded in `main()` before `runApp`, so provided by `.value`. See [Localization](#localization) |
-| `OutputSelection` | ChangeNotifier | The Android backend and output device the engine opens. Made in `main()` before `runApp` (it needs `prefs`), so provided by `.value`; `App` only starts and stops its device watching. One instance for the whole app, which every `PlayerService` is built with. See [Audio Engine](#audio-engine-playerservice) |
-| `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened in `main()` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
-| `ClipLibrary` | Provider | Records and files together: what a session plays, deleting a clip, and the one rewrite protocol. Built in `main()` over that one repository, so provided by `.value`. See [Persistence](#persistence) |
+| `MiscSettingsProvider` | ChangeNotifier | Misc settings: theme mode, frequency tooltip, import format, volume compensation. Loaded by `openAppStorage` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
+| `LocaleProvider` | ChangeNotifier | The language picked in settings. Loaded by `openAppStorage` before `runApp`, so provided by `.value`. See [Localization](#localization) |
+| `OutputSelection` | ChangeNotifier | The Android backend and output device the engine opens. Made by `openAppStorage` before `runApp` (it needs `prefs`), so provided by `.value`; `App` only starts and stops its device watching. One instance for the whole app, which every `PlayerService` is built with. See [Audio Engine](#audio-engine-playerservice) |
+| `IAudioClipRepository` | Provider | The clip library. One `AudioClipRepository` opened by `openAppStorage` before `runApp`, so provided by `.value`. See [Persistence](#persistence) |
+| `ClipLibrary` | Provider | Records and files together: what a session plays, deleting a clip, and the one rewrite protocol. Built by `openAppStorage` over that one repository, so provided by `.value`. See [Persistence](#persistence) |
 | `AudioClipService` | Provider | Imports a clip: picks the extension, trims or copies, and hands the file to `ClipLibrary.add` |
 | `ClipImport` | Provider | One import, from the picked file to the saved clip. `ImportPage`'s State creates it, provides it by `.value` and disposes it, so each import starts from nothing. See [Clip Formats](#clip-formats) |
 | `ClipRecompressService` | Provider | User-triggered WAV→FLAC recompress |
@@ -97,7 +97,7 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
 | `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand`, and `ClipQueue` (the clips a session plays) |
-| `data/` | `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `PlaybackHold` (what a player holds while it exists), `ImportPlayer` |
+| `data/` | `AppStorage` and `openAppStorage` (everything loaded from disk before `runApp`, in the one order that works), `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `PlaybackHold` (what a player holds while it exists), `ImportPlayer` |
 | `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ClipImport` (with `ImportFailure`), `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
@@ -375,7 +375,14 @@ so the error view can still tell whether to mention FFmpeg after every clip was 
 
 Settings are in `shared_preferences`, through the legacy `SharedPreferences` API
 (see `LocaleProvider` for why). Its cache is in memory, so reads are synchronous
-once `main()` has loaded it.
+once `openAppStorage` has loaded it.
+
+`openAppStorage` (`data/app_storage.dart`) is the one place that knows the load order,
+and `test/data/app_storage_test.dart` checks it: resolve the data directory, set the
+`debug.` preferences prefix before the first `getInstance`, init Hive, migrate settings
+before anything reads them, open the one repository, migrate clips before anything
+uses the library. It calls `Hive.initFlutter`, which for an absolute directory also
+registers Hive's Color and TimeOfDay adapters and a flush-on-pause observer.
 
 The clip library is `audio_clips.json` in the app support directory, loaded whole
 into `AudioClipRepository` and rewritten whole on every change. Things that are
@@ -410,7 +417,7 @@ disabled. It derives that from `ClipLibrary.missingClipIds`, held apart from the
 list the repository stream draws, and never saves it.
 
 Hive CE is only read now, to migrate what older versions stored. Both migrations
-run in `main()` before anything reads the data, and people can skip releases, so
+run in `openAppStorage` before anything reads the data, and people can skip releases, so
 they stay until dropping users on older versions is acceptable.
 
 | Migration | Boxes | On an unreadable box | After success |
@@ -656,7 +663,8 @@ so both downloads carry them. The build fails if they cannot be found.
 
 | File | Purpose |
 |---|---|
-| `lib/main.dart` | App entry, provider tree, legacy data migrations |
+| `lib/main.dart` | App entry and provider tree |
+| `lib/data/app_storage.dart` | `openAppStorage`: data directory, preferences prefix, Hive, both migrations and the clip library, in load order; see [Persistence](#persistence) |
 | `lib/domain/session/session_rounds.dart` | Picking, scoring and the band ladder; see [Session Flow](#session-flow) |
 | `lib/domain/session/clip_queue.dart` | The clips a session plays, in order, with a cursor; see [Session Flow](#session-flow) |
 | `lib/domain/session/band_layout.dart` | Which graph is which band, peak or dip, and its frequency |
