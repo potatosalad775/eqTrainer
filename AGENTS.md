@@ -18,25 +18,23 @@ eqTrainer/
 ├── lib/
 │   ├── main.dart              # App bootstrap, provider wiring, legacy data migrations
 │   ├── l10n/                  # ARB translations, context.l10n (generated/ is gitignored)
-│   ├── features/              # Feature-first UI modules
+│   ├── ui/                    # Pages, widgets and the state they own
+│   │   ├── core/              # Shared widgets and themes, error dialog, updater, licenses
 │   │   ├── config/            # Session parameter configuration page
 │   │   ├── import/            # Audio file import workflow
 │   │   ├── playlist/          # Playlist management page
 │   │   ├── result/            # Post-session results display
-│   │   ├── session/           # Core training session (UI + logic)
+│   │   ├── session/           # Core training session (page, widgets, state/)
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
-│   └── shared/                # Cross-feature code
-│       ├── model/             # AudioClip, AudioState, MiscSettingsProvider, legacy Hive records
-│       ├── player/            # Audio engine: PlayerService (flutter_soloud)
-│       ├── repository/        # IAudioClipRepository + JSON file implementation
-│       ├── service/           # Business logic services
-│       ├── themes/            # AppColors, AppTheme, AppDimens
-│       └── widget/            # Reusable UI widgets
+│   ├── domain/                # Pure Dart: AudioClip, format policy, WAV parser, SessionParameter
+│   └── data/                  # Disk, preferences and the audio engine
+│       ├── clips/             # Clip library, encoder, rewrite passes, playlist and import services
+│       └── legacy/            # Hive records and the migrations that read them
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
 │   └── icon/                  # App icon
-├── test/                      # Unit tests, mirroring lib/ (+ helpers/)
+├── test/                      # Unit tests, mirroring lib/ (+ helpers/, layers_test.dart)
 ├── integration_test/          # Real-engine tests — local only, never CI
 ├── docs/agents/               # Config the agent skills read; see Agent skills
 ├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners and packaging
@@ -77,26 +75,28 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `SessionStore` | ChangeNotifier | Session runtime state & results |
 | `SessionController` | Provider | Orchestrates session launch & answer submission |
 
-### Feature Layer (`lib/features/`)
+### Layers
 
-Each feature is a self-contained module with:
-- `*_page.dart` — top-level page widget
-- `widget/` or `widgets/` — feature-local widgets
-- `data/` — local state/data classes (if any)
-- `model/` — feature-specific models (if any)
+`lib/` has three layers, plus `main.dart` and `l10n/`. `ui/` is pages, widgets and the state they own. `domain/` is pure Dart. `data/` is anything that touches disk, preferences or the audio engine. The import rules:
+
+- `ui` may import `domain` and `data`; `data` may import `domain`; `domain` imports neither.
+- `ui` does not import `dart:io`, `package:path`, `shared_preferences` or `AppDirectories`.
+- `domain` does not import `dart:io`.
+- `domain` and `data` use only `package:flutter/foundation.dart` from Flutter, and never take a `BuildContext`.
+- Nothing in the three layers imports `main.dart`.
+
+`test/layers_test.dart` checks these. It carries an allow-list of the violations that remain, which can only shrink: delete an entry when you fix it. The reasons are in `docs/adr/0002-three-layers-enforced-by-test.md`.
 
 There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Localization](#localization)). Import the specific `package:eq_trainer/...` path.
 
-### Shared Layer (`lib/shared/`)
-
-| Sub-directory | Content |
+| Folder | Content |
 |---|---|
-| `model/` | `AudioClip` (immutable, JSON), `AudioState` (backend/device), `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`) |
-| `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
-| `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `legacy_settings_migration.dart`, `legacy_clip_migration.dart`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
-| `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
-| `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
+| `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState`, `GraphState` and `FrequencyCalculator`; `import/` holds `ImportAudioData` |
+| `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
+| `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser), `SessionParameter` |
+| `data/` | `AppDirectories`, `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
+| `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
+| `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
 ---
 
@@ -400,9 +400,9 @@ one of its items.
 - Material Design 3. `AppColors` holds fully enumerated `lightScheme`/`darkScheme`
   `ColorScheme` literals — there is **no** `ColorScheme.fromSeed` call to edit;
   regenerate the pair if the palette changes
-- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to `shared_preferences`
+- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/data/misc_settings_provider.dart`; theme mode is persisted to `shared_preferences`
 - Custom font: `PretendardVariable` (supports Korean)
-- Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
+- Colors/dimensions in `lib/ui/core/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`
 
 ---
@@ -454,6 +454,9 @@ Platform channels (`path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
 `import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
 so use its `setMockInitialValues`.
+
+`layers_test.dart` checks the import rules of the three layers; see
+[Layers](#layers).
 
 `l10n_test.dart` covers what the compiler cannot: every ARB file has every message
 and placeholder, the iOS plist matches `supportedLocales`, and the plural forms
@@ -559,21 +562,21 @@ so both downloads carry them. The build fails if they cannot be found.
 | File | Purpose |
 |---|---|
 | `lib/main.dart` | App entry, provider tree, legacy data migrations |
-| `lib/features/session/model/session_controller.dart` | Session orchestration logic |
-| `lib/features/session/model/session_store.dart` | Session UI state (ChangeNotifier) |
-| `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
-| `lib/features/session/model/frequency_calculator.dart` | Pure EQ frequency math |
-| `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
-| `lib/shared/service/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_encoder.dart` | Convert or trim through SoLoud to Opus/FLAC/WAV |
-| `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
-| `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
-| `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
-| `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
-| `lib/shared/model/audio_state.dart` | Output device + Android backend state |
+| `lib/ui/session/state/session_controller.dart` | Session orchestration logic |
+| `lib/ui/session/state/session_store.dart` | Session UI state (ChangeNotifier) |
+| `lib/domain/session_parameter.dart` | User-configurable session settings |
+| `lib/ui/session/state/frequency_calculator.dart` | Pure EQ frequency math |
+| `lib/data/player_service.dart` | Audio engine wrapper + EQ control |
+| `lib/data/clips/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
+| `lib/data/clips/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
+| `lib/data/clips/clip_encoder.dart` | Convert or trim through SoLoud to Opus/FLAC/WAV |
+| `lib/domain/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
+| `lib/data/clips/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
+| `lib/data/legacy/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
+| `lib/data/clips/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
+| `lib/data/audio_state.dart` | Output device + Android backend state |
 | `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
-| `lib/shared/model/locale_provider.dart` | The language picked in settings |
+| `lib/data/locale_provider.dart` | The language picked in settings |
 
 ---
 
