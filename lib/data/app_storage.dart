@@ -57,8 +57,9 @@ Future<AppStorage> openAppStorage({
 
   // Load Settings - older versions kept these in Hive, so move them first.
   // Must come before OutputSelection is built: it reads the Android backend
-  // once, and the migration is what writes it. The two providers read
-  // preferences live, apart from the import-format tidy-up at construction.
+  // once, and the migration is what writes it. MiscSettingsProvider reads
+  // preferences live, apart from the import-format tidy-up at construction,
+  // and the migration does not write the language.
   final prefs = await SharedPreferences.getInstance();
   await migrateLegacySettings(prefs);
   final locale = await LocaleProvider.load();
