@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
-import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:toastification/toastification.dart';
 
 class SessionSelector extends StatelessWidget {
@@ -25,14 +24,14 @@ class SessionSelector extends StatelessWidget {
     sessionController.submitAnswer(
       player: context.read<PlayerService>(),
       sessionStore: context.read<SessionStore>(),
-      sessionParameter: context.read<SessionParameter>(),
-      onResult: (isCorrect, correctIndex) {
+      onResult: (isCorrect, correctGraphIndex) {
         toastification.show(
           type: isCorrect ? ToastificationType.success : ToastificationType.error,
           style: ToastificationStyle.flatColored,
           description: Text(isCorrect
             ? l10n.sessionSnackbarCorrect
-            : l10n.sessionSnackbarIncorrect(index: correctIndex.toString())),
+            : l10n.sessionSnackbarIncorrect(
+              index: SessionStore.pickerValueOf(correctGraphIndex).toString())),
           alignment: Alignment.topCenter,
           autoCloseDuration: const Duration(seconds: 3),
           animationDuration: const Duration(milliseconds: 300),

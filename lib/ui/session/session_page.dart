@@ -86,7 +86,7 @@ class _SessionPageState extends State<SessionPage> {
             ),
             actions: [
               Selector<SessionStore, (int, int)>(
-                selector: (_, store) => (store.resultCorrect, store.resultIncorrect),
+                selector: (_, store) => (store.results.correct, store.results.incorrect),
                 builder: (_, counts, __) {
                   final (correct, incorrect) = counts;
                   return Row(
@@ -122,6 +122,7 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   void _onPop() {
+    final results = context.read<SessionController>().results;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -139,7 +140,7 @@ class _SessionPageState extends State<SessionPage> {
               // dispose() handles player.shutdown(); just navigate.
               Navigator.of(context).pop(true);
               Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const ResultPage())
+                MaterialPageRoute(builder: (context) => ResultPage(results: results))
               );
             },
             child: Text(context.l10n.sessionAlertExitButtonYes),

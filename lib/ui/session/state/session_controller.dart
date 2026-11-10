@@ -2,39 +2,33 @@ import 'dart:math';
 import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_results.dart';
+import 'package:eq_trainer/domain/session/session_rounds.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
-import 'package:eq_trainer/domain/session/session_parameter.dart';
 
-class SessionSubmitResult {
-  const SessionSubmitResult({
-    required this.isCorrect,
-    required this.correctIndex,
-  });
-  final bool isCorrect;
-  // 1-based index as shown to the user
-  final int correctIndex;
-}
-
-/// SessionController centralizes session launch, round submission and next-round init.
+/// SessionController connects the session's rules to the audio and the screen.
+///
+/// Which graph is the answer, the score and the band ladder are
+/// [SessionRounds]'; this launches the player, hands each round's band to it,
+/// and puts what changed into the [SessionStore].
 class SessionController {
-  SessionController();
+  /// [random] is for tests that need to know which graph comes up.
+  SessionController({Random? random}) : _random = random;
 
-  // --- Internal round state ---
-  final _random = Random();
-  late int _answerGraphIndex;
-  int _prevAnswerGraphIndex = -1;
-  late double _answerCenterFreq;
-  late double _answerGain;
+  final Random? _random;
+
+  /// The rules of the session in progress; every launch makes a new one.
+  SessionRounds? _rounds;
 
   // EQ bandwidth is fixed for the whole session (set from config at launch),
   // not part of a round's answer. Kept so it can be re-applied to a fresh
   // player after a track switch.
   double _qFactor = 1;
 
-  // Expose read-only for debugging/tests if needed
-  int get answerGraphIndex => _answerGraphIndex;
-  double get answerCenterFreq => _answerCenterFreq;
+  /// How the session in progress is going. This is what the result page shows.
+  SessionResults get results => _rounds?.results ?? SessionResults.empty();
 
   /// Toggle peaking EQ on the player via controller to keep UI logic thin.
   void setEqEnabled(PlayerService player, bool enabled) {
@@ -62,10 +56,14 @@ class SessionController {
       // launched player) during the async launch window.
       sessionStore.setSessionState(SessionState.init);
 
+      // The settings are frozen here, so what the user does on the config page
+      // later cannot reach a session that is already running.
+      final settings = sessionParameter.snapshot();
+
       // Reset Session
-      _prevAnswerGraphIndex = -1;
+      _rounds = null;
       sessionStore.resetPickerValue();
-      sessionStore.resetResult();
+      sessionStore.setResults(SessionResults.empty());
 
       // Load enabled audio clip absolute paths
       final paths = await clipLibrary.enabledClipPaths();
@@ -74,7 +72,7 @@ class SessionController {
 
       // Q is fixed for the whole session; capture it once so a track switch
       // can re-apply it to the fresh player.
-      _qFactor = sessionParameter.qFactor;
+      _qFactor = settings.qFactor;
 
       // If List of Audio clips for Session is Not Empty
       if (sessionStore.playlistPaths.isNotEmpty) {
@@ -94,16 +92,11 @@ class SessionController {
         return;
       }
 
-      // Calculate Frequencies required for Session and Graph UI
-      await sessionStore.initFrequency(sessionParameter: sessionParameter);
-      if (!active()) return;
-
-      // Start initialize Session (first round)
-      await initSession(
-        player,
-        sessionStore: sessionStore,
-        sessionParameter: sessionParameter,
-      );
+      // The first round is picked as the rounds are made.
+      final rounds = SessionRounds(settings, random: _random);
+      _rounds = rounds;
+      sessionStore.applyLayout(rounds.layout);
+      await _tune(player, rounds.current);
       if (!active()) return;
 
       // Notify the Session is Ready
@@ -114,38 +107,15 @@ class SessionController {
     }
   }
 
-  // Collective Function for initializing a round.
-  Future<void> initSession(
-    PlayerService player, {
-    required SessionStore sessionStore,
-    required SessionParameter sessionParameter,
-  }) async {
-    // Num of Graph
-    final layout = sessionStore.layout;
-    final int numOfGraph = layout.graphCount;
-
-    // Select Random Index of Graph (Correct Answer for Session).
-    // With only 2 graphs (e.g. peak-only/dip-only at band count 1), forbidding
-    // a repeat forces a strict 1,2,1,2,... alternation the user can solve
-    // without listening. Only forbid repeats when there's a real choice.
-    do {
-      _answerGraphIndex = _random.nextInt(numOfGraph);
-    } while (numOfGraph > 2 && _answerGraphIndex == _prevAnswerGraphIndex);
-    _prevAnswerGraphIndex = _answerGraphIndex;
-
-    _answerCenterFreq = layout.frequencyOf(_answerGraphIndex);
-
-    // A dip graph inverts the session's gain.
-    _answerGain = layout.signedGain(_answerGraphIndex, sessionParameter.gain.toDouble());
-
-    // Take the band out, wait for it to actually leave the signal, then
-    // retune it — [PlayerService.setEQParams] owns that ordering, and it is
-    // the one EQ call that genuinely awaits. (Q is session-constant and
-    // applied at launch, not per round.)
-    await player.setEQParams(
+  // Take the band out, wait for it to actually leave the signal, then retune
+  // it: [PlayerService.setEQParams] owns that ordering, and it is the one EQ
+  // call that genuinely awaits. (Q is session-constant and applied at launch,
+  // not per round.)
+  Future<void> _tune(PlayerService player, Round round) {
+    return player.setEQParams(
       enableEQ: false,
-      frequency: _answerCenterFreq,
-      gainDb: _answerGain,
+      frequency: round.frequency,
+      gainDb: round.gainDb,
     );
   }
 
@@ -159,81 +129,57 @@ class SessionController {
   /// "Original".
   void updatePlayerState(PlayerService player, {required bool eqEnabled}) {
     player.setEQQ(_qFactor);
-    player.setEQFreq(_answerCenterFreq);
-    player.setEQGain(_answerGain);
+    final round = _rounds?.current;
+    if (round != null) {
+      player.setEQFreq(round.frequency);
+      player.setEQGain(round.gainDb);
+    }
     player.setEQ(eqEnabled);
   }
 
-  Future<SessionSubmitResult?> submitAnswer({
+  /// Scores the graph the picker is on and moves to the next round.
+  ///
+  /// Returns what happened, or null when the submit was ignored or failed.
+  /// [onResult] gets whether it was right and the 0-based index of the right
+  /// graph, before the next round is set up.
+  Future<RoundOutcome?> submitAnswer({
     required PlayerService player,
     required SessionStore sessionStore,
-    required SessionParameter sessionParameter,
-    void Function(bool isCorrect, int correctIndex)? onResult,
+    void Function(bool isCorrect, int correctGraphIndex)? onResult,
   }) async {
+    final rounds = _rounds;
     // Re-entrancy guard: only a round that is currently `ready` can be
     // submitted. A double-tap within one frame (before InteractionLock's
     // rebuild absorbs the second tap) would otherwise score the same round
     // twice and move the session point by ±2.
-    if (sessionStore.sessionState != SessionState.ready) return null;
+    if (rounds == null || sessionStore.sessionState != SessionState.ready) {
+      return null;
+    }
 
     // Mark loading
     sessionStore.setSessionState(SessionState.loading);
 
     try {
-      // Capture current round's correct answer index before it changes
-      final int correctIndex = _answerGraphIndex + 1;
-      final bool isCorrect = correctIndex == sessionStore.currentPickerValue;
+      final outcome = rounds.submit(sessionStore.currentGraphIndex);
 
       // Notify caller (e.g. to show a toast) without coupling to widget layer
-      onResult?.call(isCorrect, correctIndex);
+      onResult?.call(outcome.isCorrect, outcome.correctGraphIndex);
 
-      // Apply result to session
-      sessionStore.applySubmission(centerFreq: _answerCenterFreq, isCorrect: isCorrect);
-
-      // Band threshold adjustments. Use >=/<= rather than == so a point that
-      // already overshot the threshold (see the clamp branches below) still
-      // fires the adjustment instead of requiring an exact match.
-      if (sessionStore.currentSessionPoint >= sessionParameter.threshold) {
-        if (sessionParameter.startingBand < 25) {
-          sessionParameter.startingBand++;
-          sessionStore.resetSessionPoint();
-          sessionStore.resetPickerValue();
-          // The graph layout is about to change size/meaning; a stale index
-          // from the old layout must not suppress a legitimate repeat (or,
-          // in principle, sit outside the new range) in the next round.
-          _prevAnswerGraphIndex = -1;
-          await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        } else {
-          // Already at the top band: clamp instead of letting further correct
-          // answers push the point past the threshold, which would otherwise
-          // force clawing back through the whole overshoot before a band
-          // decrease could ever fire again.
-          sessionStore.setCurrentSessionPoint(sessionParameter.threshold);
-        }
-      } else if (sessionStore.currentSessionPoint <= (0 - sessionParameter.threshold)) {
-        if (sessionParameter.startingBand > 2) {
-          sessionParameter.startingBand--;
-          sessionStore.resetSessionPoint();
-          sessionStore.resetPickerValue();
-          _prevAnswerGraphIndex = -1;
-          await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        } else {
-          sessionStore.setCurrentSessionPoint(0 - sessionParameter.threshold);
-        }
+      sessionStore.setResults(rounds.results);
+      if (outcome.bandCountChanged) {
+        // The graph layout changed size and meaning, so the picker goes back
+        // to the first graph along with it.
+        sessionStore.applyLayout(rounds.layout);
       }
 
-      await initSession(
-        player,
-        sessionStore: sessionStore,
-        sessionParameter: sessionParameter,
-      );
+      await _tune(player, outcome.next);
 
       sessionStore.setSessionState(SessionState.ready);
-      return SessionSubmitResult(isCorrect: isCorrect, correctIndex: correctIndex);
+      return outcome;
     } catch (e) {
-      // A throw here (e.g. from initFrequency/setEQParams) would otherwise
-      // leave sessionState stuck at `loading`, and InteractionLock would
-      // freeze the session permanently.
+      // A throw here (e.g. from setEQParams) would otherwise leave
+      // sessionState stuck at `loading`, and InteractionLock would freeze the
+      // session permanently.
       sessionStore.setSessionState(SessionState.error);
       return null;
     }

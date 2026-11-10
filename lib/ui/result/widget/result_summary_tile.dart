@@ -1,15 +1,16 @@
+import 'package:eq_trainer/domain/session/session_results.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
-import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 class ResultSummaryTile extends StatelessWidget {
-  const ResultSummaryTile({super.key});
+  const ResultSummaryTile({super.key, required this.results});
+
+  final SessionResults results;
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<SessionStore>();
+    final percentage = results.percentage;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -31,9 +32,9 @@ class ResultSummaryTile extends StatelessWidget {
               color: context.colors.onSecondary,
             ),
           ),
-          if (store.elapsedSession != 0)
+          if (percentage != null)
             Text(
-              '${store.resultPercentage.toStringAsFixed(2)}%',
+              '${percentage.toStringAsFixed(2)}%',
               style: context.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: context.colors.onSecondary,

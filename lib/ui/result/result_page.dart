@@ -1,12 +1,14 @@
+import 'package:eq_trainer/domain/session/session_results.dart';
 import 'package:eq_trainer/ui/result/widget/result_item_tile.dart';
 import 'package:eq_trainer/ui/result/widget/result_summary_tile.dart';
 import 'package:eq_trainer/ui/core/app_dimens.dart';
 import 'package:flutter/material.dart';
-import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 
 class ResultPage extends StatelessWidget {
-  const ResultPage({ super.key });
+  const ResultPage({ super.key, required this.results });
+
+  final SessionResults results;
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +24,14 @@ class ResultPage extends StatelessWidget {
               children: [
                 Expanded(
                   child: ListView.builder(
-                    itemCount: ResultFrequencyBand.values.length,
-                    itemBuilder: (context, index) => ResultItemTile(index: index),
+                    itemCount: ResultBand.values.length,
+                    itemBuilder: (context, index) => ResultItemTile(
+                      band: ResultBand.values[index],
+                      results: results,
+                    ),
                   ),
                 ),
-                const ResultSummaryTile(),
+                ResultSummaryTile(results: results),
               ],
             ),
           ),
