@@ -6,7 +6,7 @@ abstract interface class LoadedClip {}
 /// One playing or paused instance of a loaded clip. Opaque, like [LoadedClip].
 abstract interface class Voice {}
 
-/// The operations [PlayerService] needs from the audio engine, and no more.
+/// The operations `PlayerService` needs from the audio engine, and no more.
 ///
 /// A seam so the player's rules can be tested without a device. Everything
 /// except [open], [load] and [unload] is a synchronous call that returns at
@@ -102,6 +102,9 @@ final class SoLoudAudioEngine implements AudioEngine {
   /// restarting the output.
   static int? _activeDeviceId;
 
+  /// Brings the engine up on first use and keeps it up afterwards.
+  /// Re-initializing per clip would be slow and pointless: the engine stops
+  /// the output device on its own once no voice is playing.
   @override
   Future<void> open({
     required PlaybackDevice? device,
