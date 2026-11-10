@@ -49,6 +49,10 @@ One of the frequency bands a round can ask about. The band count belongs to the 
 **Graph**:
 One selectable curve in a round. In peak-and-dip mode each band has two, a peak and a dip.
 
+**Queue**:
+The enabled clips a session plays, in library order, fixed when the session starts.
+_Avoid_: playlist (the playlist is the screen that manages the library)
+
 **Points**:
 The running score within a session that moves the band count: plus one for a correct answer and minus one for a wrong one.
 

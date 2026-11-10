@@ -96,7 +96,7 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 | `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState` and `FrequencyCalculator` (chart curves only); `import/` holds `ImportAudioData` |
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
-| `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand` |
+| `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand`, and `ClipQueue` (the clips a session plays) |
 | `data/` | `AppDirectories` (used by `ClipLibrary` only), `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
@@ -308,6 +308,14 @@ SessionController.submitAnswer()
   → sessionStore.setResults()
   → sessionStore.applyLayout()       ← only if the band count changed
   → player.setEQParams()             ← the next round's band
+
+User presses next or previous →
+SessionControl → SessionController.nextTrack() / previousTrack()
+  → (previous only) restart the clip if it is past three seconds, else switch
+  → clipQueue.stepForward() / stepBack()
+  → clipLibrary.resolvePath()        ← follows a clip rewritten mid-session
+  → player.pause(), launch(), then the round's band again, then play()
+  → returns a TrackSwitch for the widget to show
 ```
 
 The rounds, the scoring and the band ladder live in `SessionRounds`, which knows
@@ -318,6 +326,27 @@ valid choices for each setting are defined once, on `SessionSettings`. The picke
 graphs 1-based and the domain counts them 0-based; `SessionStore.graphIndexOf` and
 `pickerValueOf` are the only place the offset is written. `SessionPage` hands
 `controller.results`, a `SessionResults` value, to `ResultPage` when the user leaves.
+
+`SessionController` also switches tracks, so the sequence can be tested without a
+widget. The `ClipQueue` it plays from is fixed when the session starts, from
+`enabledClipPaths`; the store knows nothing about it. The three-second rule for
+"previous" has its one home in `previousTrack`, and a second switch while one is
+running returns `busy` and does nothing. `SessionControl` only disables its buttons for
+the duration and shows what the `TrackSwitch` says.
+
+Two kinds of clip that cannot be played are handled differently. A clip whose file is
+missing is skipped silently and stays in the queue, as ADR 0003 asks. A clip that is
+there but fails to load is dropped from the queue for the rest of the session, counted
+in `TrackSwitch.skipped`, and the user gets a toast. Only when no clip in the queue
+loads does the switch come back `failed`, and then `SessionControl` shows the error
+dialog that ends the session. The Original/Filtered view is read once before the first
+attempt, because `launch()` takes the band out before it reads the file.
+
+Session start follows the same rule. `launch()` tries the queue's clips in order, drops
+each that fails to load, and returns how many it dropped, which `SessionPage` announces
+with the same toast. Only when none loads does it end in the error state and throw the
+last error. `clipPaths` is the list the session started with, kept apart from the queue,
+so the error view can still tell whether to mention FFmpeg after every clip was dropped.
 
 ### Persistence
 
@@ -604,11 +633,12 @@ so both downloads carry them. The build fails if they cannot be found.
 |---|---|
 | `lib/main.dart` | App entry, provider tree, legacy data migrations |
 | `lib/domain/session/session_rounds.dart` | Picking, scoring and the band ladder; see [Session Flow](#session-flow) |
+| `lib/domain/session/clip_queue.dart` | The clips a session plays, in order, with a cursor; see [Session Flow](#session-flow) |
 | `lib/domain/session/band_layout.dart` | Which graph is which band, peak or dip, and its frequency |
 | `lib/domain/session/session_settings.dart` | A session's frozen settings and the valid choices for each |
 | `lib/domain/session/session_results.dart` | `ResultBand` and the `SessionResults` tally |
 | `lib/domain/session/session_parameter.dart` | What the config page edits |
-| `lib/ui/session/state/session_controller.dart` | Connects `SessionRounds` to the player and the store |
+| `lib/ui/session/state/session_controller.dart` | Connects `SessionRounds` to the player and the store, and switches tracks |
 | `lib/ui/session/state/session_store.dart` | Session screen state (ChangeNotifier) |
 | `lib/ui/session/state/frequency_calculator.dart` | The chart's curves and positions for a `BandLayout` |
 | `lib/data/player_service.dart` | Audio engine wrapper + EQ control |

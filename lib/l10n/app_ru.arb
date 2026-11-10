@@ -43,6 +43,7 @@
   "sessionButtonSubmit": "Подтвердить",
   "sessionSnackbarCorrect": "Верно!",
   "sessionSnackbarIncorrect": "Неверно! Правильный ответ был {index}.",
+  "sessionSnackbarClipSkipped": "Клип не удалось воспроизвести, он пропущен.",
   "sessionDdbuttonDeviceDisclaimer": "Изменённое устройство вывода будет применено со следующего аудиоклипа.",
 
   "resultAppbarTitle": "Результат",

@@ -1,4 +1,5 @@
 import 'package:eq_trainer/l10n/l10n.dart';
+import 'package:eq_trainer/ui/session/state/session_controller.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/widgets/session_page_content_landscape.dart';
@@ -43,7 +44,7 @@ class SessionPageContent extends StatelessWidget {
                 Text(context.l10n.sessionAlertErrorTitle, style: context.textTheme.titleLarge),
                 const SizedBox(height: 12),
                 Text(context.l10n.sessionAlertErrorContent),
-                if (context.read<SessionStore>().playlistPaths.any(mayNeedFfmpeg)) ...[
+                if (context.read<SessionController>().clipPaths.any(mayNeedFfmpeg)) ...[
                   const SizedBox(height: 12),
                   Text(context.l10n.importAlertUnsupportedContentLinux),
                 ],
