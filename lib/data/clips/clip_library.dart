@@ -212,10 +212,20 @@ class ClipLibrary {
           ),
         );
       }
+
+      // Records migrated from Hive can share a stem under different ids, so the
+      // destination can be another clip's file. Clearing it as a leftover would
+      // destroy that clip and leave two records on one file.
+      if (clips.any((c) => c.id != clipId && p.equals(c.fileName, destName))) {
+        return RewriteResult(
+          RewriteStatus.failed,
+          error: StateError('$destName belongs to another clip'),
+        );
+      }
       destPath = candidate;
 
       // A leftover from a run interrupted between producing and committing is
-      // a partial file, not a usable clip.
+      // a partial file, not a usable clip. No record owns it, checked above.
       final leftover = File(destPath);
       if (await leftover.exists()) await leftover.delete();
 

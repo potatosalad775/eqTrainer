@@ -474,6 +474,29 @@ void main() {
       expect(File(path('1000.flac')).lengthSync(), 128);
     });
 
+    test('never writes over the file of another clip', () async {
+      // Records migrated from Hive can share a stem under different ids.
+      final a = await addClip('1000.wav', bytes: 500);
+      final b = await addClip('1000.flac', bytes: 77, id: '1000-2');
+      var produced = false;
+
+      final result = await library.rewrite(
+        '1000',
+        extension: '.flac',
+        produce: (s, d) {
+          produced = true;
+          return writer(100)(s, d);
+        },
+      );
+
+      expect(result.status, RewriteStatus.failed);
+      expect(result.error, isA<StateError>());
+      expect(produced, isFalse);
+      expect(File(path('1000.flac')).lengthSync(), 77);
+      expect(File(path('1000.wav')).lengthSync(), 500);
+      expect(library.clips, [a, b]);
+    });
+
     test('fails on an output too small to hold audio, and leaves the source',
         () async {
       final clip = await addClip('1000.m4a');
