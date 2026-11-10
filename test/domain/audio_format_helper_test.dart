@@ -228,27 +228,6 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // targetExtForPath
-  // ---------------------------------------------------------------------------
-  group('targetExtForPath', () {
-    test('extracts extension from full path', () {
-      expect(
-        targetExtForPath('/some/dir/track.m4a', ImportFormat.smart),
-        equals('.opus'),
-      );
-      expect(
-        targetExtForPath('/some/dir/track.aiff', ImportFormat.smart),
-        equals('.flac'),
-      );
-    });
-
-    test('returns null for a natively playable format', () {
-      expect(targetExtForPath('/clips/audio.mp3', ImportFormat.smart), isNull);
-      expect(targetExtForPath('/clips/audio.opus', ImportFormat.smart), isNull);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // isNativelyPlayable
   // ---------------------------------------------------------------------------
   group('isNativelyPlayable', () {

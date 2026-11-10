@@ -102,8 +102,7 @@ class _ImportPageState extends State<ImportPage> {
                 child: ValueListenableBuilder<ImportPageState>(
                   valueListenable: importPageState,
                   builder: (context, value, _) {
-                    if (value == ImportPageState.failed ||
-                        value == ImportPageState.timeout) {
+                    if (value == ImportPageState.failed) {
                       return AlertDialog(
                         title: Text(context.l10n.importAlertErrorTitle),
                         content: Text(importFailureMessage(
@@ -279,7 +278,5 @@ enum ImportPageState {
   loading,
   converting,
   failed,
-  timeout,
-  aborted,
-  noedit
+  aborted
 }
