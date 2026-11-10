@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
@@ -8,383 +9,413 @@ import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/audio_clip.dart';
+import 'package:eq_trainer/domain/session/band_layout.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_rounds.dart';
+import 'package:eq_trainer/domain/session/session_settings.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
-import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/ui/session/state/session_store.dart';
 
 import '../../../helpers/mocks.dart';
+import '../../../helpers/scripted_random.dart';
 
+// The rules of a session (which graph is the answer, the score, the band
+// ladder) are tested against SessionRounds without a player. These tests are
+// about what the controller does with them: what reaches the player, what
+// reaches the store, and in what order.
 void main() {
   setUpAll(() {
     registerFallbackValue(AndroidAudioBackend.openSles);
   });
 
   group('SessionController', () {
-    late MockPlayerService mockPlayer;
-    late SessionStore sessionStore;
-    late SessionParameter sessionParameter;
-    late SessionController controller;
+    late MockPlayerService player;
+    late MockClipLibrary library;
+    late AudioState audioState;
+    late SessionStore store;
+    late SessionParameter parameter;
 
-    setUp(() async {
-      mockPlayer = MockPlayerService();
-      sessionStore = SessionStore();
-      sessionParameter = SessionParameter();
-      controller = SessionController();
+    // Peak mode with the default 3 bands keeps the picker easy to read: graph
+    // i is picker value i + 1, and every graph has its own frequency.
+    final peak3 = BandLayout(3, FilterType.peak);
 
-      // Stub all player calls used by initSession() and submitAnswer().
-      // setEQParams is the only one that awaits — the rest are plain FFI
-      // writes and return void, so they stub with thenReturn.
-      when(() => mockPlayer.setEQParams(
+    setUp(() {
+      player = MockPlayerService();
+      library = MockClipLibrary();
+      audioState = AudioState(
+        androidBackend: AndroidAudioBackend.openSles,
+        outputDevice: null,
+      );
+      store = SessionStore();
+      parameter = SessionParameter()..filterType = FilterType.peak;
+
+      // setEQParams is the only call that awaits; the rest are plain FFI
+      // writes and return void.
+      when(() => player.setEQParams(
             enableEQ: any(named: 'enableEQ'),
             frequency: any(named: 'frequency'),
             gainDb: any(named: 'gainDb'),
           )).thenAnswer((_) async {});
-      when(() => mockPlayer.setEQ(any())).thenReturn(null);
-      when(() => mockPlayer.setEQFreq(any())).thenReturn(null);
-      when(() => mockPlayer.setEQGain(any())).thenReturn(null);
-      when(() => mockPlayer.setEQQ(any())).thenReturn(null);
-
-      // Populate frequency/graph data so initSession() has a valid list to pick from
-      await sessionStore.initFrequency(sessionParameter: sessionParameter);
-
-      // Run one initSession() so _answerGraphIndex is seeded
-      await controller.initSession(
-        mockPlayer,
-        sessionStore: sessionStore,
-        sessionParameter: sessionParameter,
-      );
-
-      // submitAnswer only proceeds from a ready session (re-entrancy guard),
-      // which launchSession sets in production. Establish that precondition.
-      sessionStore.setSessionState(SessionState.ready);
+      when(() => player.setEQ(any())).thenReturn(null);
+      when(() => player.setEQFreq(any())).thenReturn(null);
+      when(() => player.setEQGain(any())).thenReturn(null);
+      when(() => player.setEQQ(any())).thenReturn(null);
+      when(() => player.launch(
+            androidBackend: any(named: 'androidBackend'),
+            outputDevice: null,
+            path: any(named: 'path'),
+            volumeCompensation: any(named: 'volumeCompensation'),
+          )).thenAnswer((_) async {});
+      when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
     });
 
     tearDown(() {
-      sessionStore.dispose();
+      store.dispose();
+      audioState.dispose();
     });
 
-    // -------------------------------------------------------------------------
-    // submitAnswer — correctness detection
-    // -------------------------------------------------------------------------
-    group('submitAnswer — result detection', () {
-      test('returns isCorrect=true when pickerValue matches answer', () async {
-        // Capture before submitAnswer() — it calls initSession() internally which changes the index
-        final expectedIndex = controller.answerGraphIndex + 1;
-        sessionStore.setPickerValue(expectedIndex);
-
-        final result = await controller.submitAnswer(
-          player: mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
+    /// A controller whose rounds come up in [script]: first the launch's
+    /// round, then one per submit. It is made from [parameter] as it is now,
+    /// the way the session page snapshots it when a session starts.
+    SessionController controllerFor(
+      List<int> script, {
+      SessionStore? sessionStore,
+      ClipLibrary? clipLibrary,
+    }) =>
+        SessionController(
+          player: player,
+          sessionStore: sessionStore ?? store,
+          clipLibrary: clipLibrary ?? library,
+          audioState: audioState,
+          settings: parameter.snapshot(),
+          volumeCompensation: true,
+          random: ScriptedRandom(script),
         );
 
-        expect(result!.isCorrect, isTrue);
-        expect(result.correctIndex, equals(expectedIndex));
-      });
-
-      test('returns isCorrect=false when pickerValue does not match answer', () async {
-        final answerIndex = controller.answerGraphIndex;
-        final wrongValue = answerIndex == 0 ? 2 : 1;
-        sessionStore.setPickerValue(wrongValue);
-
-        final result = await controller.submitAnswer(
-          player: mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
-
-        expect(result!.isCorrect, isFalse);
-        expect(result.correctIndex, equals(answerIndex + 1));
-      });
-
-      test('onResult callback receives correct values', () async {
-        final expectedIndex = controller.answerGraphIndex + 1;
-        sessionStore.setPickerValue(expectedIndex);
-
-        bool? cbCorrect;
-        int? cbIndex;
-
-        await controller.submitAnswer(
-          player: mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-          onResult: (isCorrect, correctIndex) {
-            cbCorrect = isCorrect;
-            cbIndex = correctIndex;
-          },
-        );
-
-        expect(cbCorrect, isTrue);
-        expect(cbIndex, equals(expectedIndex));
-      });
-
-      test('onResult is optional — submitAnswer succeeds without it', () async {
-        await expectLater(
-          controller.submitAnswer(
-            player: mockPlayer,
-            sessionStore: sessionStore,
-            sessionParameter: sessionParameter,
-          ),
-          completes,
-        );
-      });
-    });
+    /// Picks [graphIndex] in [on] (the test's store unless given) and submits.
+    Future<RoundOutcome?> submit(
+      SessionController controller,
+      int graphIndex, {
+      SessionStore? on,
+      void Function(bool isCorrect, int correctGraphIndex)? onResult,
+    }) {
+      (on ?? store).setPickerValue(SessionStore.pickerValueOf(graphIndex));
+      return controller.submitAnswer(onResult: onResult);
+    }
 
     // -------------------------------------------------------------------------
-    // submitAnswer — score tracking
+    // submitAnswer
     // -------------------------------------------------------------------------
-    group('submitAnswer — score tracking', () {
-      test('correct answer increments resultCorrect', () async {
-        sessionStore.setPickerValue(controller.answerGraphIndex + 1);
+    group('submitAnswer', () {
+      test('sends the next round to the player with the band taken out',
+          () async {
+        final controller = controllerFor([0, 2]);
+        await controller.launch();
 
-        await controller.submitAnswer(
-          player: mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
+        await submit(controller, 0);
 
-        expect(sessionStore.resultCorrect, equals(1));
-        expect(sessionStore.resultIncorrect, equals(0));
+        // Once at launch for graph 0, once now for graph 2.
+        verify(() => player.setEQParams(
+              enableEQ: false,
+              frequency: peak3.frequencyOf(2),
+              gainDb: 6.0,
+            )).called(1);
       });
 
-      test('incorrect answer increments resultIncorrect', () async {
-        final wrongValue = controller.answerGraphIndex == 0 ? 2 : 1;
-        sessionStore.setPickerValue(wrongValue);
+      test('sends a dip as a negative gain', () async {
+        parameter.filterType = FilterType.peakDip;
+        final peakDip3 = BandLayout(3, FilterType.peakDip);
+        final controller = controllerFor([0, 3]);
+        await controller.launch();
 
-        await controller.submitAnswer(
-          player: mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
+        await submit(controller, 0);
 
-        expect(sessionStore.resultIncorrect, equals(1));
-        expect(sessionStore.resultCorrect, equals(0));
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // submitAnswer — band threshold adjustments
-    // -------------------------------------------------------------------------
-    group('submitAnswer — threshold logic', () {
-      test('startingBand increments when score reaches +threshold', () async {
-        final threshold = sessionParameter.threshold;
-        final initialBand = sessionParameter.startingBand;
-
-        for (var i = 0; i < threshold; i++) {
-          sessionStore.setPickerValue(controller.answerGraphIndex + 1);
-          await controller.submitAnswer(
-            player: mockPlayer,
-            sessionStore: sessionStore,
-            sessionParameter: sessionParameter,
-          );
-        }
-
-        expect(sessionParameter.startingBand, equals(initialBand + 1));
+        verify(() => player.setEQParams(
+              enableEQ: false,
+              frequency: peakDip3.frequencyOf(3),
+              gainDb: -6.0,
+            )).called(1);
       });
 
-      test('startingBand decrements when score reaches -threshold', () async {
-        final threshold = sessionParameter.threshold;
-        sessionParameter.startingBand = 10;
-        final initialBand = sessionParameter.startingBand;
+      test('tells onResult whether the pick was right and which graph was',
+          () async {
+        final controller = controllerFor([2, 0]);
+        await controller.launch();
 
-        // Re-seed initSession after changing startingBand (graph count changes)
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        await controller.initSession(
-          mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
+        bool? isCorrect;
+        int? correctGraphIndex;
+        await submit(controller, 1, onResult: (right, graph) {
+          isCorrect = right;
+          correctGraphIndex = graph;
+        });
 
-        for (var i = 0; i < threshold; i++) {
-          final wrongValue = controller.answerGraphIndex == 0 ? 2 : 1;
-          sessionStore.setPickerValue(wrongValue);
-          await controller.submitAnswer(
-            player: mockPlayer,
-            sessionStore: sessionStore,
-            sessionParameter: sessionParameter,
-          );
-        }
-
-        expect(sessionParameter.startingBand, equals(initialBand - 1));
+        expect(isCorrect, isFalse);
+        expect(correctGraphIndex, 2);
       });
 
-      test('startingBand does not exceed 25', () async {
-        sessionParameter.startingBand = 25;
-        final threshold = sessionParameter.threshold;
+      test('puts the results in the store', () async {
+        final controller = controllerFor([0, 1, 2]);
+        await controller.launch();
 
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        await controller.initSession(
-          mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
+        await submit(controller, 0);
+        await submit(controller, 0);
 
-        for (var i = 0; i < threshold; i++) {
-          sessionStore.setPickerValue(controller.answerGraphIndex + 1);
-          await controller.submitAnswer(
-            player: mockPlayer,
-            sessionStore: sessionStore,
-            sessionParameter: sessionParameter,
-          );
-        }
-
-        expect(sessionParameter.startingBand, equals(25));
+        expect(store.results.rounds, 2);
+        expect(store.results.correct, 1);
+        expect(store.results.incorrect, 1);
+        expect(controller.results, equals(store.results));
       });
 
-      test('startingBand does not go below 2', () async {
-        sessionParameter.startingBand = 2;
-        final threshold = sessionParameter.threshold;
+      test('shows the new layout and puts the picker back when the band count '
+          'changes', () async {
+        parameter.threshold = 1;
+        final controller = controllerFor([2, 0]);
+        await controller.launch();
+        expect(store.graphBarDataList.length, 3);
 
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        await controller.initSession(
-          mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
+        await submit(controller, 2);
 
-        for (var i = 0; i < threshold; i++) {
-          final wrongValue = controller.answerGraphIndex == 0 ? 2 : 1;
-          sessionStore.setPickerValue(wrongValue);
-          await controller.submitAnswer(
-            player: mockPlayer,
-            sessionStore: sessionStore,
-            sessionParameter: sessionParameter,
-          );
-        }
-
-        expect(sessionParameter.startingBand, equals(2));
-      });
-    });
-
-    // -------------------------------------------------------------------------
-    // initSession — randomness invariant
-    // -------------------------------------------------------------------------
-    group('initSession', () {
-      test('never picks the same answerGraphIndex twice in a row', () async {
-        for (var i = 0; i < 50; i++) {
-          final before = controller.answerGraphIndex;
-          await controller.initSession(
-            mockPlayer,
-            sessionStore: sessionStore,
-            sessionParameter: sessionParameter,
-          );
-          expect(controller.answerGraphIndex, isNot(equals(before)),
-              reason: 'Same index picked twice in a row at iteration $i');
-        }
+        expect(store.graphBarDataList.length, 4);
+        expect(store.layout, equals(BandLayout(4, FilterType.peak)));
+        expect(store.currentPickerValue, 1);
       });
 
-      test('answerCenterFreq maps correctly for FilterType.peak', () async {
-        sessionParameter.filterType = FilterType.peak;
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        await controller.initSession(
-          mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
-        // For peak/dip: freqIndex == graphIndex
-        final expectedFreq = sessionStore.centerFreqLogList[controller.answerGraphIndex];
-        expect(controller.answerCenterFreq, equals(expectedFreq));
+      test('leaves the picker where it is when the band count stays', () async {
+        final controller = controllerFor([1, 2]);
+        await controller.launch();
+
+        await submit(controller, 1);
+
+        expect(store.graphBarDataList.length, 3);
+        expect(store.currentPickerValue, 2);
       });
 
-      test('answerCenterFreq maps correctly for FilterType.peakDip', () async {
-        sessionParameter.filterType = FilterType.peakDip;
-        await sessionStore.initFrequency(sessionParameter: sessionParameter);
-        await controller.initSession(
-          mockPlayer,
-          sessionStore: sessionStore,
-          sessionParameter: sessionParameter,
-        );
-        // For peakDip: freqIndex = floor(graphIndex / 2)
-        final expectedFreqIndex = (controller.answerGraphIndex / 2).floor();
-        final expectedFreq = sessionStore.centerFreqLogList[expectedFreqIndex];
-        expect(controller.answerCenterFreq, equals(expectedFreq));
+      test('goes loading, then ready', () async {
+        final controller = controllerFor([0, 1]);
+        await controller.launch();
+
+        final states = <SessionState>[];
+        store.addListener(() {
+          if (states.isEmpty || states.last != store.sessionState) {
+            states.add(store.sessionState);
+          }
+        });
+
+        await submit(controller, 0);
+
+        expect(states, [SessionState.loading, SessionState.ready]);
+      });
+
+      test('a second submit while the first is running is ignored', () async {
+        final controller = controllerFor([0, 1, 2]);
+        await controller.launch();
+        store.setPickerValue(1);
+
+        final first = controller.submitAnswer();
+        final second = controller.submitAnswer();
+
+        expect(await second, isNull);
+        expect(await first, isNotNull);
+        expect(store.results.rounds, 1);
+        // The launch's round and the one next round, not a third.
+        verify(() => player.setEQParams(
+              enableEQ: any(named: 'enableEQ'),
+              frequency: any(named: 'frequency'),
+              gainDb: any(named: 'gainDb'),
+            )).called(2);
+      });
+
+      test('is ignored before the session is ready', () async {
+        final controller = controllerFor([0]);
+
+        final outcome = await controller.submitAnswer();
+
+        expect(outcome, isNull);
+        verifyNever(() => player.setEQParams(
+              enableEQ: any(named: 'enableEQ'),
+              frequency: any(named: 'frequency'),
+              gainDb: any(named: 'gainDb'),
+            ));
+      });
+
+      test('a submit that finishes after the page is gone writes nothing',
+          () async {
+        // The store is dropped with the page, and writing to a disposed
+        // notifier asserts.
+        final pageStore = SessionStore();
+        final controller = controllerFor([0, 1], sessionStore: pageStore);
+        await controller.launch();
+        final retuned = Completer<void>();
+        when(() => player.setEQParams(
+              enableEQ: any(named: 'enableEQ'),
+              frequency: any(named: 'frequency'),
+              gainDb: any(named: 'gainDb'),
+            )).thenAnswer((_) => retuned.future);
+
+        final pending = submit(controller, 0, on: pageStore);
+        pageStore.dispose();
+        retuned.complete();
+
+        expect(await pending, isNull);
+      });
+
+      test('a throw ends in the error state and returns null', () async {
+        final controller = controllerFor([0, 1]);
+        await controller.launch();
+        when(() => player.setEQParams(
+              enableEQ: any(named: 'enableEQ'),
+              frequency: any(named: 'frequency'),
+              gainDb: any(named: 'gainDb'),
+            )).thenThrow(StateError('engine gone'));
+
+        final outcome = await submit(controller, 0);
+
+        expect(outcome, isNull);
+        expect(store.sessionState, SessionState.error);
       });
     });
 
     // -------------------------------------------------------------------------
-    // launchSession — the one path that touches every collaborator
+    // One session after another
+    //
+    // The session page makes a store and a controller when a session starts
+    // and drops them when it ends. Only the SessionParameter outlives them.
     // -------------------------------------------------------------------------
-    group('launchSession', () {
-      late MockClipLibrary library;
-      late AudioState audioState;
+    group('one session after another', () {
+      test('a new session starts at zero points', () async {
+        // Two points are left behind by the first session. One more would
+        // reach the threshold of 3 if they carried over, and add a band.
+        final first = controllerFor([0, 1, 2]);
+        await first.launch();
+        await submit(first, 0);
+        await submit(first, 1);
+        expect(store.graphBarDataList.length, 3);
 
-      // A fresh store: the outer setUp has already run one round on the
-      // shared one, and launch has to be shown resetting that.
-      late SessionStore store;
+        final nextStore = SessionStore();
+        addTearDown(nextStore.dispose);
+        final second = controllerFor([0, 1], sessionStore: nextStore);
+        await second.launch();
+        await submit(second, 0, on: nextStore);
 
-      setUp(() {
-        library = MockClipLibrary();
-        audioState = AudioState(
-          androidBackend: AndroidAudioBackend.openSles,
-          outputDevice: null,
-        );
-        store = SessionStore();
-        when(() => mockPlayer.launch(
-              androidBackend: any(named: 'androidBackend'),
-              outputDevice: null,
-              path: any(named: 'path'),
-              volumeCompensation: any(named: 'volumeCompensation'),
-            )).thenAnswer((_) async {});
+        expect(nextStore.graphBarDataList.length, 3,
+            reason: 'the second session began with points left over from the '
+                'first');
       });
 
-      tearDown(() {
-        store.dispose();
-        audioState.dispose();
+      test('a new session starts with no results and the picker on the first '
+          'graph', () async {
+        final first = controllerFor([0, 1, 2]);
+        await first.launch();
+        await submit(first, 0);
+        await submit(first, 1);
+        store.setPickerValue(3);
+
+        final nextStore = SessionStore();
+        addTearDown(nextStore.dispose);
+        final second = controllerFor([0], sessionStore: nextStore);
+        await second.launch();
+
+        expect(nextStore.results.rounds, isZero);
+        expect(second.results.rounds, isZero);
+        expect(nextStore.currentPickerValue, 1);
+        // And the first session's are still its own.
+        expect(first.results.rounds, 2);
+        expect(store.results.rounds, 2);
       });
 
-      Future<void> launch({
-        bool Function()? shouldContinue,
-        ClipLibrary? clipLibrary,
-      }) =>
-          controller.launchSession(
-            mockPlayer,
-            audioState: audioState,
-            sessionStore: store,
-            sessionParameter: sessionParameter,
-            clipLibrary: clipLibrary ?? library,
-            volumeCompensation: true,
-            shouldContinue: shouldContinue,
-          );
+      test('a session whose band count went up leaves the settings alone',
+          () async {
+        final first = controllerFor([0, 1, 2, 0]);
+        await first.launch();
+        await submit(first, 0);
+        await submit(first, 1);
+        await submit(first, 2);
+        expect(store.graphBarDataList.length, 4, reason: 'the ladder moved');
 
+        expect(parameter.startingBand, 3);
+
+        final nextStore = SessionStore();
+        addTearDown(nextStore.dispose);
+        final second = controllerFor([0], sessionStore: nextStore);
+        await second.launch();
+        expect(nextStore.graphBarDataList.length, 3,
+            reason: 'the next session starts at the configured band count');
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // updatePlayerState
+    // -------------------------------------------------------------------------
+    group('updatePlayerState', () {
+      test('re-sends Q, the answer and the toggle to a fresh player', () async {
+        parameter.qFactor = 2.0;
+        parameter.gain = 8;
+        final controller = controllerFor([1]);
+        await controller.launch();
+        clearInteractions(player);
+
+        controller.updatePlayerState(eqEnabled: true);
+
+        verify(() => player.setEQQ(2.0)).called(1);
+        verify(() => player.setEQFreq(peak3.frequencyOf(1))).called(1);
+        verify(() => player.setEQGain(8.0)).called(1);
+        verify(() => player.setEQ(true)).called(1);
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // launch: the one path that touches every collaborator
+    // -------------------------------------------------------------------------
+    group('launch', () {
       test('opens the first enabled clip and reports ready', () async {
         when(library.enabledClipPaths)
             .thenAnswer((_) async => ['/a.flac', '/b.flac']);
 
-        await launch();
+        await controllerFor([1]).launch();
 
         expect(store.sessionState, equals(SessionState.ready));
         expect(store.playlistPaths, equals(['/a.flac', '/b.flac']));
         expect(store.currentClipPath, equals('/a.flac'));
-        verify(() => mockPlayer.launch(
+        verify(() => player.launch(
               androidBackend: AndroidAudioBackend.openSles,
               outputDevice: null,
               path: '/a.flac',
               volumeCompensation: true,
             )).called(1);
-        // The graph is populated and a first answer picked.
-        expect(store.graphBarDataList, isNotEmpty);
-        expect(controller.answerGraphIndex,
-            inInclusiveRange(0, store.graphBarDataList.length - 1));
+        // The graphs are shown and the first round is on the player.
+        expect(store.graphBarDataList.length, 3);
+        verify(() => player.setEQParams(
+              enableEQ: false,
+              frequency: peak3.frequencyOf(1),
+              gainDb: 6.0,
+            )).called(1);
+      });
+
+      test('starts at the configured band count', () async {
+        parameter.startingBand = 7;
+
+        await controllerFor([0]).launch();
+
+        expect(store.layout, equals(BandLayout(7, FilterType.peak)));
       });
 
       test('applies the session Q to the fresh player once', () async {
-        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
-        sessionParameter.qFactor = 2.5;
+        parameter.qFactor = 2.0;
 
-        await launch();
+        await controllerFor([0]).launch();
 
-        verify(() => mockPlayer.setEQQ(2.5)).called(1);
+        verify(() => player.setEQQ(2.0)).called(1);
       });
 
       test('reports playlistEmpty and never touches the player when nothing '
           'is enabled', () async {
         when(library.enabledClipPaths).thenAnswer((_) async => []);
 
-        await launch();
+        await controllerFor([]).launch();
 
         expect(store.sessionState, equals(SessionState.playlistEmpty));
-        verifyNever(() => mockPlayer.launch(
+        verifyNever(() => player.launch(
               androidBackend: any(named: 'androidBackend'),
               outputDevice: any(named: 'outputDevice'),
               path: any(named: 'path'),
@@ -392,20 +423,8 @@ void main() {
             ));
       });
 
-      test('resets the previous session\'s score and picker', () async {
-        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
-        // Leave a finished session behind in the store.
-        await store.initFrequency(sessionParameter: sessionParameter);
-        store.applySubmission(centerFreq: 440, isCorrect: true);
-        store.applySubmission(centerFreq: 440, isCorrect: false);
-        store.setPickerValue(3);
-
-        await launch();
-
-        expect(store.elapsedSession, isZero);
-        expect(store.resultCorrect, isZero);
-        expect(store.resultIncorrect, isZero);
-        expect(store.currentPickerValue, equals(1));
+      test('has no results before it has launched', () {
+        expect(controllerFor([]).results.rounds, isZero);
       });
 
       test('reports playlistEmpty when the only enabled clip has no file, and '
@@ -422,19 +441,18 @@ void main() {
         final dirs = MockAppDirectories();
         when(() => dirs.getClipsPath()).thenAnswer((_) async => dir.path);
 
-        await launch(clipLibrary: ClipLibrary(repo, dirs));
+        await controllerFor([], clipLibrary: ClipLibrary(repo, dirs)).launch();
 
         expect(store.sessionState, equals(SessionState.playlistEmpty));
         expect(repo.getAllClips(), [clip]);
       });
 
       test('goes to init synchronously, before the first await', () {
-        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
         store.setSessionState(SessionState.ready);
 
         // Not awaited on purpose: the state must already have moved so a
         // relaunch never renders the previous session's ready UI.
-        final pending = launch();
+        final pending = controllerFor([0]).launch();
         expect(store.sessionState, equals(SessionState.init));
         return pending;
       });
@@ -448,12 +466,12 @@ void main() {
           return ['/a.flac'];
         });
 
-        await launch(shouldContinue: () => stillOnPage);
+        await controllerFor([]).launch(shouldContinue: () => stillOnPage);
 
-        // Nothing after the abandoned await may land in the app-scoped store.
+        // Nothing after the abandoned await may land in the store.
         expect(store.sessionState, equals(SessionState.init));
         expect(store.playlistPaths, isEmpty);
-        verifyNever(() => mockPlayer.launch(
+        verifyNever(() => player.launch(
               androidBackend: any(named: 'androidBackend'),
               outputDevice: any(named: 'outputDevice'),
               path: any(named: 'path'),
@@ -462,15 +480,14 @@ void main() {
       });
 
       test('a player that fails to open reports error and rethrows', () async {
-        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
-        when(() => mockPlayer.launch(
+        when(() => player.launch(
               androidBackend: any(named: 'androidBackend'),
               outputDevice: null,
               path: any(named: 'path'),
               volumeCompensation: any(named: 'volumeCompensation'),
             )).thenThrow(StateError('no device'));
 
-        await expectLater(launch(), throwsException);
+        await expectLater(controllerFor([]).launch(), throwsException);
         expect(store.sessionState, equals(SessionState.error));
       });
 
@@ -483,7 +500,7 @@ void main() {
         });
 
         await expectLater(
-          launch(shouldContinue: () => stillOnPage),
+          controllerFor([]).launch(shouldContinue: () => stillOnPage),
           throwsException,
         );
         expect(store.sessionState, equals(SessionState.init));

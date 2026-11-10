@@ -8,7 +8,7 @@ import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 
@@ -20,7 +20,12 @@ class SessionPage extends StatefulWidget {
 }
 
 class _SessionPageState extends State<SessionPage> {
+  // A session's state lives exactly as long as this page: made here when the
+  // session starts and dropped in dispose(), so nothing carries over to the
+  // next one.
   final player = PlayerService();
+  final _store = SessionStore();
+  late final SessionController _controller;
 
   /// Captured in initState rather than read in dispose, where the element is
   /// already detached from the tree.
@@ -33,6 +38,16 @@ class _SessionPageState extends State<SessionPage> {
     // or a DAP, and the session is the one screen where that matters. The
     // migration holds at its next clip boundary until this page is gone.
     _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
+    _controller = SessionController(
+      player: player,
+      sessionStore: _store,
+      clipLibrary: context.read<ClipLibrary>(),
+      audioState: context.read<AudioState>(),
+      // Frozen now: what the user does on the config page later cannot reach
+      // this session.
+      settings: context.read<SessionParameter>().snapshot(),
+      volumeCompensation: context.read<MiscSettingsProvider>().volumeCompensation,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
@@ -40,31 +55,17 @@ class _SessionPageState extends State<SessionPage> {
   void dispose() {
     _clipFormatMigration.resume();
     player.dispose();
+    _store.dispose();
     super.dispose();
   }
 
   Future<void> _init() async {
     if (!mounted) return;
-    final audioState = Provider.of<AudioState>(context, listen: false);
-    final sessionParameter = Provider.of<SessionParameter>(context, listen: false);
-    final sessionStore = Provider.of<SessionStore>(context, listen: false);
-    final clipLibrary = Provider.of<ClipLibrary>(context, listen: false);
-    final sessionController = Provider.of<SessionController>(context, listen: false);
-    final volumeCompensation = Provider.of<MiscSettingsProvider>(context, listen: false).volumeCompensation;
-
     try {
-      await sessionController.launchSession(
-        player,
-        audioState: audioState,
-        sessionStore: sessionStore,
-        sessionParameter: sessionParameter,
-        clipLibrary: clipLibrary,
-        volumeCompensation: volumeCompensation,
-        shouldContinue: () => mounted,
-      );
+      await _controller.launch(shouldContinue: () => mounted);
     } catch (_) {
-      // sessionStore.sessionState already reflects the failure (set inside
-      // launchSession); nothing else to surface here, and rethrowing would
+      // The store's sessionState already reflects the failure (set inside
+      // launch); nothing else to surface here, and rethrowing would
       // otherwise escape as an uncaught async exception since this runs from
       // a post-frame callback with no caller awaiting it.
     }
@@ -72,8 +73,12 @@ class _SessionPageState extends State<SessionPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<PlayerService>.value(
-      value: player,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<PlayerService>.value(value: player),
+        ChangeNotifierProvider<SessionStore>.value(value: _store),
+        Provider<SessionController>.value(value: _controller),
+      ],
       builder: (context, child) => PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
@@ -86,7 +91,7 @@ class _SessionPageState extends State<SessionPage> {
             ),
             actions: [
               Selector<SessionStore, (int, int)>(
-                selector: (_, store) => (store.resultCorrect, store.resultIncorrect),
+                selector: (_, store) => (store.results.correct, store.results.incorrect),
                 builder: (_, counts, __) {
                   final (correct, incorrect) = counts;
                   return Row(
@@ -122,6 +127,7 @@ class _SessionPageState extends State<SessionPage> {
   }
 
   void _onPop() {
+    final results = _controller.results;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -139,7 +145,7 @@ class _SessionPageState extends State<SessionPage> {
               // dispose() handles player.shutdown(); just navigate.
               Navigator.of(context).pop(true);
               Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => const ResultPage())
+                MaterialPageRoute(builder: (context) => ResultPage(results: results))
               );
             },
             child: Text(context.l10n.sessionAlertExitButtonYes),

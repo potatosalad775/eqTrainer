@@ -41,7 +41,7 @@ class SessionPicker extends StatelessWidget {
               crossAxisExtent: size.height * 0.1,
               selectedTextStyle: selectedStyle,
               textStyle: normalStyle,
-              onChanged: (value) => store.updatePickerValue(value),
+              onChanged: (value) => store.setPickerValue(value),
             ),
           )
         : Expanded(
@@ -54,7 +54,7 @@ class SessionPicker extends StatelessWidget {
               crossAxisExtent: size.width * 0.1,
               selectedTextStyle: selectedStyle,
               textStyle: normalStyle,
-              onChanged: (value) => store.updatePickerValue(value),
+              onChanged: (value) => store.setPickerValue(value),
             ),
           );
 

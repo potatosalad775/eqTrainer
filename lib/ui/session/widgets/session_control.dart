@@ -49,7 +49,7 @@ class _SessionControlState extends State<SessionControl> {
         volumeCompensation: volumeCompensation,
       );
       if (context.mounted) {
-        context.read<SessionController>().updatePlayerState(player, eqEnabled: wasEqEnabled);
+        context.read<SessionController>().updatePlayerState(eqEnabled: wasEqEnabled);
         player.play();
       }
     } catch (e) {

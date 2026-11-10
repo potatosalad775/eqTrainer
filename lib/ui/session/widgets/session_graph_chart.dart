@@ -13,7 +13,7 @@ class SessionGraphChart extends StatelessWidget {
       (s) => s.graphBarDataList,
     );
     final selectedIdx = context.select<SessionStore, int>(
-      (s) => s.currentPickerValue - 1,
+      (s) => s.currentGraphIndex,
     );
     const selectedColor = Color(0xFF287DCC);
     const unselectedColor = Color(0xFFD23232);

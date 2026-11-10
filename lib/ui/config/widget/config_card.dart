@@ -2,7 +2,8 @@ import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_parameter.dart';
+import 'package:eq_trainer/domain/session/session_settings.dart';
 
 class ConfigCard extends StatelessWidget {
   const ConfigCard({
@@ -119,11 +120,11 @@ enum ConfigCardType {
   }
   List<dynamic> get valueList {
     switch(this) {
-      case ConfigCardType.startingBand: return [for(var i = 2; i <= 25; i+=1) i];
-      case ConfigCardType.gain: return [3,4,5,6,8,10,15];
-      case ConfigCardType.qFactor: return [0.1, 0.5, 1.0, 2.0, 5.0, 10.0];
-      case ConfigCardType.filterType: return [FilterType.peak, FilterType.dip, FilterType.peakDip];
-      case ConfigCardType.threshold: return [1, 3, 5, 10];
+      case ConfigCardType.startingBand: return SessionSettings.bandCounts;
+      case ConfigCardType.gain: return SessionSettings.gains;
+      case ConfigCardType.qFactor: return SessionSettings.qFactors;
+      case ConfigCardType.filterType: return FilterType.values;
+      case ConfigCardType.threshold: return SessionSettings.thresholds;
     }
   }
 }

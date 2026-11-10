@@ -1,27 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:eq_trainer/ui/session/state/frequency_calculator.dart';
-import 'package:eq_trainer/ui/session/state/graph_state.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
-import 'package:eq_trainer/domain/session_parameter.dart';
+import 'package:eq_trainer/domain/session/band_layout.dart';
+import 'package:eq_trainer/domain/session/session_results.dart';
 
-/// SessionStore aggregates session-related UI state into a single source of truth.
-/// Holds frequency/graph data computed by the pure FrequencyCalculator.
-/// The bands results are grouped into, lowest first.
-enum ResultFrequencyBand {
-  subBass('20Hz ~ 80Hz'),
-  midBass('80Hz ~ 200Hz'),
-  lowerMidrange('200Hz ~ 800Hz'),
-  centreMidrange('800Hz ~ 1.5kHz'),
-  upperMidrange('1.5kHz ~ 5kHz'),
-  treble('5kHz ~ 10kHz'),
-  upperTreble('10kHz ~ 20kHz');
-
-  const ResultFrequencyBand(this.range);
-
-  final String range;
-}
-
+/// What the session screen shows: the state, the graphs, the picker, the
+/// running counts and the playlist cursor. The rules behind them (which graph
+/// is the answer, the score, the band ladder) are `SessionRounds`'.
 class SessionStore extends ChangeNotifier {
   SessionStore();
 
@@ -34,15 +20,16 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Graph state (loading/ready/error)
-  final ValueNotifier<GraphState> graphStateNotifier = ValueNotifier<GraphState>(GraphState.loading);
-
   // Graph data snapshot
   List<LineChartBarData> _graphBarDataList = const [];
   List<LineChartBarData> get graphBarDataList => _graphBarDataList;
 
-  List<double> _centerFreqLogList = const [];
-  List<double> get centerFreqLogList => _centerFreqLogList;
+  BandLayout? _layout;
+
+  /// What the graphs currently on screen mean. Only valid once
+  /// [applyLayout] has run.
+  BandLayout get layout =>
+      _layout ?? (throw StateError('the layout is not set before applyLayout'));
 
   List<double> _centerFreqLinearList = const [];
   List<double> get centerFreqLinearList => _centerFreqLinearList;
@@ -50,6 +37,14 @@ class SessionStore extends ChangeNotifier {
   // Picker value - single source of truth (replaces SessionStateData.selectedPickerNum)
   int _currentPickerValue = 1;
   int get currentPickerValue => _currentPickerValue;
+
+  // The picker counts from 1 and graph indices from 0. These two are the only
+  // places that offset is written.
+  static int graphIndexOf(int pickerValue) => pickerValue - 1;
+  static int pickerValueOf(int graphIndex) => graphIndex + 1;
+
+  /// The picked graph, 0-based, as the domain counts them.
+  int get currentGraphIndex => graphIndexOf(_currentPickerValue);
 
   void setPickerValue(int newValue) {
     if (newValue == _currentPickerValue) return;
@@ -60,100 +55,15 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Progress (replaces SessionStateData.currentSessionPoint)
-  int _currentSessionPoint = 0;
-  int get currentSessionPoint => _currentSessionPoint;
+  /// The counts so far this session, for the app bar. The controller keeps the
+  /// session's own copy, which is what the result page gets.
+  SessionResults _results = SessionResults.empty();
+  SessionResults get results => _results;
 
-  void setCurrentSessionPoint(int point) {
-    _currentSessionPoint = point;
+  void setResults(SessionResults results) {
+    _results = results;
     notifyListeners();
   }
-
-  void incrementSessionPoint() {
-    setCurrentSessionPoint(_currentSessionPoint + 1);
-  }
-
-  void decrementSessionPoint() {
-    setCurrentSessionPoint(_currentSessionPoint - 1);
-  }
-
-  void resetSessionPoint() {
-    setCurrentSessionPoint(0);
-  }
-
-  // Session Results (replaces SessionResultData functionality)
-  int _elapsedSession = 0;
-  int get elapsedSession => _elapsedSession;
-
-  List<int> _elapsedSessionPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
-  List<int> get elapsedSessionPerFreq => List<int>.from(_elapsedSessionPerFreq);
-
-  int _resultCorrect = 0;
-  int get resultCorrect => _resultCorrect;
-
-  List<int> _correctAnswerPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
-  List<int> get correctAnswerPerFreq => List<int>.from(_correctAnswerPerFreq);
-
-  int _resultIncorrect = 0;
-  int get resultIncorrect => _resultIncorrect;
-
-  // Reset Session Results
-  void resetResult() {
-    _elapsedSession = 0;
-    _elapsedSessionPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
-    _resultCorrect = 0;
-    _correctAnswerPerFreq = List.filled(ResultFrequencyBand.values.length, 0);
-    _resultIncorrect = 0;
-    notifyListeners();
-  }
-
-  // Consolidated submission update to minimize intermediate rebuilds
-  void applySubmission({required double centerFreq, required bool isCorrect}) {
-    final idx = _getFrequencyBandIndex(centerFreq);
-    _elapsedSession++;
-    _elapsedSessionPerFreq[idx]++;
-    if (isCorrect) {
-      _resultCorrect++;
-      _correctAnswerPerFreq[idx]++;
-      _currentSessionPoint += 1;
-    } else {
-      _resultIncorrect++;
-      _currentSessionPoint -= 1;
-    }
-    notifyListeners();
-  }
-
-  // Get frequency band index based on center frequency
-  int _getFrequencyBandIndex(double centerFreq) {
-    // Sub-Bass - 20 ~ 80
-    if (20 <= centerFreq && centerFreq < 80) { return 0; }
-    // Mid-Bass :: 80 ~ 200
-    else if (80 <= centerFreq && centerFreq < 200) { return 1; }
-    // Lower-Midrange :: 200 ~ 800
-    else if (200 <= centerFreq && centerFreq < 800) { return 2; }
-    // Centre-Midrange :: 800 ~ 1.5k
-    else if (800 <= centerFreq && centerFreq < 1500) { return 3; }
-    // Upper-Midrange :: 1.5k ~ 5k
-    else if (1500 <= centerFreq && centerFreq < 5000) { return 4; }
-    // Treble :: 5k ~ 10k
-    else if (5000 <= centerFreq && centerFreq < 10000) { return 5; }
-    // Upper-Treble :: 10k ~ 20k
-    else { return 6; }
-  }
-
-  // Calculate overall result percentage
-  double get resultPercentage => _elapsedSession > 0 ? _resultCorrect * 100 / _elapsedSession : 0;
-
-  // Get result percentage for specific frequency band
-  String getResultPercentagePerFreq(int index) {
-    if (index < 0 || index >= _elapsedSessionPerFreq.length) return "-";
-    if (_elapsedSessionPerFreq[index] == 0) {
-      return "-";
-    } else {
-      return "${(_correctAnswerPerFreq[index] * 100 / _elapsedSessionPerFreq[index]).toStringAsFixed(2)}%";
-    }
-  }
-
 
   // Playlist paths and index
   List<String> _playlistPaths = const [];
@@ -168,54 +78,45 @@ class SessionStore extends ChangeNotifier {
           : null;
 
   // --- Frequency/Graph lifecycle ---
-  Future<void> initFrequency({required SessionParameter sessionParameter}) async {
-    graphStateNotifier.value = GraphState.loading;
-    try {
-      final computed = FrequencyCalculator.compute(sessionParameter: sessionParameter);
 
-      _centerFreqLogList = List<double>.from(computed.centerFreqLogList);
-      _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
-      _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
+  /// Shows [layout]'s graphs and puts the picker back on the first.
+  void applyLayout(BandLayout layout) {
+    final computed = FrequencyCalculator.compute(layout);
 
-      // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
-      resetPickerValue();
+    _layout = layout;
+    _centerFreqLinearList = List<double>.from(computed.centerFreqLinearList);
+    _graphBarDataList = List<LineChartBarData>.from(computed.graphBarDataList);
 
-      // Notify listeners so widgets that depend on the graph data (e.g. the
-      // picker's max value) rebuild — resetPickerValue() alone early-returns
-      // without notifying when the picker was already at 1, which would leave
-      // the picker range stale after a threshold-driven band count change.
-      notifyListeners();
+    // Reset picker to 1 and ensure first graph highlighted (blue) by calculator
+    resetPickerValue();
 
-      graphStateNotifier.value = GraphState.ready;
-    } catch (_) {
-      graphStateNotifier.value = GraphState.error;
-      rethrow;
-    }
-  }
-
-  void updatePickerValue(int newValue) {
-    setPickerValue(newValue);
+    // Notify listeners so widgets that depend on the graph data (e.g. the
+    // picker's max value) rebuild: resetPickerValue() alone early-returns
+    // without notifying when the picker was already at 1, which would leave
+    // the picker range stale after a band count change.
+    notifyListeners();
   }
 
   void resetPickerValue() {
     setPickerValue(1);
   }
 
+  bool _disposed = false;
+
+  /// Whether the session page that owned this store has closed. Work that
+  /// finishes after an await checks it, since writing to a disposed notifier
+  /// asserts.
+  bool get isDisposed => _disposed;
+
   @override
   void dispose() {
-    graphStateNotifier.dispose();
+    _disposed = true;
     super.dispose();
   }
 
   // --- Playlist controls ---
   void setPlaylistPaths(List<String> paths) {
     _playlistPaths = List<String>.from(paths);
-    _currentPlayingAudioIndex = 0;
-    notifyListeners();
-  }
-
-  void clearPlaylist() {
-    _playlistPaths = const [];
     _currentPlayingAudioIndex = 0;
     notifyListeners();
   }
@@ -230,15 +131,6 @@ class SessionStore extends ChangeNotifier {
     if (index < 0 || index >= _playlistPaths.length) return;
     if (_playlistPaths[index] == path) return;
     _playlistPaths = List<String>.from(_playlistPaths)..[index] = path;
-    notifyListeners();
-  }
-
-  void setCurrentPlayingIndex(int index) {
-    if (_playlistPaths.isEmpty) {
-      _currentPlayingAudioIndex = 0;
-    } else {
-      _currentPlayingAudioIndex = index.clamp(0, _playlistPaths.length - 1);
-    }
     notifyListeners();
   }
 
