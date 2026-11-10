@@ -97,7 +97,7 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
 | `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand`, and `ClipQueue` (the clips a session plays) |
-| `data/` | `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
+| `data/` | `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `PlaybackHold` (what a player holds while it exists), `ImportPlayer` |
 | `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
@@ -130,6 +130,11 @@ the next app launch. Nothing holds a copy of the choice. The device list comes t
 `OutputDevices` seam, which `SoLoudOutputDevices` implements; the UI lists
 devices with `OutputSelection.availableDevices()`, and tests give it a
 `FakeOutputDevices`.
+
+A player is also built with a `PlaybackHold` (`data/playback_hold.dart`): it pauses it
+in the constructor and resumes it once in `dispose`, not in `shutdown`, since the player
+still exists. The app passes `ClipFormatMigration`; see [Clip Formats](#clip-formats).
+`PlayerService` knows only the interface. Integration suites pass `NoHold`.
 
 **The signatures mean something.** Only `launch`, `shutdown`, `seek` and
 `setEQParams` return a `Future`; everything else is a synchronous FFI write and
@@ -288,9 +293,10 @@ follow a clip that moved underneath a live session.
 **Anything that rewrites the library must yield to playback, not block it.** A
 decode-plus-encode is CPU-seconds per clip on a phone or a DAP — the hardware
 where libraries are largest and the contention is audible. `ClipFormatMigration`
-exposes `pause()`/`resume()`, and the screens that play audio (`SessionPage`,
-`PlaylistControlView`, `ImportPage`) hold it while they are open; the checkpoint is between
-clips, which the per-clip commit makes free. Disabling the UI instead was
+is a `PlaybackHold` (`pause()`/`resume()`, counted), and every `PlayerService` takes one:
+it pauses it when built and resumes it in `dispose`, so the screens that play audio
+(`SessionPage`, `PlaylistControlView`, `ImportPage`) hold it by having a player. The
+checkpoint is between clips, which the per-clip commit makes free. Disabling the UI instead was
 considered and rejected: a large library on a slow device is minutes of a dead
 Start button, and legacy clips still play through `PlayerService`'s
 decode-on-load fallback meanwhile, so there is nothing to wait for.
@@ -527,6 +533,7 @@ repository. Shared scaffolding is in `test/helpers/`:
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `ClipLibrary`, `PlayerService`. `OutputSelection` is not here: construct a real one over a `FakeOutputDevices`, it needs no engine. |
 | `fake_output_devices.dart` | `FakeOutputDevices`: the device list an `OutputSelection` reads, set by the test, or made to throw. `playbackDevice(id, name)` builds a `PlaybackDevice` without an engine. |
 | `scripted_random.dart` | `ScriptedRandom`: a `Random` that returns given numbers, for tests where which graph comes up matters. |
+| `recording_hold.dart` | `RecordingHold`: a `PlaybackHold` that counts its `pause` and `resume` calls, for building a `PlayerService` without a migration. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
 
 Platform channels (`path_provider`) are stubbed per test with
