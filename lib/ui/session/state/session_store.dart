@@ -5,8 +5,8 @@ import 'package:eq_trainer/ui/session/state/session_state.dart';
 import 'package:eq_trainer/domain/session/band_layout.dart';
 import 'package:eq_trainer/domain/session/session_results.dart';
 
-/// What the session screen shows: the state, the graphs, the picker, the
-/// running counts and the playlist cursor. The rules behind them (which graph
+/// What the session screen shows: the state, the graphs, the picker and the
+/// running counts. The rules behind them (which graph
 /// is the answer, the score, the band ladder) are `SessionRounds`'.
 class SessionStore extends ChangeNotifier {
   SessionStore();
@@ -65,18 +65,6 @@ class SessionStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Playlist paths and index
-  List<String> _playlistPaths = const [];
-  List<String> get playlistPaths => _playlistPaths;
-
-  int _currentPlayingAudioIndex = 0;
-  int get currentPlayingAudioIndex => _currentPlayingAudioIndex;
-
-  String? get currentClipPath =>
-      (_playlistPaths.isNotEmpty && _currentPlayingAudioIndex >= 0 && _currentPlayingAudioIndex < _playlistPaths.length)
-          ? _playlistPaths[_currentPlayingAudioIndex]
-          : null;
-
   // --- Frequency/Graph lifecycle ---
 
   /// Shows [layout]'s graphs and puts the picker back on the first.
@@ -112,43 +100,5 @@ class SessionStore extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     super.dispose();
-  }
-
-  // --- Playlist controls ---
-  void setPlaylistPaths(List<String> paths) {
-    _playlistPaths = List<String>.from(paths);
-    _currentPlayingAudioIndex = 0;
-    notifyListeners();
-  }
-
-  /// Repoints the entry at [index] at [path].
-  ///
-  /// The snapshot taken at launch goes stale when a background task rewrites
-  /// a clip to another format mid-session (see
-  /// `ClipLibrary.resolvePath`). Writing the resolved path back means
-  /// the lookup is paid once per clip rather than on every visit to it.
-  void updatePathAt(int index, String path) {
-    if (index < 0 || index >= _playlistPaths.length) return;
-    if (_playlistPaths[index] == path) return;
-    _playlistPaths = List<String>.from(_playlistPaths)..[index] = path;
-    notifyListeners();
-  }
-
-  void nextTrack() {
-    if (_playlistPaths.isEmpty) return;
-    _currentPlayingAudioIndex = (_currentPlayingAudioIndex + 1) % _playlistPaths.length;
-    notifyListeners();
-  }
-
-  void previousTrack({Duration threshold = const Duration(seconds: 3), Duration? currentPosition}) {
-    if (_playlistPaths.isEmpty) return;
-    // If we're past the threshold into the current track, restart it rather than go back.
-    if (currentPosition != null && currentPosition > threshold) return;
-    if (_currentPlayingAudioIndex == 0) {
-      _currentPlayingAudioIndex = _playlistPaths.length - 1;
-    } else {
-      _currentPlayingAudioIndex -= 1;
-    }
-    notifyListeners();
   }
 }

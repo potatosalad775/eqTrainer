@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:eq_trainer/ui/core/error.dart';
-import 'package:eq_trainer/data/misc_settings_provider.dart';
-import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/player_service.dart';
-import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/ui/core/widget/player_control_buttons.dart';
-import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 
 class SessionControl extends StatefulWidget {
@@ -19,127 +14,31 @@ class SessionControl extends StatefulWidget {
 }
 
 class _SessionControlState extends State<SessionControl> {
-  // Guards previous/next while a track switch (pause -> launch -> play) is in
-  // flight. Without it, rapid taps interleave concurrent launches and the
-  // playlist index can advance before the previous relaunch even finishes.
+  // Only disables the buttons while a switch runs. The controller refuses a
+  // second switch on its own, so this is for the look of it.
   bool _switching = false;
 
-  Future<void> _relaunchWith(
-    BuildContext context,
-    String path, {
-    required AndroidAudioBackend androidBackend,
-    required PlaybackDevice? outputDevice,
-  }) async {
+  Future<void> _switchTrack(
+    Future<TrackSwitch> Function(SessionController controller) switchTrack,
+  ) async {
+    if (_switching) return;
+    final controller = context.read<SessionController>();
     final player = context.read<PlayerService>();
-    // Capture the pre-switch EQ state: launch() always takes the band back
-    // out, and updatePlayerState needs to know whether to re-enable it so a
-    // manually-toggled "Filtered" view doesn't silently become "Original" on
-    // the new track.
-    final wasEqEnabled = player.fetchEQState;
-    final volumeCompensation = context.read<MiscSettingsProvider>().volumeCompensation;
+    setState(() => _switching = true);
     try {
-      player.pause();
-      // No shutdown() first: launch() disposes the old source itself and
-      // keeps the engine and its output device open, so a track switch no
-      // longer pays a device re-open.
-      await player.launch(
-        androidBackend: androidBackend,
-        outputDevice: outputDevice,
-        path: path,
-        volumeCompensation: volumeCompensation,
-      );
-      if (context.mounted) {
-        context.read<SessionController>().updatePlayerState(eqEnabled: wasEqEnabled);
-        player.play();
-      }
-    } catch (e) {
-      if (context.mounted) {
+      final result = await switchTrack(controller);
+      if (!mounted) return;
+      if (result.status == TrackSwitchStatus.failed) {
         await showPlayerErrorDialog(context,
           action: () {
             player.shutdown();
             Navigator.of(context).pop();
             Navigator.of(context).pop();
           },
-          error: e,
-          path: path,
+          error: result.error,
+          path: result.path,
         );
       }
-    }
-  }
-
-  /// Steps one track and returns a path that is actually on disk, skipping
-  /// clips that are not.
-  ///
-  /// The session plays from a snapshot taken at launch, and a clip's file can
-  /// be rewritten to another format underneath it while the session runs (see
-  /// `ClipLibrary.resolvePath`). Before this, a stale entry threw out
-  /// of `launch()` into the error dialog below, which pops twice and ends the
-  /// session — losing the user's score over a file that is still perfectly
-  /// playable under a different extension.
-  ///
-  /// Bounded by the playlist length so a library that vanished entirely stops
-  /// rather than looping.
-  Future<String?> _stepToPlayable(BuildContext context, {required bool forward}) async {
-    final sessionStore = context.read<SessionStore>();
-    final clipLibrary = context.read<ClipLibrary>();
-
-    for (var attempt = 0; attempt < sessionStore.playlistPaths.length; attempt++) {
-      forward ? sessionStore.nextTrack() : sessionStore.previousTrack();
-
-      final candidate = sessionStore.currentClipPath;
-      if (candidate == null) return null;
-
-      final resolved = await clipLibrary.resolvePath(candidate);
-      if (resolved != null) {
-        sessionStore.updatePathAt(sessionStore.currentPlayingAudioIndex, resolved);
-        return resolved;
-      }
-    }
-    return null;
-  }
-
-  Future<void> _playerNext(
-    BuildContext context, {
-    required AndroidAudioBackend androidBackend,
-    required PlaybackDevice? outputDevice,
-  }) async {
-    final sessionStore = context.read<SessionStore>();
-    if (sessionStore.playlistPaths.isEmpty) return;
-    final nextPath = await _stepToPlayable(context, forward: true);
-    if (!context.mounted) return;
-    if (nextPath != null) {
-      await _relaunchWith(context, nextPath,
-          androidBackend: androidBackend, outputDevice: outputDevice);
-    }
-  }
-
-  Future<void> _playerPrevious(
-    BuildContext context, {
-    required AndroidAudioBackend androidBackend,
-    required PlaybackDevice? outputDevice,
-  }) async {
-    final player = context.read<PlayerService>();
-
-    // If player position > 3 seconds, reset to 0 instead of going to previous
-    if (player.fetchPosition > const Duration(seconds: 3)) {
-      await player.seek(Duration.zero);
-      return;
-    }
-    final sessionStore = context.read<SessionStore>();
-    if (sessionStore.playlistPaths.isEmpty) return;
-    final prevPath = await _stepToPlayable(context, forward: false);
-    if (!context.mounted) return;
-    if (prevPath != null) {
-      await _relaunchWith(context, prevPath,
-          androidBackend: androidBackend, outputDevice: outputDevice);
-    }
-  }
-
-  Future<void> _guardedSwitch(Future<void> Function() action) async {
-    if (_switching) return;
-    setState(() => _switching = true);
-    try {
-      await action();
     } finally {
       if (mounted) setState(() => _switching = false);
     }
@@ -147,19 +46,12 @@ class _SessionControlState extends State<SessionControl> {
 
   @override
   Widget build(BuildContext context) {
-    final (androidBackend, outputDevice) =
-        context.select<AudioState, (AndroidAudioBackend, PlaybackDevice?)>(
-      (s) => (s.androidBackend, s.outputDevice),
-    );
     final player = context.read<PlayerService>();
     final playerState = context.select<PlayerService, PlayerStateResponse>((p) => p.fetchPlayerState);
 
     return PlayerControlButtons(
       isPlaying: playerState.isPlaying,
-      onPrevious: _switching
-          ? null
-          : () => _guardedSwitch(() => _playerPrevious(context,
-              androidBackend: androidBackend, outputDevice: outputDevice)),
+      onPrevious: _switching ? null : () => _switchTrack((c) => c.previousTrack()),
       onPlayPause: _switching
           ? null
           : () {
@@ -187,10 +79,7 @@ class _SessionControlState extends State<SessionControl> {
               }
             },
       thirdIcon: Icons.skip_next,
-      onThird: _switching
-          ? null
-          : () => _guardedSwitch(() => _playerNext(context,
-              androidBackend: androidBackend, outputDevice: outputDevice)),
+      onThird: _switching ? null : () => _switchTrack((c) => c.nextTrack()),
     );
   }
 }

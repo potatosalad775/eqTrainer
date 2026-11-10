@@ -27,6 +27,7 @@ import '../../../helpers/scripted_random.dart';
 void main() {
   setUpAll(() {
     registerFallbackValue(AndroidAudioBackend.openSles);
+    registerFallbackValue(Duration.zero);
   });
 
   group('SessionController', () {
@@ -68,6 +69,14 @@ void main() {
             volumeCompensation: any(named: 'volumeCompensation'),
           )).thenAnswer((_) async {});
       when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+      // A clip is where the queue says it is unless a test says otherwise.
+      when(() => library.resolvePath(any()))
+          .thenAnswer((i) async => i.positionalArguments.first as String);
+      when(() => player.pause()).thenReturn(null);
+      when(() => player.play()).thenReturn(null);
+      when(() => player.seek(any())).thenAnswer((_) async => null);
+      when(() => player.fetchEQState).thenReturn(false);
+      when(() => player.fetchPosition).thenReturn(Duration.zero);
     });
 
     tearDown(() {
@@ -345,22 +354,326 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
-    // updatePlayerState
+    // Track switching
     // -------------------------------------------------------------------------
-    group('updatePlayerState', () {
-      test('re-sends Q, the answer and the toggle to a fresh player', () async {
-        parameter.qFactor = 2.0;
-        parameter.gain = 8;
-        final controller = controllerFor([1]);
+    group('track switching', () {
+      Future<SessionController> launched(
+        List<String> paths, {
+        List<int> script = const [1],
+      }) async {
+        when(library.enabledClipPaths).thenAnswer((_) async => paths);
+        final controller = controllerFor(script);
         await controller.launch();
         clearInteractions(player);
+        clearInteractions(library);
+        return controller;
+      }
 
-        controller.updatePlayerState(eqEnabled: true);
+      /// The paths the player was asked to load, in order.
+      List<String> loaded() => verify(() => player.launch(
+            androidBackend: any(named: 'androidBackend'),
+            outputDevice: any(named: 'outputDevice'),
+            path: captureAny(named: 'path'),
+            volumeCompensation: any(named: 'volumeCompensation'),
+          )).captured.cast<String>();
 
-        verify(() => player.setEQQ(2.0)).called(1);
-        verify(() => player.setEQFreq(peak3.frequencyOf(1))).called(1);
-        verify(() => player.setEQGain(8.0)).called(1);
-        verify(() => player.setEQ(true)).called(1);
+      void launchThrowsFor(String path, [Object error = 'cannot decode']) {
+        when(() => player.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: null,
+              path: path,
+              volumeCompensation: any(named: 'volumeCompensation'),
+            )).thenThrow(error);
+      }
+
+      group('nextTrack', () {
+        test('pauses, loads the next clip, re-applies the round and plays, in '
+            'that order', () async {
+          parameter.qFactor = 2.0;
+          parameter.gain = 8;
+          final controller = await launched(['/a', '/b'], script: [1]);
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          verifyInOrder([
+            () => player.fetchEQState,
+            () => player.pause(),
+            () => player.launch(
+                  androidBackend: AndroidAudioBackend.openSles,
+                  outputDevice: null,
+                  path: '/b',
+                  volumeCompensation: true,
+                ),
+            () => player.setEQQ(2.0),
+            () => player.setEQFreq(peak3.frequencyOf(1)),
+            () => player.setEQGain(8.0),
+            () => player.setEQ(false),
+            () => player.play(),
+          ]);
+        });
+
+        test('does not shut the player down first', () async {
+          final controller = await launched(['/a', '/b']);
+
+          await controller.nextTrack();
+
+          verifyNever(() => player.shutdown());
+        });
+
+        test('puts the Original or Filtered view back after the new clip loads',
+            () async {
+          final controller = await launched(['/a', '/b']);
+          when(() => player.fetchEQState).thenReturn(true);
+          // launch() takes the band out, so the player reports it off by the
+          // time the round is re-applied. What counts is what it said before.
+          when(() => player.launch(
+                androidBackend: any(named: 'androidBackend'),
+                outputDevice: null,
+                path: any(named: 'path'),
+                volumeCompensation: any(named: 'volumeCompensation'),
+              )).thenAnswer((_) async {
+            when(() => player.fetchEQState).thenReturn(false);
+          });
+
+          await controller.nextTrack();
+
+          verify(() => player.setEQ(true)).called(1);
+          verifyNever(() => player.setEQ(false));
+        });
+
+        test('wraps from the last clip to the first', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+
+          await controller.nextTrack();
+          await controller.nextTrack();
+          await controller.nextTrack();
+
+          expect(loaded(), ['/b', '/c', '/a']);
+        });
+      });
+
+      group('previousTrack', () {
+        test('wraps from the first clip to the last', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(loaded(), ['/c']);
+        });
+
+        test('steps back one clip at a time', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+
+          await controller.previousTrack();
+          await controller.previousTrack();
+
+          expect(loaded(), ['/c', '/b']);
+        });
+
+        test('past three seconds restarts the clip instead of switching',
+            () async {
+          when(() => player.fetchPosition)
+              .thenReturn(const Duration(seconds: 3, milliseconds: 1));
+          final controller = await launched(['/a', '/b']);
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, TrackSwitchStatus.restarted);
+          verify(() => player.seek(Duration.zero)).called(1);
+          verifyNever(() => player.launch(
+                androidBackend: any(named: 'androidBackend'),
+                outputDevice: any(named: 'outputDevice'),
+                path: any(named: 'path'),
+                volumeCompensation: any(named: 'volumeCompensation'),
+              ));
+        });
+
+        test('at exactly three seconds switches', () async {
+          when(() => player.fetchPosition).thenReturn(const Duration(seconds: 3));
+          final controller = await launched(['/a', '/b']);
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(loaded(), ['/b']);
+          verifyNever(() => player.seek(any()));
+        });
+
+        test('inside three seconds switches', () async {
+          when(() => player.fetchPosition).thenReturn(const Duration(seconds: 1));
+          final controller = await launched(['/a', '/b']);
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(loaded(), ['/b']);
+        });
+
+        test('a restart does not move the queue', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+          when(() => player.fetchPosition).thenReturn(const Duration(seconds: 9));
+          await controller.previousTrack();
+          when(() => player.fetchPosition).thenReturn(Duration.zero);
+
+          await controller.previousTrack();
+
+          // Still on /a, so back from it is /c.
+          expect(loaded(), ['/c']);
+        });
+      });
+
+      group('a stale path', () {
+        test('is resolved before loading and written back', () async {
+          when(() => library.resolvePath('/b.m4a'))
+              .thenAnswer((_) async => '/b.opus');
+          final controller = await launched(['/a.flac', '/b.m4a', '/c.flac']);
+
+          await controller.nextTrack();
+
+          expect(loaded(), ['/b.opus']);
+          expect(controller.clipPaths, ['/a.flac', '/b.opus', '/c.flac']);
+        });
+
+        test('is looked up once, not on every visit', () async {
+          when(() => library.resolvePath('/b.m4a'))
+              .thenAnswer((_) async => '/b.opus');
+          final controller = await launched(['/a.flac', '/b.m4a']);
+
+          await controller.nextTrack(); // /b.m4a, resolved
+          await controller.nextTrack(); // /a.flac
+          await controller.nextTrack(); // /b.opus, already current
+
+          verify(() => library.resolvePath('/b.m4a')).called(1);
+          verify(() => library.resolvePath('/b.opus')).called(1);
+        });
+      });
+
+      group('a missing clip', () {
+        test('is skipped without a word and stays in the queue', () async {
+          when(() => library.resolvePath('/b')).thenAnswer((_) async => null);
+          final controller = await launched(['/a', '/b', '/c']);
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(result.skipped, 0);
+          expect(loaded(), ['/c']);
+          expect(controller.clipPaths, ['/a', '/b', '/c']);
+        });
+
+        test('is skipped going back too', () async {
+          when(() => library.resolvePath('/c')).thenAnswer((_) async => null);
+          final controller = await launched(['/a', '/b', '/c']);
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(loaded(), ['/b']);
+        });
+
+        test('with every clip missing, nothing is playable and nothing loads',
+            () async {
+          when(() => library.resolvePath(any())).thenAnswer((_) async => null);
+          final controller = await launched(['/a', '/b', '/c']);
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.nothingPlayable);
+          // One look at each clip, then it stops rather than looping.
+          verify(() => library.resolvePath(any())).called(3);
+          verifyNever(() => player.pause());
+          verifyNever(() => player.launch(
+                androidBackend: any(named: 'androidBackend'),
+                outputDevice: any(named: 'outputDevice'),
+                path: any(named: 'path'),
+                volumeCompensation: any(named: 'volumeCompensation'),
+              ));
+        });
+      });
+
+      test('an empty queue has nothing playable', () async {
+        final controller = await launched([]);
+
+        expect((await controller.nextTrack()).status,
+            TrackSwitchStatus.nothingPlayable);
+        expect((await controller.previousTrack()).status,
+            TrackSwitchStatus.nothingPlayable);
+        verifyNever(() => player.pause());
+      });
+
+      test('a second call while one is in flight is busy and loads nothing',
+          () async {
+        final controller = await launched(['/a', '/b', '/c']);
+        final loading = Completer<void>();
+        when(() => player.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: null,
+              path: any(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            )).thenAnswer((_) => loading.future);
+
+        final first = controller.nextTrack();
+        final second = await controller.nextTrack();
+        final third = await controller.previousTrack();
+
+        expect(second.status, TrackSwitchStatus.busy);
+        expect(third.status, TrackSwitchStatus.busy);
+        loading.complete();
+        expect((await first).status, TrackSwitchStatus.switched);
+        expect(loaded(), ['/b']);
+        // And once it has finished the next one is accepted.
+        expect((await controller.nextTrack()).status,
+            TrackSwitchStatus.switched);
+      });
+
+      test('a load that finishes after the page is gone leaves the player alone',
+          () async {
+        // The player goes with the page, and touching it afterwards asserts.
+        final pageStore = SessionStore();
+        when(library.enabledClipPaths).thenAnswer((_) async => ['/a', '/b']);
+        final controller = controllerFor([1], sessionStore: pageStore);
+        await controller.launch();
+        clearInteractions(player);
+        final loading = Completer<void>();
+        when(() => player.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: null,
+              path: any(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            )).thenAnswer((_) => loading.future);
+
+        final pending = controller.nextTrack();
+        pageStore.dispose();
+        loading.complete();
+        await pending;
+
+        verifyNever(() => player.setEQ(any()));
+        verifyNever(() => player.play());
+      });
+
+      test('a load that throws comes back as failed with the error and the '
+          'path', () async {
+        final controller = await launched(['/a', '/b']);
+        launchThrowsFor('/b', StateError('cannot decode'));
+
+        final result = await controller.nextTrack();
+
+        expect(result.status, TrackSwitchStatus.failed);
+        expect(result.error, isA<StateError>());
+        expect(result.path, '/b');
+        verifyNever(() => player.play());
+      });
+
+      test('a failed switch lets the next one through', () async {
+        final controller = await launched(['/a', '/b']);
+        launchThrowsFor('/b');
+        await controller.nextTrack();
+
+        final result = await controller.previousTrack();
+
+        expect(result.status, isNot(TrackSwitchStatus.busy));
       });
     });
 
@@ -372,11 +685,11 @@ void main() {
         when(library.enabledClipPaths)
             .thenAnswer((_) async => ['/a.flac', '/b.flac']);
 
-        await controllerFor([1]).launch();
+        final controller = controllerFor([1]);
+        await controller.launch();
 
         expect(store.sessionState, equals(SessionState.ready));
-        expect(store.playlistPaths, equals(['/a.flac', '/b.flac']));
-        expect(store.currentClipPath, equals('/a.flac'));
+        expect(controller.clipPaths, equals(['/a.flac', '/b.flac']));
         verify(() => player.launch(
               androidBackend: AndroidAudioBackend.openSles,
               outputDevice: null,
@@ -466,11 +779,12 @@ void main() {
           return ['/a.flac'];
         });
 
-        await controllerFor([]).launch(shouldContinue: () => stillOnPage);
+        final controller = controllerFor([]);
+        await controller.launch(shouldContinue: () => stillOnPage);
 
         // Nothing after the abandoned await may land in the store.
         expect(store.sessionState, equals(SessionState.init));
-        expect(store.playlistPaths, isEmpty);
+        expect(controller.clipPaths, isEmpty);
         verifyNever(() => player.launch(
               androidBackend: any(named: 'androidBackend'),
               outputDevice: any(named: 'outputDevice'),
