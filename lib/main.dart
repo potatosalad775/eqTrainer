@@ -1,28 +1,22 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:eq_trainer/ui/core/third_party_licenses.dart';
 import 'package:eq_trainer/ui/core/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:upgrader/upgrader.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:path/path.dart' as p;
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/main_page.dart';
+import 'package:eq_trainer/data/app_storage.dart';
 import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/locale_provider.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
-import 'package:eq_trainer/data/app_directories.dart';
 import 'package:eq_trainer/data/clips/audio_clip_service.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/data/clips/clip_recompress_service.dart';
-import 'package:eq_trainer/data/legacy/legacy_clip_migration.dart';
-import 'package:eq_trainer/data/legacy/legacy_settings_migration.dart';
 import 'package:eq_trainer/ui/core/upgrader_service.dart';
 import 'package:eq_trainer/domain/session/session_parameter.dart';
 
@@ -30,31 +24,8 @@ Future<void> main() async {
   // Initialize Packages
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Prepare Document Directory
-  appSupportDir = await resolveAppDataDir();
-  // shared_preferences has one file per app, so debug gets its own keys instead.
-  // Must come before the first getInstance.
-  if (usesSeparateDebugData) SharedPreferences.setPrefix('debug.');
-
-  // Load Hive - only ever read now, to migrate what older versions stored in it
-  await Hive.initFlutter(appSupportDir.path);
-
-  // Load Settings - older versions kept these in Hive, so move them first
-  final prefs = await SharedPreferences.getInstance();
-  await migrateLegacySettings(prefs);
-  final localeProvider = await LocaleProvider.load();
-  final miscSettings = await MiscSettingsProvider.load();
-
-  // The one instance everything shares: the engine reads it at each launch
-  final outputSelection = OutputSelection(prefs: prefs);
-
-  // Load Playlist Data - the one instance everything shares, see AudioClipRepository
-  final clipRepository = await AudioClipRepository.open(
-    File(p.join(appSupportDir.path, audioClipFileName)),
-  );
-  await migrateLegacyClips(clipRepository, prefs, boxDirectory: appSupportDir.path);
-  // Records and files together, over that one repository
-  final clipLibrary = ClipLibrary(clipRepository, AppDirectories());
+  // Everything on disk, loaded and migrated in the order openAppStorage needs
+  final storage = await openAppStorage();
 
   // Set Android System UI Style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -80,8 +51,8 @@ Future<void> main() async {
   // Handed to the widget tree as well: the screens that play audio pause it
   // while they are open, so the run never competes with playback for CPU.
   final clipFormatMigration = ClipFormatMigration(
-    clipLibrary,
-    importFormat: miscSettings.importFormat,
+    storage.clipLibrary,
+    importFormat: storage.miscSettings.importFormat,
   );
   unawaited(clipFormatMigration.run());
 
@@ -90,11 +61,11 @@ Future<void> main() async {
       child: App(
         upgrader: upgrader,
         clipFormatMigration: clipFormatMigration,
-        localeProvider: localeProvider,
-        miscSettings: miscSettings,
-        outputSelection: outputSelection,
-        clipRepository: clipRepository,
-        clipLibrary: clipLibrary,
+        localeProvider: storage.locale,
+        miscSettings: storage.miscSettings,
+        outputSelection: storage.outputSelection,
+        clipRepository: storage.clipRepository,
+        clipLibrary: storage.clipLibrary,
       ),
     ),
   );
@@ -227,7 +198,3 @@ class AppState extends State<App> with WidgetsBindingObserver {
     );
   }
 }
-
-const String audioClipFileName = "audio_clips.json";
-
-late Directory appSupportDir;
