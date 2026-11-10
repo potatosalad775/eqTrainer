@@ -9,7 +9,7 @@ import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/domain/audio_clip.dart';
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/app_directories.dart';
-import 'package:eq_trainer/data/clips/audio_clip_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 
 /// A library that could not be read must say so. An empty list on its own looks
 /// exactly like the clips being gone for good.
@@ -29,7 +29,7 @@ void main() {
       providers: [
         Provider<IAudioClipRepository>.value(value: repo),
         Provider<AppDirectories>.value(value: dirs),
-        Provider<AudioClipService>.value(value: AudioClipService(repo, dirs)),
+        Provider<ClipLibrary>.value(value: ClipLibrary(repo, dirs)),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
