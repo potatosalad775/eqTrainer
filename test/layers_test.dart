@@ -15,7 +15,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// Each entry is 'lib/relative/path.dart -> offending import uri'.
 const _knownViolations = <String>{
   // Rule 1: ui must not import dart:io.
-  'lib/ui/core/error.dart -> dart:io',
   'lib/ui/core/upgrader_service.dart -> dart:io',
   'lib/ui/import/import_page.dart -> dart:io',
   'lib/ui/import/widget/editor_clip_save_button.dart -> dart:io',
@@ -31,7 +30,6 @@ const _knownViolations = <String>{
   'lib/data/misc_settings_provider.dart -> package:flutter/material.dart',
   'lib/data/clips/clip_format_migration.dart -> package:flutter/scheduler.dart',
   // Rule 5: nothing in the layers imports main.dart.
-  'lib/ui/core/error.dart -> package:eq_trainer/main.dart',
   'lib/ui/core/widget/device_dropdown.dart -> package:eq_trainer/main.dart',
   'lib/ui/settings/audio_backend_page.dart -> package:eq_trainer/main.dart',
 };
