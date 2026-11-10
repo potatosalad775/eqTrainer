@@ -221,8 +221,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
           value: widget.clipFormatMigration,
         ),
         Provider<ClipRecompressService>(create: (ctx) => ClipRecompressService(
-          ctx.read<IAudioClipRepository>(),
-          ctx.read<AppDirectories>(),
+          ctx.read<ClipLibrary>(),
         )),
 
         // Session parameters and data notifiers
