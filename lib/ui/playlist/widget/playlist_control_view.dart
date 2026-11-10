@@ -48,7 +48,10 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
         showPlayerErrorDialog(context,
           action: () {
             _player.shutdown();
-            Navigator.of(context).pop();
+            // Twice: the dialog is the top route, and the sheet is under it.
+            final navigator = Navigator.of(context);
+            navigator.pop();
+            navigator.pop();
           },
           error: e,
           path: widget.filePath,

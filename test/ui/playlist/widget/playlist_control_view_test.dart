@@ -160,8 +160,6 @@ void main() {
       await leave(tester);
     });
 
-    // Skipped, production bug. Fails today: the dialog's action pops once, and the topmost route is the
-    // dialog itself, so the sheet is left open on a player that was shut down.
     testWidgets('the error dialog action closes the view', (tester) async {
       engine.failingPaths.add('bad.wav');
       await openSheet(tester, 'bad.wav');
@@ -170,8 +168,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       expect(find.byType(PlaylistControlView), findsNothing);
+      // And nothing more: the page under the sheet is still there.
+      expect(find.text('preview'), findsOneWidget);
       await leave(tester);
-    }, skip: true);
+    });
 
     testWidgets('the close button pops', (tester) async {
       await openSheet(tester, 'a.wav');
