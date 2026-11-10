@@ -101,8 +101,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     settings = await MiscSettingsProvider.load();
     migration = ClipFormatMigration(
-      MockIAudioClipRepository(),
-      MockAppDirectories(),
+      MockClipLibrary(),
       importFormat: 0,
       encoder: FakeClipEncoder(),
     );

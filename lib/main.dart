@@ -20,6 +20,7 @@ import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/app_directories.dart';
 import 'package:eq_trainer/data/clips/audio_clip_service.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/data/clips/clip_recompress_service.dart';
 import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 import 'package:eq_trainer/data/legacy/legacy_clip_migration.dart';
@@ -54,6 +55,8 @@ Future<void> main() async {
     File(p.join(appSupportDir.path, audioClipFileName)),
   );
   await migrateLegacyClips(clipRepository, prefs, boxDirectory: appSupportDir.path);
+  // Records and files together, over that one repository
+  final clipLibrary = ClipLibrary(clipRepository, AppDirectories());
 
   // Set Android System UI Style
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -79,8 +82,7 @@ Future<void> main() async {
   // Handed to the widget tree as well: the screens that play audio pause it
   // while they are open, so the run never competes with playback for CPU.
   final clipFormatMigration = ClipFormatMigration(
-    clipRepository,
-    AppDirectories(),
+    clipLibrary,
     importFormat: miscSettings.importFormat,
   );
   unawaited(clipFormatMigration.run());
@@ -94,6 +96,7 @@ Future<void> main() async {
         miscSettings: miscSettings,
         androidBackend: readAndroidBackend(prefs),
         clipRepository: clipRepository,
+        clipLibrary: clipLibrary,
       ),
     ),
   );
@@ -108,6 +111,7 @@ class App extends StatefulWidget {
     required this.miscSettings,
     required this.androidBackend,
     required this.clipRepository,
+    required this.clipLibrary,
   });
 
   final Upgrader upgrader;
@@ -116,6 +120,7 @@ class App extends StatefulWidget {
   final MiscSettingsProvider miscSettings;
   final AndroidAudioBackend androidBackend;
   final AudioClipRepository clipRepository;
+  final ClipLibrary clipLibrary;
 
   static AppState of(BuildContext context) {
     return context.findAncestorStateOfType<AppState>()!;
@@ -197,6 +202,8 @@ class AppState extends State<App> with WidgetsBindingObserver {
 
         // Repository
         Provider<IAudioClipRepository>.value(value: widget.clipRepository),
+        // Built over the repository above, so there is still exactly one.
+        Provider<ClipLibrary>.value(value: widget.clipLibrary),
 
         // Services
         Provider<AudioClipService>(create: (ctx) => AudioClipService(

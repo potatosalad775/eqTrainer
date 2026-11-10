@@ -8,25 +8,27 @@ import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 
 import '../../helpers/fake_encoder.dart';
 import '../../helpers/mocks.dart';
 
 /// The one-time conversion of pre-SoLoud `.m4a`/`.aac` clips.
 ///
-/// It deletes files out of the user's library, so the invariant that matters
-/// most is the ordering: the record is repointed at the new file *before* the
-/// original goes, and nothing is deleted when the conversion did not produce a
-/// usable file. The second invariant is that the target tracks the user's
+/// This is about which clips it picks, which format they land in, and that it
+/// yields to playback and never throws. The rewrite itself, with its commit
+/// before delete ordering, is `ClipLibrary.rewrite` and is tested there. The
+/// other thing that matters here is that the target tracks the user's
 /// import-format setting rather than a constant, so a migrated clip lands
 /// where the same file would land if it were imported today.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ClipFormatMigration', () {
-    late MockIAudioClipRepository mockRepo;
-    late MockAppDirectories mockDirs;
+    late Directory root;
     late Directory tmpClips;
+    late AudioClipRepository repo;
+    late ClipLibrary library;
 
     /// Builds a migration for [importFormat] over [encoder].
     ClipFormatMigration migrationFor({
@@ -34,63 +36,65 @@ void main() {
       ClipEncoder? encoder,
     }) =>
         ClipFormatMigration(
-          mockRepo,
-          mockDirs,
+          library,
           importFormat: importFormat,
           encoder: encoder ?? FakeClipEncoder(),
         );
 
     setUp(() async {
-      mockRepo = MockIAudioClipRepository();
-      mockDirs = MockAppDirectories();
-      tmpClips = await Directory.systemTemp.createTemp('cfm_clips_');
-
-      when(() => mockDirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
-      when(() => mockRepo.updateFileNameById(any(), any()))
-          .thenAnswer((_) async {});
+      root = await Directory.systemTemp.createTemp('cfm_');
+      tmpClips = await Directory(p.join(root.path, 'clips')).create();
+      repo = await AudioClipRepository.open(
+        File(p.join(root.path, 'audio_clips.json')),
+      );
+      final dirs = MockAppDirectories();
+      when(() => dirs.getClipsPath()).thenAnswer((_) async => tmpClips.path);
+      library = ClipLibrary(repo, dirs);
     });
 
     tearDown(() async {
-      await tmpClips.delete(recursive: true);
+      await root.delete(recursive: true);
     });
 
+    /// A record with no file behind it.
+    Future<void> addRecord(String fileName) =>
+        repo.addClip(AudioClip(fileName, 'original.m4a', 12.5, true));
+
     /// A record plus its backing file on disk.
-    Future<AudioClip> writeClip(String fileName) async {
+    Future<void> writeClip(String fileName) async {
       await File(p.join(tmpClips.path, fileName)).writeAsBytes([1, 2, 3, 4]);
-      return AudioClip(fileName, 'original.m4a', 12.5, true);
+      await addRecord(fileName);
     }
 
-    /// A record with no file behind it.
-    Future<AudioClip> orphanClip(String fileName) async =>
-        AudioClip(fileName, 'original.m4a', 3, true);
+    List<String> fileNames() => [for (final c in repo.getAllClips()) c.fileName];
+
+    bool onDisk(String fileName) =>
+        File(p.join(tmpClips.path, fileName)).existsSync();
 
     test(
         'converts an m4a clip to Opus, repoints the record and removes the '
         'original', () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
 
       expect(await migrationFor().run(), equals(1));
 
-      verify(() => mockRepo.updateFileNameById(any(), '1000.opus')).called(1);
-      expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isTrue);
-      expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isFalse);
+      expect(fileNames(), ['1000.opus']);
+      expect(onDisk('1000.opus'), isTrue);
+      expect(onDisk('1000.m4a'), isFalse);
       // The lossy source must not be inflated into a lossless container.
-      expect(File(p.join(tmpClips.path, '1000.wav')).existsSync(), isFalse);
+      expect(onDisk('1000.wav'), isFalse);
     });
 
     test('converts .aac the same way as .m4a', () async {
-      final clip = await writeClip('1000.aac');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.aac');
 
       expect(await migrationFor().run(), equals(1));
 
-      verify(() => mockRepo.updateFileNameById(any(), '1000.opus')).called(1);
+      expect(fileNames(), ['1000.opus']);
     });
 
     test('honours an explicit All-FLAC setting', () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
       final encoder = FakeClipEncoder();
 
       expect(
@@ -101,13 +105,12 @@ void main() {
         equals(1),
       );
 
-      verify(() => mockRepo.updateFileNameById(any(), '1000.flac')).called(1);
+      expect(fileNames(), ['1000.flac']);
       expect(encoder.encoded.single, endsWith('1000.flac'));
     });
 
     test('honours an explicit All-WAV setting', () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
       final encoder = FakeClipEncoder();
 
       expect(
@@ -118,51 +121,41 @@ void main() {
         equals(1),
       );
 
-      verify(() => mockRepo.updateFileNameById(any(), '1000.wav')).called(1);
+      expect(fileNames(), ['1000.wav']);
       expect(encoder.encoded.single, endsWith('1000.wav'));
     });
 
     test('maps a retired stored ordinal onto Smart rather than falling through',
         () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
 
       expect(
         await migrationFor(importFormat: ImportFormat.keepOriginal).run(),
         equals(1),
       );
 
-      verify(() => mockRepo.updateFileNameById(any(), '1000.opus')).called(1);
+      expect(fileNames(), ['1000.opus']);
     });
 
     test('leaves formats the engine reads natively completely alone', () async {
-      final clips = [
-        await writeClip('a.wav'),
-        await writeClip('b.mp3'),
-        await writeClip('c.flac'),
-        await writeClip('d.ogg'),
-        await writeClip('e.opus'),
-      ];
-      when(() => mockRepo.getAllClips()).thenReturn(clips);
+      final names = ['a.wav', 'b.mp3', 'c.flac', 'd.ogg', 'e.opus'];
+      for (final name in names) {
+        await writeClip(name);
+      }
       final encoder = FakeClipEncoder();
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
 
       expect(encoder.encoded, isEmpty);
-      verifyNever(() => mockRepo.updateFileNameById(any(), any()));
-      for (final clip in clips) {
-        expect(File(p.join(tmpClips.path, clip.fileName)).existsSync(), isTrue);
+      expect(fileNames(), names);
+      for (final name in names) {
+        expect(onDisk(name), isTrue);
       }
     });
 
     test('is idempotent — a second run has nothing left to do', () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
       await migrationFor().run();
-
-      // The record now points at the Opus file, which is what a relaunch reads.
-      when(() => mockRepo.getAllClips())
-          .thenReturn([await orphanClip('1000.opus')]);
       final encoder = FakeClipEncoder();
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
@@ -170,153 +163,51 @@ void main() {
     });
 
     test('keeps the original when the conversion fails', () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
 
       expect(
         await migrationFor(encoder: FakeClipEncoder(throwOnEncode: true)).run(),
         equals(0),
       );
 
-      verifyNever(() => mockRepo.updateFileNameById(any(), any()));
-      expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isTrue);
-    });
-
-    test('keeps the original when the conversion produces an unusable file',
-        () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
-
-      // Shorter than any container header: the encoder claimed success but
-      // wrote nothing playable.
-      expect(
-        await migrationFor(encoder: FakeClipEncoder(outputSize: 10)).run(),
-        equals(0),
-      );
-
-      verifyNever(() => mockRepo.updateFileNameById(any(), any()));
-      expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isTrue);
-      // The stub output must not be left behind as a "converted" clip.
-      expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isFalse);
-    });
-
-    test('overwrites a partial file left by an interrupted run', () async {
-      final clip = await writeClip('1000.m4a');
-      await File(p.join(tmpClips.path, '1000.opus')).writeAsBytes([9]);
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
-
-      expect(
-        await migrationFor(encoder: FakeClipEncoder(outputSize: 128)).run(),
-        equals(1),
-      );
-
-      expect(File(p.join(tmpClips.path, '1000.opus')).lengthSync(), equals(128));
+      expect(fileNames(), ['1000.m4a']);
+      expect(onDisk('1000.m4a'), isTrue);
     });
 
     test('skips a record whose file is already gone, without touching it',
         () async {
-      when(() => mockRepo.getAllClips())
-          .thenReturn([await orphanClip('missing.m4a')]);
+      await addRecord('missing.m4a');
       final encoder = FakeClipEncoder();
 
       expect(await migrationFor(encoder: encoder).run(), equals(0));
 
       expect(encoder.encoded, isEmpty);
-      verifyNever(() => mockRepo.updateFileNameById(any(), any()));
+      expect(fileNames(), ['missing.m4a']);
     });
 
     test('one failing clip does not stop the others', () async {
-      final good = await writeClip('2000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([
-        await orphanClip('missing.m4a'),
-        good,
-      ]);
+      await addRecord('missing.m4a');
+      await writeClip('2000.m4a');
 
       expect(await migrationFor().run(), equals(1));
-      verify(() => mockRepo.updateFileNameById(any(), '2000.opus')).called(1);
+      expect(fileNames(), ['missing.m4a', '2000.opus']);
     });
 
     test('refuses a concurrent run rather than racing itself over the same '
         'files', () async {
-      final clip = await writeClip('1000.m4a');
-      when(() => mockRepo.getAllClips()).thenReturn([clip]);
+      await writeClip('1000.m4a');
       final migration = migrationFor();
 
       final first = migration.run();
       expect(await migration.run(), equals(0));
       expect(await first, equals(1));
 
-      verify(() => mockRepo.updateFileNameById(any(), '1000.opus')).called(1);
-    });
-
-    test('drops a conversion whose record was deleted while it ran, leaving '
-        'no orphan file', () async {
-      final clip = await writeClip('1000.m4a');
-      // The scan sees the clip; by the time the conversion is committed the
-      // user has deleted it from the playlist, so the record is gone. Another
-      // record survives, so the check has to compare ids, not just count.
-      final other = await writeClip('2000.flac');
-      var call = 0;
-      when(() => mockRepo.getAllClips())
-          .thenAnswer((_) => call++ == 0 ? [clip, other] : [other]);
-
-      expect(await migrationFor().run(), equals(0));
-
-      verifyNever(() => mockRepo.updateFileNameById(any(), any()));
-      // updateFileNameById would have no-opped on the missing id, so
-      // without the check this file would sit on disk unreferenced forever.
-      expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isFalse);
-    });
-
-    group('against the real repository', () {
-      late File libraryFile;
-      late AudioClipRepository repo;
-
-      setUp(() async {
-        libraryFile = File(p.join(tmpClips.path, 'audio_clips.json'));
-        repo = await AudioClipRepository.open(libraryFile);
-        await File(p.join(tmpClips.path, '1000.m4a')).writeAsBytes([1, 2, 3, 4]);
-        await repo.addClip(AudioClip('1000.m4a', 'song.m4a', 12.5, false));
-      });
-
-      ClipFormatMigration migration() => ClipFormatMigration(
-            repo,
-            mockDirs,
-            importFormat: ImportFormat.smart,
-            encoder: FakeClipEncoder(),
-          );
-
-      test('the rewrite reaches the disk, keeping the rest of the record',
-          () async {
-        expect(await migration().run(), equals(1));
-
-        final saved = (await AudioClipRepository.open(libraryFile)).getAllClips();
-        expect(
-          saved,
-          equals([AudioClip('1000.opus', 'song.m4a', 12.5, false, id: '1000')]),
-        );
-        expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isFalse);
-      });
-
-      test('the original survives if the record cannot be saved', () async {
-        // A directory cannot be renamed over, so this is the save failing after
-        // the conversion succeeded: the moment a record could point at a file
-        // that is gone.
-        await libraryFile.delete();
-        await Directory(libraryFile.path).create();
-
-        expect(await migration().run(), equals(0));
-
-        expect(repo.getAllClips().single.fileName, equals('1000.m4a'));
-        expect(File(p.join(tmpClips.path, '1000.m4a')).existsSync(), isTrue);
-        expect(File(p.join(tmpClips.path, '1000.opus')).existsSync(), isFalse);
-      });
+      expect(fileNames(), ['1000.opus']);
     });
 
     group('pausing for playback', () {
       test('holds the run at a clip boundary until resumed', () async {
-        final clip = await writeClip('1000.m4a');
-        when(() => mockRepo.getAllClips()).thenReturn([clip]);
+        await writeClip('1000.m4a');
         final migration = migrationFor();
 
         migration.pause();
@@ -326,16 +217,15 @@ void main() {
 
         expect(migration.isPaused, isTrue);
         expect(migration.isRunning, isTrue);
-        verifyNever(() => mockRepo.updateFileNameById(any(), any()));
+        expect(fileNames(), ['1000.m4a']);
 
         migration.resume();
         expect(await run, equals(1));
-        verify(() => mockRepo.updateFileNameById(any(), '1000.opus')).called(1);
+        expect(fileNames(), ['1000.opus']);
       });
 
       test('stays held until every nested pause is released', () async {
-        final clip = await writeClip('1000.m4a');
-        when(() => mockRepo.getAllClips()).thenReturn([clip]);
+        await writeClip('1000.m4a');
         final migration = migrationFor();
 
         // A playlist preview opened over a session page: closing only the
@@ -348,7 +238,7 @@ void main() {
         migration.resume();
         await pumpEventQueue();
         expect(migration.isPaused, isTrue);
-        verifyNever(() => mockRepo.updateFileNameById(any(), any()));
+        expect(fileNames(), ['1000.m4a']);
 
         migration.resume();
         expect(await run, equals(1));
@@ -356,8 +246,7 @@ void main() {
 
       test('ignores an unbalanced resume rather than un-pausing a live '
           'session', () async {
-        final clip = await writeClip('1000.m4a');
-        when(() => mockRepo.getAllClips()).thenReturn([clip]);
+        await writeClip('1000.m4a');
         final migration = migrationFor();
 
         // A double dispose. The extra resume must not bank credit against
@@ -368,17 +257,15 @@ void main() {
         await pumpEventQueue();
 
         expect(migration.isPaused, isTrue);
-        verifyNever(() => mockRepo.updateFileNameById(any(), any()));
+        expect(fileNames(), ['1000.m4a']);
 
         migration.resume();
         expect(await run, equals(1));
       });
 
       test('reports progress over the run and clears it when idle', () async {
-        when(() => mockRepo.getAllClips()).thenReturn([
-          await writeClip('1000.m4a'),
-          await writeClip('2000.m4a'),
-        ]);
+        await writeClip('1000.m4a');
+        await writeClip('2000.m4a');
         final migration = migrationFor();
 
         expect(migration.isRunning, isFalse);
