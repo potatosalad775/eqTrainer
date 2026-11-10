@@ -91,7 +91,7 @@ void main() {
       });
     }
 
-    PlayerService newPlayer(WidgetTester tester, [OutputSelection? out]) {
+    PlayerService newPlayer([OutputSelection? out]) {
       final player = PlayerService(
         out ?? output,
         hold: RecordingHold(),
@@ -106,7 +106,7 @@ void main() {
       String path = 'a.wav',
       bool volumeCompensation = true,
     }) async {
-      final player = newPlayer(tester);
+      final player = newPlayer();
       await player.launch(path: path, volumeCompensation: volumeCompensation);
       return player;
     }
@@ -226,7 +226,24 @@ void main() {
       await elapse(tester, const Duration(milliseconds: 100));
       expect(player.fetchPlayerState.isPlaying, isTrue);
 
+      // What listeners were shown, since one poll later the new paused voice
+      // would report "stopped at 0" by itself.
+      final shown = <({bool playing, Duration position})>[];
+      void record() => shown.add((
+            playing: player.fetchPlayerState.isPlaying,
+            position: player.fetchPosition,
+          ));
+      player.addListener(record);
       await elapse(tester, const Duration(milliseconds: 500));
+      player.removeListener(record);
+      expect(shown, isNotEmpty);
+      for (final s in shown) {
+        // Never "playing at 0" and never "stopped mid-clip": the end is shown
+        // as stopped and rewound in the same notification.
+        expect(s.playing, s.position > Duration.zero, reason: '$s in $shown');
+      }
+      expect(shown.last.playing, isFalse);
+
       expect(player.fetchPlayerState.isPlaying, isFalse);
       expect(player.fetchPosition, Duration.zero);
       expect(engine.voices, hasLength(2));
@@ -294,7 +311,7 @@ void main() {
       // A second player over the same engine, which still holds wet = 1.
       player.setEQ(true);
       expect(engine.eqWet, 1);
-      final other = newPlayer(tester);
+      final other = newPlayer();
       from = engine.calls.length;
       await other.launch(path: 'a.wav');
       order = ops(engine.calls.skip(from));
@@ -313,7 +330,7 @@ void main() {
         devices: FakeOutputDevices([first, second]),
         watchesDevices: false,
       );
-      final player = newPlayer(tester, out);
+      final player = newPlayer(out);
 
       await player.launch(path: 'a.wav');
       expect(engine.opens.last.device, first);
