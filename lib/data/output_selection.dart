@@ -43,7 +43,7 @@ class OutputSelection extends ChangeNotifier {
         _devices = devices ?? const SoLoudOutputDevices(),
         watchesDevices = watchesDevices ??
             (Platform.isWindows || Platform.isMacOS || Platform.isLinux),
-        androidBackend = readAndroidBackend(prefs, isAndroid: isAndroid) {
+        _androidBackend = readAndroidBackend(prefs, isAndroid: isAndroid) {
     _device = _defaultOf(_enumerate());
   }
 
@@ -60,7 +60,8 @@ class OutputSelection extends ChangeNotifier {
   ///
   /// Read at [SoLoud.init] only, so a change reaches the engine on the next
   /// launch of the app. Ignored on every other platform.
-  AndroidAudioBackend androidBackend;
+  AndroidAudioBackend get androidBackend => _androidBackend;
+  AndroidAudioBackend _androidBackend;
 
   PlaybackDevice? _device;
 
@@ -91,7 +92,7 @@ class OutputSelection extends ChangeNotifier {
   /// choice: this only changes which API opens it.
   Future<void> setAndroidBackend(AndroidAudioBackend backend) async {
     await saveAndroidBackend(_prefs, backend);
-    androidBackend = backend;
+    _androidBackend = backend;
     notifyListeners();
   }
 
