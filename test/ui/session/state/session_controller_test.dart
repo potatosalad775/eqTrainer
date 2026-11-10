@@ -533,7 +533,6 @@ void main() {
           await controller.nextTrack();
 
           expect(loaded(), ['/b.opus']);
-          expect(controller.clipPaths, ['/a.flac', '/b.opus', '/c.flac']);
         });
 
         test('is looked up once, not on every visit', () async {
@@ -560,7 +559,13 @@ void main() {
           expect(result.status, TrackSwitchStatus.switched);
           expect(result.skipped, 0);
           expect(loaded(), ['/c']);
-          expect(controller.clipPaths, ['/a', '/b', '/c']);
+
+          // The file comes back, and the clip was still there to play.
+          when(() => library.resolvePath('/b'))
+              .thenAnswer((_) async => '/b');
+          await controller.nextTrack(); // /a
+          await controller.nextTrack(); // /b
+          expect(loaded(), ['/a', '/b']);
         });
 
         test('is skipped going back too', () async {
@@ -663,7 +668,6 @@ void main() {
           expect(result.status, TrackSwitchStatus.switched);
           expect(result.skipped, 1);
           expect(loaded(), ['/b', '/c']);
-          expect(controller.clipPaths, ['/a', '/c']);
           verify(() => player.play()).called(1);
         });
 
@@ -677,7 +681,6 @@ void main() {
           expect(result.status, TrackSwitchStatus.switched);
           expect(result.skipped, 2);
           expect(loaded(), ['/b', '/c', '/d']);
-          expect(controller.clipPaths, ['/a', '/d']);
         });
 
         test('can come all the way round to the clip that was playing',
@@ -692,7 +695,6 @@ void main() {
           expect(result.status, TrackSwitchStatus.switched);
           expect(result.skipped, 3);
           expect(loaded(), ['/b', '/c', '/d', '/a']);
-          expect(controller.clipPaths, ['/a']);
         });
 
         test('is not tried again later in the session', () async {
@@ -716,7 +718,6 @@ void main() {
           expect(result.status, TrackSwitchStatus.switched);
           expect(result.skipped, 2);
           expect(loaded(), ['/d', '/c', '/b']);
-          expect(controller.clipPaths, ['/a', '/b']);
         });
 
         test('going back, the dropped clip is not tried again', () async {
@@ -740,7 +741,6 @@ void main() {
           expect(result.status, TrackSwitchStatus.switched);
           expect(result.skipped, 1);
           expect(loaded(), ['/c', '/d']);
-          expect(controller.clipPaths, ['/a', '/b', '/d']);
         });
 
         test('does not cost the Original or Filtered view', () async {
@@ -777,7 +777,6 @@ void main() {
           expect(result.error, isA<StateError>());
           expect((result.error as StateError).message, 'a is broken');
           expect(result.path, '/a');
-          expect(controller.clipPaths, isEmpty);
           verifyNever(() => player.play());
         });
 
@@ -824,8 +823,9 @@ void main() {
             .thenAnswer((_) async => ['/a.flac', '/b.flac']);
 
         final controller = controllerFor([1]);
-        await controller.launch();
+        final skipped = await controller.launch();
 
+        expect(skipped, 0);
         expect(store.sessionState, equals(SessionState.ready));
         expect(controller.clipPaths, equals(['/a.flac', '/b.flac']));
         verify(() => player.launch(
@@ -842,6 +842,140 @@ void main() {
               gainDb: 6.0,
             )).called(1);
       });
+
+      group('a clip that fails to load at the start', () {
+        void launchThrowsFor(String path, [Object error = 'cannot decode']) {
+          when(() => player.launch(
+                androidBackend: any(named: 'androidBackend'),
+                outputDevice: null,
+                path: path,
+                volumeCompensation: any(named: 'volumeCompensation'),
+              )).thenThrow(error);
+        }
+
+        List<String> loaded() => verify(() => player.launch(
+              androidBackend: any(named: 'androidBackend'),
+              outputDevice: any(named: 'outputDevice'),
+              path: captureAny(named: 'path'),
+              volumeCompensation: any(named: 'volumeCompensation'),
+            )).captured.cast<String>();
+
+        test('is skipped, and the session starts on the next one', () async {
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a', '/b', '/c']);
+          launchThrowsFor('/a');
+
+          final skipped = await controllerFor([1]).launch();
+
+          expect(skipped, 1);
+          expect(store.sessionState, SessionState.ready);
+          expect(loaded(), ['/a', '/b']);
+          // The session carries on exactly as if /b had been first.
+          verify(() => player.setEQQ(any())).called(1);
+          verify(() => player.setEQParams(
+                enableEQ: false,
+                frequency: peak3.frequencyOf(1),
+                gainDb: 6.0,
+              )).called(1);
+        });
+
+        test('several in a row are all skipped', () async {
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a', '/b', '/c', '/d']);
+          launchThrowsFor('/a');
+          launchThrowsFor('/b');
+          launchThrowsFor('/c');
+
+          final skipped = await controllerFor([0]).launch();
+
+          expect(skipped, 3);
+          expect(store.sessionState, SessionState.ready);
+          expect(loaded(), ['/a', '/b', '/c', '/d']);
+        });
+
+        test('with every clip failing, ends in error and throws the last '
+            'error', () async {
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a', '/b']);
+          launchThrowsFor('/a', StateError('a is broken'));
+          launchThrowsFor('/b', StateError('b is broken'));
+
+          await expectLater(
+            controllerFor([]).launch(),
+            throwsA(isA<Exception>().having(
+                (e) => e.toString(), 'message', contains('b is broken'))),
+          );
+
+          expect(store.sessionState, SessionState.error);
+          expect(loaded(), ['/a', '/b']);
+          verifyNever(() => player.setEQQ(any()));
+        });
+
+        test('still lists every path for the error view after all of them '
+            'failed', () async {
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a.m4a', '/b.flac']);
+          launchThrowsFor('/a.m4a');
+          launchThrowsFor('/b.flac');
+          final controller = controllerFor([]);
+
+          await expectLater(controller.launch(), throwsException);
+
+          expect(controller.clipPaths, ['/a.m4a', '/b.flac']);
+        });
+
+        test('is not visited by a later switch', () async {
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a', '/b', '/c']);
+          launchThrowsFor('/a');
+          final controller = controllerFor([1]);
+          await controller.launch();
+          clearInteractions(player);
+
+          await controller.nextTrack(); // /c
+          await controller.nextTrack(); // /b, not /a
+          await controller.nextTrack(); // /c
+
+          expect(loaded(), ['/c', '/b', '/c']);
+        });
+
+        test('does not count a clip that loads', () async {
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a', '/b']);
+
+          expect(await controllerFor([0]).launch(), 0);
+        });
+
+        test('leaves the loop and the store alone once the page is gone',
+            () async {
+          var stillOnPage = true;
+          when(library.enabledClipPaths)
+              .thenAnswer((_) async => ['/a', '/b', '/c']);
+          when(() => player.launch(
+                androidBackend: any(named: 'androidBackend'),
+                outputDevice: null,
+                path: '/a',
+                volumeCompensation: any(named: 'volumeCompensation'),
+              )).thenAnswer((_) async {
+            // The user leaves while the first clip is failing to load.
+            stillOnPage = false;
+            throw StateError('cannot decode');
+          });
+
+          await controllerFor([])
+              .launch(shouldContinue: () => stillOnPage);
+
+          expect(loaded(), ['/a']);
+          expect(store.sessionState, SessionState.init);
+          verifyNever(() => player.setEQQ(any()));
+          verifyNever(() => player.setEQParams(
+                enableEQ: any(named: 'enableEQ'),
+                frequency: any(named: 'frequency'),
+                gainDb: any(named: 'gainDb'),
+              ));
+        });
+      });
+
 
       test('starts at the configured band count', () async {
         parameter.startingBand = 7;

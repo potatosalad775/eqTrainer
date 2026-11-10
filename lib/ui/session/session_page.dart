@@ -11,6 +11,7 @@ import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/session/session_parameter.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
+import 'package:eq_trainer/ui/session/widgets/clip_skipped_toast.dart';
 
 class SessionPage extends StatefulWidget {
   const SessionPage({super.key});
@@ -61,8 +62,12 @@ class _SessionPageState extends State<SessionPage> {
 
   Future<void> _init() async {
     if (!mounted) return;
+    // Captured up front: the launch finishes after an await, by which time the
+    // page may be gone.
+    final l10n = context.l10n;
     try {
-      await _controller.launch(shouldContinue: () => mounted);
+      final skipped = await _controller.launch(shouldContinue: () => mounted);
+      if (mounted && skipped > 0) showClipSkippedToast(l10n);
     } catch (_) {
       // The store's sessionState already reflects the failure (set inside
       // launch); nothing else to surface here, and rethrowing would

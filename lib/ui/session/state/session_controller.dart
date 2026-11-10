@@ -93,8 +93,11 @@ class SessionController {
   /// another load before the first has finished.
   bool _switching = false;
 
-  /// The queue's paths, for the error view's FFmpeg hint.
-  List<String> get clipPaths => _queue.paths;
+  /// The paths the session started with, for the error view's FFmpeg hint.
+  /// Kept apart from the queue, which loses a clip that fails to load and can
+  /// end up empty by the time the error view asks.
+  List<String> _startPaths = const [];
+  List<String> get clipPaths => _startPaths;
 
   /// The rules of the session, made once the player is open.
   SessionRounds? _rounds;
@@ -102,7 +105,9 @@ class SessionController {
   /// How the session is going. This is what the result page shows.
   SessionResults get results => _rounds?.results ?? SessionResults.empty();
 
-  Future<void> launch({
+  /// Opens the first clip that loads, and returns how many were skipped on the
+  /// way because they would not.
+  Future<int> launch({
     // Checked before each write to the store after an await: a launch can
     // still finish after the page is gone, and writing to a disposed notifier
     // asserts. Callers that don't care can omit it.
@@ -117,37 +122,62 @@ class SessionController {
 
       // Load enabled audio clip absolute paths
       final paths = await _clipLibrary.enabledClipPaths();
-      if (!active()) return;
+      if (!active()) return 0;
+      _startPaths = List<String>.unmodifiable(paths);
       _queue = ClipQueue(paths);
 
       // If List of Audio clips for Session is Not Empty
-      if (!_queue.isEmpty) {
-        // Open First AudioClip
-        await _player.launch(
-          androidBackend: _audioState.androidBackend,
-          outputDevice: _audioState.outputDevice,
-          path: _queue.current,
-          volumeCompensation: _volumeCompensation,
-        );
-        if (!active()) return;
-        // Q is fixed for the whole session, so it is applied once on the fresh
-        // player here and re-applied only after a track switch.
-        _player.setEQQ(_settings.qFactor);
-      } else {
+      if (_queue.isEmpty) {
         // ... else notify the playlist is empty.
-        if (active()) _store.setSessionState(SessionState.playlistEmpty);
-        return;
+        _store.setSessionState(SessionState.playlistEmpty);
+        return 0;
       }
+
+      // Open the first AudioClip that loads. One that fails is dropped for the
+      // session rather than ending it, as a track switch does. Bounded by the
+      // queue's length at the start, so every clip is tried once.
+      var skipped = 0;
+      Object? lastError;
+      var opened = false;
+      final attempts = _queue.length;
+      for (var attempt = 0; attempt < attempts; attempt++) {
+        try {
+          await _player.launch(
+            androidBackend: _audioState.androidBackend,
+            outputDevice: _audioState.outputDevice,
+            path: _queue.current,
+            volumeCompensation: _volumeCompensation,
+          );
+          if (!active()) return skipped;
+          opened = true;
+          break;
+        } catch (e) {
+          // The page can close while a clip is failing to load, and then
+          // there is nothing left to write to or to try.
+          if (!active()) return skipped;
+          lastError = e;
+          skipped++;
+          _queue.removeCurrent(forward: true);
+        }
+      }
+      // Reported as an error, with the last clip's reason, as it was when the
+      // first clip was the only one tried.
+      if (!opened) throw lastError!;
+
+      // Q is fixed for the whole session, so it is applied once on the fresh
+      // player here and re-applied only after a track switch.
+      _player.setEQQ(_settings.qFactor);
 
       // The first round is picked as the rounds are made.
       final rounds = SessionRounds(_settings, random: _random);
       _rounds = rounds;
       _store.applyLayout(rounds.layout);
       await _tune(rounds.current);
-      if (!active()) return;
+      if (!active()) return skipped;
 
       // Notify the Session is Ready
       _store.setSessionState(SessionState.ready);
+      return skipped;
     } catch (e) {
       if (active()) _store.setSessionState(SessionState.error);
       throw Exception(e.toString());
