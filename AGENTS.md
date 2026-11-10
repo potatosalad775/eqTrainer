@@ -544,9 +544,9 @@ repository. Shared scaffolding is in `test/helpers/`:
 | `recording_hold.dart` | `RecordingHold`: a `PlaybackHold` that counts its `pause` and `resume` calls, for building a `PlayerService` without a migration. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
 
-Platform channels (`path_provider`) are stubbed per test with
-`setMockMethodCallHandler` rather than by depending on the plugin; see
-`import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
+Code that needs the temp directory takes it as a parameter (`ClipImport`'s
+`tempDirectory`), so a test passes a real one from `Directory.systemTemp`; if a platform
+channel does have to be stubbed, use `setMockMethodCallHandler`. `shared_preferences` is a direct dependency,
 so use its `setMockInitialValues`.
 
 `layers_test.dart` checks the import rules of the three layers; see
