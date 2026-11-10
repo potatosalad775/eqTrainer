@@ -167,7 +167,8 @@ final class SoLoudAudioEngine implements AudioEngine {
       _soloud.getIsValidVoiceHandle((voice as _SoLoudVoice).handle);
 
   @override
-  bool isPaused(Voice voice) => _soloud.getPause((voice as _SoLoudVoice).handle);
+  bool isPaused(Voice voice) =>
+      _soloud.getPause((voice as _SoLoudVoice).handle);
 
   @override
   void setPaused(Voice voice, {required bool paused}) =>
@@ -207,7 +208,7 @@ final class SoLoudAudioEngine implements AudioEngine {
       _soloud.filters.peakingEqFilter.wet.value = target;
 
   @override
-  void fadeEqWet(double target, Duration time) => _soloud.filters.peakingEqFilter
-      .wet
-      .fadeFilterParameter(to: target, time: time);
+  void fadeEqWet(double target, Duration time) =>
+      _soloud.filters.peakingEqFilter.wet
+          .fadeFilterParameter(to: target, time: time);
 }
