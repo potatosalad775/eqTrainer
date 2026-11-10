@@ -44,4 +44,13 @@ One run of training, from Start until the user leaves.
 One question within a session: one answer band to identify.
 
 **Band**:
-One of the frequency bands a round can ask about. The number of bands changes with the user's score.
+One of the frequency bands a round can ask about. The band count belongs to the session: it starts at the configured value and moves along the band ladder.
+
+**Graph**:
+One selectable curve in a round. In peak-and-dip mode each band has two, a peak and a dip.
+
+**Points**:
+The running score within a session that moves the band count: plus one for a correct answer and minus one for a wrong one.
+
+**Band ladder**:
+The rule that raises the band count when the points reach the threshold and lowers it when they reach minus the threshold, between 2 and 25 bands.

@@ -27,7 +27,7 @@ eqTrainer/
 │   │   ├── session/           # Core training session (page, widgets, state/)
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
-│   ├── domain/                # Pure Dart: AudioClip, format policy, WAV parser, SessionParameter
+│   ├── domain/                # Pure Dart: AudioClip, format policy, WAV parser, session rules (session/)
 │   └── data/                  # Disk, preferences and the audio engine
 │       ├── clips/             # Clip library, encoder, rewrite passes and import services
 │       └── legacy/            # Hive records and the migrations that read them
@@ -70,9 +70,12 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `ImportWorkflowService` | Provider | File-picker import flow |
 | `ClipRecompressService` | Provider | User-triggered WAV→FLAC recompress |
 | `ClipFormatMigration` | ChangeNotifier | Started in `main()` before `runApp`, so provided by `.value`; playback screens pause it. See [Clip Formats](#clip-formats) |
-| `SessionParameter` | ChangeNotifier | Session config (band, gain, Q, filter type, threshold) |
-| `SessionStore` | ChangeNotifier | Session runtime state & results |
-| `SessionController` | Provider | Orchestrates session launch & answer submission |
+| `SessionParameter` | ChangeNotifier | What the config page edits (band, gain, Q, filter type, threshold). Its setters accept only the choices `SessionSettings` lists. A session takes a `SessionSettings` snapshot of it when it starts |
+
+Session state is **not** app-scoped. `SessionPage`'s State creates the `SessionStore`
+and `SessionController` in `initState`, next to the `PlayerService` it already creates,
+provides all three to its subtree by `.value`, and disposes them in `dispose`. A session
+therefore starts from nothing, and nothing in `main.dart` registers them.
 
 ### Layers
 
@@ -90,9 +93,10 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 
 | Folder | Content |
 |---|---|
-| `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState`, `GraphState` and `FrequencyCalculator`; `import/` holds `ImportAudioData` |
+| `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState` and `FrequencyCalculator` (chart curves only); `import/` holds `ImportAudioData` |
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
-| `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser), `SessionParameter` |
+| `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
+| `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand` |
 | `data/` | `AppDirectories` (used by `ClipLibrary` only), `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
 | `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
@@ -286,19 +290,34 @@ decode-on-load fallback meanwhile, so there is nothing to wait for.
 ### Session Flow
 
 ```
-SessionController.launchSession()
+SessionPage.initState()
+  → SessionStore(), SessionController(...)   ← with a SessionSettings snapshot
+
+SessionController.launch()
   → clipLibrary.enabledClipPaths()   ← skips a missing clip, keeps its record
   → player.launch()
-  → sessionStore.initFrequency()     ← FrequencyCalculator.compute()
-  → SessionController.initSession()  ← picks random answer freq
+  → SessionRounds(settings)          ← picks the first round
+  → sessionStore.applyLayout()       ← FrequencyCalculator.compute(layout)
+  → player.setEQParams()             ← the first round's band
   → sessionStore.setSessionState(SessionState.ready)
 
 User submits answer →
 SessionController.submitAnswer()
-  → sessionStore.applySubmission()   ← updates score & per-band stats
-  → adjusts sessionParameter.startingBand if threshold reached
-  → SessionController.initSession()  ← next round
+  → rounds.submit(pickedGraphIndex)  ← scores, moves the points, climbs the band
+                                       ladder, picks the next round
+  → sessionStore.setResults()
+  → sessionStore.applyLayout()       ← only if the band count changed
+  → player.setEQParams()             ← the next round's band
 ```
+
+The rounds, the scoring and the band ladder live in `SessionRounds`, which knows
+nothing about the player or the screen and is tested without either. A session's band
+count is its own: it starts at `SessionSettings.startingBand` and is never written back
+to `SessionParameter`, so the next session starts where the user configured it. The
+valid choices for each setting are defined once, on `SessionSettings`. The picker shows
+graphs 1-based and the domain counts them 0-based; `SessionStore.graphIndexOf` and
+`pickerValueOf` are the only place the offset is written. `SessionPage` hands
+`controller.results`, a `SessionResults` value, to `ResultPage` when the user leaves.
 
 ### Persistence
 
@@ -469,6 +488,7 @@ repository. Shared scaffolding is in `test/helpers/`:
 | Helper | Use it for |
 |---|---|
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `ClipLibrary`, `PlayerService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
+| `scripted_random.dart` | `ScriptedRandom`: a `Random` that returns given numbers, for tests where which graph comes up matters. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`, and `onWrite` runs just before an output is written, to change the library while an encode is in flight. |
 
 Platform channels (`path_provider`) are stubbed per test with
@@ -583,10 +603,14 @@ so both downloads carry them. The build fails if they cannot be found.
 | File | Purpose |
 |---|---|
 | `lib/main.dart` | App entry, provider tree, legacy data migrations |
-| `lib/ui/session/state/session_controller.dart` | Session orchestration logic |
-| `lib/ui/session/state/session_store.dart` | Session UI state (ChangeNotifier) |
-| `lib/domain/session_parameter.dart` | User-configurable session settings |
-| `lib/ui/session/state/frequency_calculator.dart` | Pure EQ frequency math |
+| `lib/domain/session/session_rounds.dart` | Picking, scoring and the band ladder; see [Session Flow](#session-flow) |
+| `lib/domain/session/band_layout.dart` | Which graph is which band, peak or dip, and its frequency |
+| `lib/domain/session/session_settings.dart` | A session's frozen settings and the valid choices for each |
+| `lib/domain/session/session_results.dart` | `ResultBand` and the `SessionResults` tally |
+| `lib/domain/session/session_parameter.dart` | What the config page edits |
+| `lib/ui/session/state/session_controller.dart` | Connects `SessionRounds` to the player and the store |
+| `lib/ui/session/state/session_store.dart` | Session screen state (ChangeNotifier) |
+| `lib/ui/session/state/frequency_calculator.dart` | The chart's curves and positions for a `BandLayout` |
 | `lib/data/player_service.dart` | Audio engine wrapper + EQ control |
 | `lib/data/clips/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
 | `lib/data/clips/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
