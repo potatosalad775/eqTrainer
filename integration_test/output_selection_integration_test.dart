@@ -3,16 +3,17 @@ import 'dart:io';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 
 /// miniaudio's Android enumeration reports one device and never sets its
-/// default flag, so [AudioState.outputDevice] stays null there. That is the
+/// default flag, so [OutputSelection.device] stays null there. That is the
 /// documented "let SoLoud open the OS default".
 const _noDefaultFlag = 'Android devices do not report isDefault';
 
 /// Device enumeration without a running engine.
 ///
-/// The settings page and [AudioState.initialize] both list devices at startup,
+/// The settings page and [OutputSelection]'s constructor both list devices at startup,
 /// long before anything plays — under coast_audio that meant standing up a
 /// probe `AudioDeviceContext` and disposing it before it could collide with
 /// the playback one. SoLoud claims `listPlaybackDevices` is safe uninitialized;
@@ -36,15 +37,16 @@ void main() {
           reason: 'no device reported itself as the OS default');
     });
 
-    test('AudioState.initialize picks up the default device', () {
-      final state = AudioState.initialize(androidBackend: AndroidAudioBackend.auto);
-      expect(state.outputDevice, isNotNull);
-      expect(state.outputDevice!.isDefault, isTrue);
+    test('OutputSelection picks up the default device', () async {
+      SharedPreferences.setMockInitialValues({});
+      final state = OutputSelection(prefs: await SharedPreferences.getInstance());
+      expect(state.device, isNotNull);
+      expect(state.device!.isDefault, isTrue);
       state.dispose();
     }, skip: Platform.isAndroid ? _noDefaultFlag : false);
 
-    test('refreshDevices holds a still-present user selection', () {
-      // Prefer a non-default device: refreshDevices would land on the default
+    test('refresh holds a still-present user selection', () async {
+      // Prefer a non-default device: refresh would land on the default
       // anyway, so only this one can tell a held selection from a followed one.
       final devices = SoLoud.instance.listPlaybackDevices();
       expect(devices, isNotEmpty);
@@ -52,12 +54,11 @@ void main() {
         (d) => !d.isDefault,
         orElse: () => devices.first,
       );
-      final state = AudioState(
-        androidBackend: AndroidAudioBackend.auto,
-        outputDevice: chosen,
-      )..userSelectedDevice = true;
-      state.refreshDevices();
-      expect(state.outputDevice?.name, equals(chosen.name));
+      SharedPreferences.setMockInitialValues({});
+      final state = OutputSelection(prefs: await SharedPreferences.getInstance())
+        ..selectDevice(chosen);
+      state.refresh();
+      expect(state.device?.name, equals(chosen.name));
       expect(state.userSelectedDevice, isTrue);
       state.dispose();
     });

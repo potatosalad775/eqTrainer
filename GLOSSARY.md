@@ -35,6 +35,12 @@ _Avoid_: Dangling record, orphan (an orphan is the reverse: a file with no recor
 **Orphan file**:
 A file in the clips directory that no record points at.
 
+### Audio
+
+**Output selection**:
+The Android backend and the output device the engine opens, and the module that owns them. There is one for the whole app. A player reads the device at each launch and the backend when the engine starts.
+_Avoid_: Audio state
+
 ### Training
 
 **Session**:

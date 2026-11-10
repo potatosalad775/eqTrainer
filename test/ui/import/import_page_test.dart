@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:eq_trainer/ui/import/import_page.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/import_player.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
@@ -19,6 +19,7 @@ import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 
 import '../../helpers/fake_encoder.dart';
+import '../../helpers/fake_output_devices.dart';
 import '../../helpers/mocks.dart';
 
 class _FakePicker extends FilePickerPlatform {
@@ -82,7 +83,6 @@ class _FakeWorkflow implements ImportWorkflowService {
 
   @override
   Future<Duration> loadAudioFile({
-    required AudioState audioState,
     required ImportPlayer importPlayer,
     required String filePath,
     String? originalPath,
@@ -95,11 +95,16 @@ class _FakeWorkflow implements ImportWorkflowService {
 void main() {
   late ClipFormatMigration migration;
   late MiscSettingsProvider settings;
+  late OutputSelection output;
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     settings = await MiscSettingsProvider.load();
+    output = OutputSelection(
+      prefs: await SharedPreferences.getInstance(),
+      devices: FakeOutputDevices(),
+    );
     migration = ClipFormatMigration(
       MockClipLibrary(),
       importFormat: 0,
@@ -117,12 +122,7 @@ void main() {
       providers: [
         ChangeNotifierProvider.value(value: settings),
         ChangeNotifierProvider.value(value: migration),
-        ChangeNotifierProvider.value(
-          value: AudioState(
-            androidBackend: AndroidAudioBackend.openSles,
-            outputDevice: null,
-          ),
-        ),
+        ChangeNotifierProvider.value(value: output),
         Provider<ImportWorkflowService>.value(value: workflow),
       ],
       child: const MaterialApp(

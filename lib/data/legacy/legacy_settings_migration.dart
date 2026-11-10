@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/legacy/setting_data.dart';
 

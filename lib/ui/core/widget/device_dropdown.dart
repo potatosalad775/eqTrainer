@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:flutter_soloud/flutter_soloud.dart' show PlaybackDevice;
 import 'package:provider/provider.dart';
-import 'package:eq_trainer/main.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 
 class DeviceDropdown extends StatefulWidget {
@@ -15,40 +14,34 @@ class DeviceDropdown extends StatefulWidget {
 class _DeviceDropdownState extends State<DeviceDropdown> {
   List<PlaybackDevice> _devices = [];
 
-  // No cached device context to own any more: SoLoud enumerates devices
-  // without creating one, so the coast_audio dance of holding a context alive
-  // (and disposing it so it couldn't collide with the playback context) is
-  // gone along with it.
-  void _refreshDeviceList() {
-    try {
-      _devices = SoLoud.instance.listPlaybackDevices();
-    } catch (_) {
-      // Keep existing list if enumeration fails.
-    }
+  // Keeps the existing list if enumeration fails: availableDevices() returns
+  // the last one it got.
+  void _refreshDeviceList(OutputSelection selection) {
+    _devices = selection.availableDevices();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _refreshDeviceList();
+    _refreshDeviceList(context.read<OutputSelection>());
   }
 
   @override
   Widget build(BuildContext context) {
-    final audioState = context.watch<AudioState>();
+    final selection = context.watch<OutputSelection>();
 
     // Ensure device list includes the current output device. Match by id,
     // not name: two DACs can share a display name, and matching by name
     // could pick the wrong one or leave the dropdown's value unmatched.
-    if (audioState.outputDevice != null &&
-        !_devices.any((d) => d.id == audioState.outputDevice!.id)) {
-      _refreshDeviceList();
+    if (selection.device != null &&
+        !_devices.any((d) => d.id == selection.device!.id)) {
+      _refreshDeviceList(selection);
     }
 
     // Only pass a value the dropdown actually has a matching item for.
     // Otherwise a stale/disconnected selection trips DropdownButton's
     // "exactly one matching item" assertion and crashes the page.
-    final currentId = audioState.outputDevice?.id;
+    final currentId = selection.device?.id;
     final selectedValue =
         (currentId != null && _devices.any((d) => d.id == currentId)) ? currentId : null;
 
@@ -77,13 +70,7 @@ class _DeviceDropdownState extends State<DeviceDropdown> {
                         .where((d) => d.id == deviceId)
                         .firstOrNull;
                     if (device == null) return;
-                    audioState.userSelectedDevice = true;
-                    App.of(context).applyAudioState(
-                      audioState.copyWith(
-                        outputDevice: device,
-                        userSelectedDevice: true,
-                      ),
-                    );
+                    selection.selectDevice(device);
                   },
                 ),
               ),

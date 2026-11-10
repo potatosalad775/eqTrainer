@@ -7,7 +7,7 @@ import 'package:eq_trainer/data/player_service.dart';
 /// it exposes as `filePath` is [PlayerService]'s own, set by `launch()` —
 /// under coast_audio this class had to track it separately.
 class ImportPlayer extends PlayerService {
-  ImportPlayer();
+  ImportPlayer(super.output);
 
   /// The file the user picked, when what is loaded is a conversion of it.
   String? originalPath;

@@ -3,7 +3,7 @@ import 'package:eq_trainer/ui/core/app_dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/ui/core/error.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/data/clips/clip_format_migration.dart';
@@ -19,7 +19,7 @@ class PlaylistControlView extends StatefulWidget {
 }
 
 class _PlaylistControlViewState extends State<PlaylistControlView> {
-  final _player = PlaylistPlayer();
+  late final PlaylistPlayer _player;
 
   /// Captured in initState rather than read in dispose, where the element is
   /// already detached from the tree.
@@ -33,10 +33,8 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
     // the audio. Nested pauses are counted, so a preview opened over a
     // session does not resume the run when only the preview closes.
     _clipFormatMigration = context.read<ClipFormatMigration>()..pause();
-    final audioState = context.read<AudioState>();
+    _player = PlaylistPlayer(context.read<OutputSelection>());
     _player.launch(
-      androidBackend: audioState.androidBackend,
-      outputDevice: audioState.outputDevice,
       path: widget.filePath,
     ).onError((e, _) {
       // Unhandled before: a missing/unreadable file (e.g. a dangling
@@ -114,5 +112,5 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
 }
 
 class PlaylistPlayer extends PlayerService {
-  PlaylistPlayer();
+  PlaylistPlayer(super.output);
 }

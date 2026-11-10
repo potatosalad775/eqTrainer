@@ -54,7 +54,7 @@ class TestFixtures {
     await File(f.path(sine440hz3sMp3))
         .writeAsBytes(base64Decode(sine440hz3sMp3Base64));
     // The offline encoder touches no engine state, so this is fine before
-    // SoLoud.init() and must stay so: audio_state_integration_test checks
+    // SoLoud.init() and must stay so: output_selection_integration_test checks
     // device enumeration on a down engine.
     await ClipEncoder().encodeWavBytes(
       wavBytes: sineWav(seconds: 3, amplitude: toneAmplitude3s),

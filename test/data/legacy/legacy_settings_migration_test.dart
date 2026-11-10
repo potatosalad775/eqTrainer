@@ -7,7 +7,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/misc_settings_provider.dart';
 import 'package:eq_trainer/data/legacy/setting_data.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
