@@ -653,27 +653,165 @@ void main() {
         verifyNever(() => player.play());
       });
 
-      test('a load that throws comes back as failed with the error and the '
-          'path', () async {
-        final controller = await launched(['/a', '/b']);
-        launchThrowsFor('/b', StateError('cannot decode'));
+      group('a clip that fails to load', () {
+        test('is dropped, counted, and the next one is tried', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+          launchThrowsFor('/b');
 
-        final result = await controller.nextTrack();
+          final result = await controller.nextTrack();
 
-        expect(result.status, TrackSwitchStatus.failed);
-        expect(result.error, isA<StateError>());
-        expect(result.path, '/b');
-        verifyNever(() => player.play());
-      });
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(result.skipped, 1);
+          expect(loaded(), ['/b', '/c']);
+          expect(controller.clipPaths, ['/a', '/c']);
+          verify(() => player.play()).called(1);
+        });
 
-      test('a failed switch lets the next one through', () async {
-        final controller = await launched(['/a', '/b']);
-        launchThrowsFor('/b');
-        await controller.nextTrack();
+        test('several in a row are all dropped', () async {
+          final controller = await launched(['/a', '/b', '/c', '/d']);
+          launchThrowsFor('/b');
+          launchThrowsFor('/c');
 
-        final result = await controller.previousTrack();
+          final result = await controller.nextTrack();
 
-        expect(result.status, isNot(TrackSwitchStatus.busy));
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(result.skipped, 2);
+          expect(loaded(), ['/b', '/c', '/d']);
+          expect(controller.clipPaths, ['/a', '/d']);
+        });
+
+        test('can come all the way round to the clip that was playing',
+            () async {
+          final controller = await launched(['/a', '/b', '/c', '/d']);
+          launchThrowsFor('/b');
+          launchThrowsFor('/c');
+          launchThrowsFor('/d');
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(result.skipped, 3);
+          expect(loaded(), ['/b', '/c', '/d', '/a']);
+          expect(controller.clipPaths, ['/a']);
+        });
+
+        test('is not tried again later in the session', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+          launchThrowsFor('/b');
+
+          await controller.nextTrack(); // /b fails, lands on /c
+          await controller.nextTrack(); // /a
+          await controller.nextTrack(); // /c, not /b
+
+          expect(loaded(), ['/b', '/c', '/a', '/c']);
+        });
+
+        test('is dropped going back too', () async {
+          final controller = await launched(['/a', '/b', '/c', '/d']);
+          launchThrowsFor('/d');
+          launchThrowsFor('/c');
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(result.skipped, 2);
+          expect(loaded(), ['/d', '/c', '/b']);
+          expect(controller.clipPaths, ['/a', '/b']);
+        });
+
+        test('going back, the dropped clip is not tried again', () async {
+          final controller = await launched(['/a', '/b', '/c']);
+          launchThrowsFor('/c');
+
+          await controller.previousTrack(); // /c fails, lands on /b
+          await controller.previousTrack(); // /a
+          await controller.previousTrack(); // /b, not /c
+
+          expect(loaded(), ['/c', '/b', '/a', '/b']);
+        });
+
+        test('is counted apart from a missing clip, which stays', () async {
+          when(() => library.resolvePath('/b')).thenAnswer((_) async => null);
+          final controller = await launched(['/a', '/b', '/c', '/d']);
+          launchThrowsFor('/c');
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.switched);
+          expect(result.skipped, 1);
+          expect(loaded(), ['/c', '/d']);
+          expect(controller.clipPaths, ['/a', '/b', '/d']);
+        });
+
+        test('does not cost the Original or Filtered view', () async {
+          // launch() takes the band out before it tries to load, so by the
+          // second attempt the player already says it is off.
+          final controller = await launched(['/a', '/b', '/c']);
+          when(() => player.fetchEQState).thenReturn(true);
+          when(() => player.launch(
+                androidBackend: any(named: 'androidBackend'),
+                outputDevice: null,
+                path: '/b',
+                volumeCompensation: any(named: 'volumeCompensation'),
+              )).thenAnswer((_) async {
+            when(() => player.fetchEQState).thenReturn(false);
+            throw StateError('cannot decode');
+          });
+
+          await controller.nextTrack();
+
+          verify(() => player.setEQ(true)).called(1);
+          verifyNever(() => player.setEQ(false));
+        });
+
+        test('with every clip failing, the switch fails with the last error '
+            'and path', () async {
+          final controller = await launched(['/a', '/b']);
+          launchThrowsFor('/b', StateError('b is broken'));
+          launchThrowsFor('/a', StateError('a is broken'));
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.failed);
+          expect(result.skipped, 2);
+          expect(result.error, isA<StateError>());
+          expect((result.error as StateError).message, 'a is broken');
+          expect(result.path, '/a');
+          expect(controller.clipPaths, isEmpty);
+          verifyNever(() => player.play());
+        });
+
+        test('a single clip that fails to reload fails the switch', () async {
+          final controller = await launched(['/a']);
+          launchThrowsFor('/a');
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.failed);
+          expect(result.path, '/a');
+        });
+
+        test('leaves nothing playable once every clip is gone', () async {
+          final controller = await launched(['/a', '/b']);
+          launchThrowsFor('/a');
+          launchThrowsFor('/b');
+          await controller.nextTrack();
+
+          final result = await controller.nextTrack();
+
+          expect(result.status, TrackSwitchStatus.nothingPlayable);
+        });
+
+        test('lets the next switch through after a failed one', () async {
+          final controller = await launched(['/a', '/b']);
+          launchThrowsFor('/a');
+          launchThrowsFor('/b');
+          await controller.nextTrack();
+
+          final result = await controller.previousTrack();
+
+          expect(result.status, isNot(TrackSwitchStatus.busy));
+        });
       });
     });
 

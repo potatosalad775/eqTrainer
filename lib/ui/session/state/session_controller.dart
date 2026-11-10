@@ -191,7 +191,7 @@ class SessionController {
     }
   }
 
-  /// Steps one clip and loads the first one found on disk.
+  /// Steps one clip and loads the first one that plays.
   ///
   /// The session plays from a snapshot taken at launch, and a clip's file can
   /// be rewritten to another format underneath it while the session runs (see
@@ -199,39 +199,67 @@ class SessionController {
   /// and end the session, losing the user's score over a file that is still
   /// perfectly playable under a different extension. So the path is resolved
   /// first, and the resolved one written back, which means the lookup is paid
-  /// once per clip rather than on every visit to it. A clip with no file at all
-  /// is skipped and stays in the queue (ADR 0003).
+  /// once per clip rather than on every visit to it.
   ///
-  /// Bounded by the queue's length so a library that vanished entirely stops
-  /// rather than looping.
+  /// Two kinds of unplayable clip are treated differently. One with no file is
+  /// skipped and stays in the queue, since the file may come back and only the
+  /// user deletes a clip (ADR 0003). One that is there but fails to load is
+  /// dropped for the rest of the session and counted, so the user can be told.
+  /// If none can be loaded, the switch fails and the session ends as before.
+  ///
+  /// Bounded by the queue's length at the start so a library that vanished
+  /// entirely stops rather than looping. The last candidate can be the clip that
+  /// was playing, which is loaded again.
   Future<TrackSwitch> _switchTrack({required bool forward}) async {
     final attempts = _queue.length;
-    for (var attempt = 0; attempt < attempts; attempt++) {
-      forward ? _queue.stepForward() : _queue.stepBack();
+    var skipped = 0;
+    Object? lastError;
+    String? lastPath;
+    // Taken before the first load and kept: launch() takes the band out before
+    // it tries to read the file, so after a failed load the player already
+    // says it is off, and the view the user chose would be lost.
+    bool? wasEqEnabled;
 
+    forward ? _queue.stepForward() : _queue.stepBack();
+    for (var attempt = 0; attempt < attempts; attempt++) {
       final candidate = _queue.current;
       if (candidate == null) break;
 
       final resolved = await _clipLibrary.resolvePath(candidate);
-      if (resolved == null) continue;
+      if (resolved == null) {
+        forward ? _queue.stepForward() : _queue.stepBack();
+        continue;
+      }
       _queue.replaceCurrent(resolved);
 
+      wasEqEnabled ??= _player.fetchEQState;
       try {
-        await _relaunchWith(resolved);
-        return const TrackSwitch(TrackSwitchStatus.switched);
+        await _relaunchWith(resolved, eqEnabled: wasEqEnabled);
+        return TrackSwitch(TrackSwitchStatus.switched, skipped: skipped);
       } catch (e) {
-        return TrackSwitch(TrackSwitchStatus.failed, error: e, path: resolved);
+        lastError = e;
+        lastPath = resolved;
+        skipped++;
+        // Leaves the cursor on the clip that comes next in this direction.
+        _queue.removeCurrent(forward: forward);
       }
+    }
+    if (skipped > 0) {
+      return TrackSwitch(
+        TrackSwitchStatus.failed,
+        skipped: skipped,
+        error: lastError,
+        path: lastPath,
+      );
     }
     return const TrackSwitch(TrackSwitchStatus.nothingPlayable);
   }
 
-  Future<void> _relaunchWith(String path) async {
-    // Capture the pre-switch EQ state: launch() always takes the band back
-    // out, and the round has to be re-applied knowing whether to re-enable it,
-    // so a manually-toggled "Filtered" view doesn't silently become "Original"
-    // on the new track.
-    final wasEqEnabled = _player.fetchEQState;
+  /// [eqEnabled] is the Original or Filtered view from before the switch began:
+  /// launch() always takes the band back out, so it is re-applied afterwards, and
+  /// a manually-toggled "Filtered" view doesn't silently become "Original" on the
+  /// new track.
+  Future<void> _relaunchWith(String path, {required bool eqEnabled}) async {
     _player.pause();
     // No shutdown() first: launch() disposes the old source itself and keeps
     // the engine and its output device open, so a track switch no longer pays
@@ -245,7 +273,7 @@ class SessionController {
     // The page can close while the clip is loading, and it takes the player
     // with it.
     if (_store.isDisposed) return;
-    _reapplyRound(eqEnabled: wasEqEnabled);
+    _reapplyRound(eqEnabled: eqEnabled);
     _player.play();
   }
 

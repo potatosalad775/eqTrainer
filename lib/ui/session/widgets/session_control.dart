@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:toastification/toastification.dart';
+import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:eq_trainer/ui/core/error.dart';
 import 'package:eq_trainer/data/player_service.dart';
 import 'package:eq_trainer/ui/core/widget/player_control_buttons.dart';
@@ -24,11 +26,25 @@ class _SessionControlState extends State<SessionControl> {
     if (_switching) return;
     final controller = context.read<SessionController>();
     final player = context.read<PlayerService>();
+    // Captured up front: the result arrives after an await, by which time this
+    // widget may be gone.
+    final l10n = context.l10n;
     setState(() => _switching = true);
     try {
       final result = await switchTrack(controller);
       if (!mounted) return;
-      if (result.status == TrackSwitchStatus.failed) {
+      if (result.status == TrackSwitchStatus.switched && result.skipped > 0) {
+        toastification.show(
+          type: ToastificationType.warning,
+          style: ToastificationStyle.flatColored,
+          description: Text(l10n.sessionSnackbarClipSkipped),
+          alignment: Alignment.topCenter,
+          autoCloseDuration: const Duration(seconds: 3),
+          animationDuration: const Duration(milliseconds: 300),
+          dragToClose: true,
+          closeOnClick: true,
+        );
+      } else if (result.status == TrackSwitchStatus.failed) {
         await showPlayerErrorDialog(context,
           action: () {
             player.shutdown();

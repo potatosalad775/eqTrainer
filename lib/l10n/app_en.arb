@@ -51,6 +51,7 @@
       "index": { "type": "String" }
     }
   },
+  "sessionSnackbarClipSkipped": "Skipped a clip that could not be played.",
   "sessionDdbuttonDeviceDisclaimer": "The changed output device will be applied from the next audio clip.",
 
   "resultAppbarTitle": "Result",

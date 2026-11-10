@@ -43,6 +43,7 @@
   "sessionButtonSubmit": "제출하기",
   "sessionSnackbarCorrect": "정답입니다!",
   "sessionSnackbarIncorrect": "오답입니다! 올바른 정답은 {index}이었습니다.",
+  "sessionSnackbarClipSkipped": "재생할 수 없는 클립을 건너뛰었습니다.",
   "sessionDdbuttonDeviceDisclaimer": "변경된 출력 기기는 다음 오디오 클립부터 적용됩니다.",
 
   "resultAppbarTitle": "결과",

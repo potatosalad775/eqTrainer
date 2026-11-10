@@ -43,6 +43,7 @@
   "sessionButtonSubmit": "Підтвердити",
   "sessionSnackbarCorrect": "Правильно!",
   "sessionSnackbarIncorrect": "Неправильно! Правильна відповідь була {index}.",
+  "sessionSnackbarClipSkipped": "Кліп не вдалося відтворити, його пропущено.",
   "sessionDdbuttonDeviceDisclaimer": "Змінено пристрій виводу буде застосовано з наступного аудіокліпу.",
 
   "resultAppbarTitle": "Результат",
