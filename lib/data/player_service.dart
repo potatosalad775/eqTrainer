@@ -51,9 +51,9 @@ class PlayerPositionResponse extends Equatable {
 /// which awaits the band's fade-out before retuning it. Everything else is
 /// `void`, so a call site can tell at a glance which ones it has to sequence.
 class PlayerService extends ChangeNotifier {
-  /// Where the Android backend and the output device come from. Read at each
-  /// [launch], so a change made while this player is open applies from the next
-  /// clip.
+  /// Where the Android backend and the output device come from. The device is
+  /// read at each [launch], so a change made while this player is open applies
+  /// from the next clip. The backend is read only when the engine starts.
   PlayerService(this.output);
 
   final OutputSelection output;

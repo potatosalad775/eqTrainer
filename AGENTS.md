@@ -123,9 +123,10 @@ Never call `SoLoud` APIs directly from the UI. Always go through
 `PlayerService` (`launch`, `setEQ`, `setEQFreq`, `setEQGain`, `setEQParams`,
 `seek`, …).
 
-A player is built with the app's one `OutputSelection` and reads its backend and
-device at each `launch`, so a device picked mid-session is the one the next clip
-opens. Nothing holds a copy of the choice. The device list comes through the
+A player is built with the app's one `OutputSelection` and reads its device at
+each `launch`, so a device picked mid-session is the one the next clip opens. The
+Android backend is read only when the engine starts, so a change to it waits for
+the next app launch. Nothing holds a copy of the choice. The device list comes through the
 `OutputDevices` seam, which `SoLoudOutputDevices` implements; the UI lists
 devices with `OutputSelection.availableDevices()`, and tests give it a
 `FakeOutputDevices`.
