@@ -4,6 +4,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/clips/audio_clip_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
 import 'package:eq_trainer/data/app_directories.dart';
 
@@ -41,7 +42,7 @@ void main() {
     // Real AppDirectories subclass that points to our temp clips dir
     final dirs = _TestAppDirectories(clipsDir.path);
 
-    service = AudioClipService(repo, dirs);
+    service = AudioClipService(ClipLibrary(repo, dirs));
   });
 
   tearDown(() async {

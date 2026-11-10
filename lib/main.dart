@@ -206,8 +206,7 @@ class AppState extends State<App> with WidgetsBindingObserver {
 
         // Services
         Provider<AudioClipService>(create: (ctx) => AudioClipService(
-          ctx.read<IAudioClipRepository>(),
-          ctx.read<AppDirectories>(),
+          ctx.read<ClipLibrary>(),
         )),
         Provider<ImportWorkflowService>(create: (_) => ImportWorkflowService()),
         // .value, not create: the run was started in main() before the tree

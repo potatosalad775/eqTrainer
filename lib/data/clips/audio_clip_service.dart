@@ -1,18 +1,15 @@
 import 'dart:io';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:path/path.dart' as p;
-import 'package:eq_trainer/domain/audio_clip.dart';
-import 'package:eq_trainer/data/app_directories.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
-import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
 import 'package:eq_trainer/data/clips/clip_encoder.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 
 class AudioClipService {
-  AudioClipService(this._repository, this._dirs, {ClipEncoder? encoder})
+  AudioClipService(this._library, {ClipEncoder? encoder})
       : _encoder = encoder ?? ClipEncoder();
 
-  final IAudioClipRepository _repository;
-  final AppDirectories _dirs;
+  final ClipLibrary _library;
   final ClipEncoder _encoder;
 
   /// Generate Audio Clip from Source File
@@ -30,9 +27,6 @@ class AudioClipService {
     required bool isTrimmed,
     required int importFormat,
   }) async {
-    // Prepare Paths
-    final String fileBase = DateTime.now().microsecondsSinceEpoch.toString();
-    final audioClipPath = await _dirs.getClipsPath();
     final sourceExt = p.extension(sourcePath).toLowerCase();
 
     // A trim always re-encodes, so its target follows the format setting
@@ -40,65 +34,41 @@ class AudioClipService {
     // so it keeps whatever it already was.
     final String ext =
         isTrimmed ? trimOutputExt(sourceExt, importFormat) : sourceExt;
-    final String destPath = '$audioClipPath${Platform.pathSeparator}$fileBase$ext';
 
-    // Generate Clip File
-    late final double duration;
-    if (isTrimmed) {
-      final start = Duration(microseconds: (startSec * 1e6).round());
-      final end = Duration(microseconds: (endSec * 1e6).round());
-      duration = endSec - startSec;
-      try {
-        await _trim(
-          sourcePath: sourcePath,
-          originalPath: originalPath,
-          destPath: destPath,
-          start: start,
-          end: end,
-        );
-      } catch (e) {
-        await _deleteQuietly(destPath);
-        // The save button tells the user why, since retrying cannot help.
-        if (e is UnsupportedChannelCountException ||
-            isUnreadableAudioError(e)) {
-          rethrow;
+    // The library names the file, removes it if either step fails, and saves
+    // the record. What is decided here is what produces the file and how its
+    // failure is reported.
+    await _library.add(
+      extension: ext,
+      originalName: p.basename(sourcePath),
+      duration: isTrimmed ? endSec - startSec : endSec,
+      produce: (destPath) async {
+        if (isTrimmed) {
+          try {
+            await _trim(
+              sourcePath: sourcePath,
+              originalPath: originalPath,
+              destPath: destPath,
+              start: Duration(microseconds: (startSec * 1e6).round()),
+              end: Duration(microseconds: (endSec * 1e6).round()),
+            );
+          } catch (e) {
+            // The save button tells the user why, since retrying cannot help.
+            if (e is UnsupportedChannelCountException ||
+                isUnreadableAudioError(e)) {
+              rethrow;
+            }
+            throw Exception('Audio trim failed: $e');
+          }
+        } else {
+          try {
+            await File(sourcePath).copy(destPath);
+          } catch (e) {
+            throw Exception('Audio copy failed: $e');
+          }
         }
-        throw Exception('Audio trim failed: $e');
-      }
-    } else {
-      duration = endSec;
-      try {
-        await File(sourcePath).copy(destPath);
-      } catch (e) {
-        await _deleteQuietly(destPath);
-        throw Exception('Audio copy failed: $e');
-      }
-    }
-
-    // Save Metadata to DB
-    final originalName = p.basename(sourcePath);
-    final clip = AudioClip(
-      '$fileBase$ext',
-      originalName,
-      duration,
-      true,
+      },
     );
-
-    try {
-      await _repository.addClip(clip);
-    } catch (_) {
-      await _deleteQuietly(destPath);
-      rethrow;
-    }
-  }
-
-  /// Removes a file no record will point at. The original error is the one worth
-  /// reporting, so a failure here is ignored.
-  Future<void> _deleteQuietly(String path) async {
-    try {
-      final file = File(path);
-      if (await file.exists()) await file.delete();
-    } catch (_) {}
   }
 
   /// Trims from [originalPath] where possible. The picked file can stop being
