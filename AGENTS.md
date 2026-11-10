@@ -38,6 +38,7 @@ eqTrainer/
 │   └── icon/                  # App icon
 ├── test/                      # Unit tests, mirroring lib/ (+ helpers/)
 ├── integration_test/          # Real-engine tests — local only, never CI
+├── docs/agents/               # Config the agent skills read; see Agent skills
 ├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners and packaging
 ├── .github/workflows/
 │   ├── build.yml              # 5-platform release builds
@@ -644,3 +645,18 @@ name a moment after launch. It comes from `CFBundleName` instead, which also
 fixes the menu items the nib builds from `APP_NAME` ("Quit eqTrainer" rather
 than "Quit eq_trainer"). `PRODUCT_NAME` stays `eq_trainer` because it names the
 binary and the `.app`, which the DMG packaging in CI depends on.
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (`potatosalad775/eqTrainer`), through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels, each named after its role: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root, created only when a term or decision is settled. See `docs/agents/domain.md`.
