@@ -342,6 +342,12 @@ loads does the switch come back `failed`, and then `SessionControl` shows the er
 dialog that ends the session. The Original/Filtered view is read once before the first
 attempt, because `launch()` takes the band out before it reads the file.
 
+Session start follows the same rule. `launch()` tries the queue's clips in order, drops
+each that fails to load, and returns how many it dropped, which `SessionPage` announces
+with the same toast. Only when none loads does it end in the error state and throw the
+last error. `clipPaths` is the list the session started with, kept apart from the queue,
+so the error view can still tell whether to mention FFmpeg after every clip was dropped.
+
 ### Persistence
 
 Settings are in `shared_preferences`, through the legacy `SharedPreferences` API
