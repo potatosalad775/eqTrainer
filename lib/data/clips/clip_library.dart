@@ -290,10 +290,19 @@ class ClipLibrary {
       // A delete queued ahead of the repoint makes it a no-op, and reports
       // success all the same. Look at the record, not at the call.
       final now = _clipById(clipId);
-      if (now == null || now.fileName != destName) {
+      if (now == null) {
         await _deleteQuietly(destPath);
         await _deleteQuietly(sourcePath);
         return const RewriteResult(RewriteStatus.clipGone);
+      }
+      if (now.fileName != destName) {
+        // Something else repointed the record. Only the file made here is
+        // ours to remove: the source may be what the record now names.
+        await _deleteQuietly(destPath);
+        return RewriteResult(
+          RewriteStatus.failed,
+          error: StateError('${clip.fileName} was repointed during its rewrite'),
+        );
       }
 
       try {
