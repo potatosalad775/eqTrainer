@@ -97,7 +97,7 @@ There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Local
 | `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
 | `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser) |
 | `domain/session/` | The rules of a session: `SessionSettings` (with the valid choices) and `FilterType`, `SessionParameter`, `BandLayout`, `SessionRounds`, `SessionResults` and `ResultBand`, and `ClipQueue` (the clips a session plays) |
-| `data/` | `AppStorage` and `openAppStorage` (everything loaded from disk before `runApp`, in the one order that works), `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `PlaybackHold` (what a player holds while it exists), `ImportPlayer` |
+| `data/` | `AppStorage` and `openAppStorage` (everything loaded from disk before `runApp`, in the one order that works), `AppDirectories` (used by `ClipLibrary` only), `OutputSelection` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (transport + EQ rules), `AudioEngine` + `SoLoudAudioEngine` (the seam under it, over flutter_soloud), `PlaybackHold` (what a player holds while it exists), `ImportPlayer` |
 | `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `ClipLibrary`, `AudioClipService`, `ClipImport` (with `ImportFailure`), `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
 | `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
@@ -122,6 +122,13 @@ by timer clocks, and the stutter that caused is what the migration removed.
 Never call `SoLoud` APIs directly from the UI. Always go through
 `PlayerService` (`launch`, `setEQ`, `setEQFreq`, `setEQGain`, `setEQParams`,
 `seek`, …).
+
+`PlayerService` talks to the engine through `AudioEngine` (`data/audio_engine.dart`),
+a seam with exactly the operations it uses. It says `Eq`, not `Band`, because
+"band" is a training term. `SoLoudAudioEngine` is the real one and passes each call
+straight to SoLoud, except `open`, which owns which device is open. The rest of the
+app still reaches the engine only through `PlayerService`. The engine's own device
+list is a separate seam, `OutputDevices`.
 
 A player is built with the app's one `OutputSelection` and reads its device at
 each `launch`, so a device picked mid-session is the one the next clip opens. The
@@ -675,6 +682,7 @@ so both downloads carry them. The build fails if they cannot be found.
 | `lib/ui/session/state/session_store.dart` | Session screen state (ChangeNotifier) |
 | `lib/ui/session/state/frequency_calculator.dart` | The chart's curves and positions for a `BandLayout` |
 | `lib/data/player_service.dart` | Audio engine wrapper + EQ control |
+| `lib/data/audio_engine.dart` | `AudioEngine`, the seam under `PlayerService`, and `SoLoudAudioEngine`; see [Audio Engine](#audio-engine-playerservice) |
 | `lib/data/clips/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
 | `lib/data/clips/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
 | `lib/data/clips/clip_encoder.dart` | Convert or trim through SoLoud to Opus/FLAC/WAV |

@@ -4,8 +4,9 @@ import 'dart:math';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
 import 'package:path/path.dart' as p;
+import 'package:eq_trainer/data/audio_engine.dart';
 import 'package:eq_trainer/data/output_selection.dart';
 import 'package:eq_trainer/data/playback_hold.dart';
 import 'package:eq_trainer/domain/audio_format_helper.dart';
@@ -58,12 +59,20 @@ class PlayerService extends ChangeNotifier {
   ///
   /// [hold] is paused here and resumed in [dispose], so whatever must stand
   /// aside for playback does so for exactly as long as a player exists.
-  PlayerService(this.output, {required PlaybackHold hold}) : _hold = hold {
+  ///
+  /// [engine] is for tests; it defaults to SoLoud.
+  PlayerService(
+    this.output, {
+    required PlaybackHold hold,
+    AudioEngine? engine,
+  })  : _hold = hold,
+        _engine = engine ?? const SoLoudAudioEngine() {
     _hold.pause();
   }
 
   final OutputSelection output;
   final PlaybackHold _hold;
+  final AudioEngine _engine;
 
   /// How often the transport state is polled for the UI. Unlike the old
   /// isolate poll this is a plain synchronous read, so it cannot back up.
@@ -91,19 +100,8 @@ class PlayerService extends ChangeNotifier {
   /// `wet` at or below this counts as fully out of the signal.
   static const double _wetEpsilon = 1e-4;
 
-  SoLoud get _soloud => SoLoud.instance;
-
-  /// Id of the device the (singleton) engine currently has open.
-  ///
-  /// Static because the engine is: the session page, the playlist preview and
-  /// the import editor each build their own [PlayerService] over one shared
-  /// SoLoud instance. Per-instance, a second player would always see `null`
-  /// here and re-run `changeDevice` on a device that was already open,
-  /// needlessly restarting the output.
-  static int? _activeDeviceId;
-
-  AudioSource? _source;
-  SoundHandle? _handle;
+  LoadedClip? _source;
+  Voice? _handle;
   String? _path;
 
   Timer? _pollTimer;
@@ -147,10 +145,10 @@ class PlayerService extends ChangeNotifier {
   /// [setEQGain]), read back from the engine rather than from Dart state.
   double get outputVolume {
     final handle = _handle;
-    if (handle == null || !_soloud.getIsValidVoiceHandle(handle)) {
+    if (handle == null || !_engine.isValid(handle)) {
       return _compensationVolume;
     }
-    return _soloud.getVolume(handle);
+    return _engine.volumeOf(handle);
   }
 
   // ---------------------------------------------------------------------------
@@ -177,7 +175,10 @@ class PlayerService extends ChangeNotifier {
     _lastDuration = null;
     notifyListeners();
 
-    await _ensureEngine();
+    await _engine.open(
+      device: output.device,
+      androidBackend: output.androidBackend,
+    );
     await _disposeSource();
 
     // Take the band out on every launch, not just the first.
@@ -193,7 +194,7 @@ class PlayerService extends ChangeNotifier {
     // A step is safe here — nothing is rendering yet, the source below is
     // loaded paused. This matches the old isolate, which started bypassed
     // because the isolate itself was new.
-    _soloud.filters.peakingEqFilter.wet.value = 0;
+    _engine.stepEqWet(0);
     _eqEnabled = false;
 
     if (path == null) return;
@@ -202,7 +203,7 @@ class PlayerService extends ChangeNotifier {
     _path = path;
 
     // Duration is available as soon as the sound is loaded — no polling loop.
-    _lastDuration = _soloud.getLength(_source!);
+    _lastDuration = _engine.lengthOf(_source!);
 
     _startHandle();
     _startPolling();
@@ -211,7 +212,7 @@ class PlayerService extends ChangeNotifier {
 
   /// Loads [path], decoding it up front if it is not natively playable.
   ///
-  /// The normal path is [LoadMode.disk]: SoLoud streams and decodes on the
+  /// The normal path is streamed: SoLoud streams and decodes on the
   /// native audio thread, so a full song costs a file handle rather than the
   /// ~21 MB per stereo minute that fully-decoded float PCM would take in RAM.
   ///
@@ -219,53 +220,12 @@ class PlayerService extends ChangeNotifier {
   /// app does not stream (`audio_format_helper.dart`), but libraries created
   /// before that policy hold `.m4a` and `.aac` clips. Those are converted once
   /// at startup by `ClipFormatMigration`; this plays the ones not converted yet
-  /// or that it could not convert. [LoadMode.memory] holds the whole file, but a
+  /// or that it could not convert. Loading it whole holds the file in memory, but a
   /// streamed voice of these formats could underrun on a slow device. A file
   /// SoLoud cannot read fails here, and the caller reports it.
-  Future<AudioSource> _loadSource(String path) {
+  Future<LoadedClip> _loadSource(String path) {
     final ext = p.extension(path).toLowerCase();
-    return _soloud.loadFile(
-      path,
-      mode: isNativelyPlayable(ext) ? LoadMode.disk : LoadMode.memory,
-    );
-  }
-
-
-  /// Brings up the SoLoud engine on first use and keeps it up afterwards.
-  ///
-  /// Re-initializing per track would be both slow and pointless: the engine
-  /// stops the output device on its own once no voice is playing.
-  Future<void> _ensureEngine() async {
-    final outputDevice = output.device;
-    if (_soloud.isInitialized) {
-      // The device can change while the engine is up (user picks another
-      // output). changeDevice reuses the context, so the Android backend
-      // choice made at init survives.
-      if (outputDevice != null && outputDevice.id != _activeDeviceId) {
-        await _soloud.changeDevice(newDevice: outputDevice);
-        _activeDeviceId = outputDevice.id;
-      }
-      return;
-    }
-
-    await _soloud.init(
-      device: outputDevice,
-      androidBackend: output.androidBackend,
-    );
-    _activeDeviceId = outputDevice?.id;
-
-    // The peaking EQ is a *global* filter, applied to the mixed output. That
-    // ordering matters: SoLoud mixes each voice at its handle volume, then
-    // runs global filters, then clips — volume -> EQ -> clamp, matching the
-    // chain the coast_audio graph had. A per-voice filter would run *before*
-    // the voice's volume and invert it. Being global also means it survives
-    // track switches without re-attaching.
-    // `wet` defaults to 1 (soloud_filter.cpp:96), i.e. the band fully
-    // audible; launch() takes it back out once the filter exists.
-    final eq = _soloud.filters.peakingEqFilter;
-    if (!eq.isActive) {
-      eq.activate();
-    }
+    return _engine.load(path, streamed: isNativelyPlayable(ext));
   }
 
   /// Creates a paused voice for the loaded source at position 0 and applies
@@ -273,7 +233,7 @@ class PlayerService extends ChangeNotifier {
   void _startHandle() {
     final source = _source;
     if (source == null) return;
-    _handle = _soloud.play(source, paused: true, volume: _compensationVolume);
+    _handle = _engine.startPaused(source, volume: _compensationVolume);
   }
 
   Future<void> _disposeSource() async {
@@ -282,7 +242,7 @@ class PlayerService extends ChangeNotifier {
     _source = null;
     _path = null;
     if (source != null) {
-      await _soloud.disposeSource(source);
+      await _engine.unload(source);
     }
   }
 
@@ -318,12 +278,12 @@ class PlayerService extends ChangeNotifier {
     if (handle == null) return;
     // The voice is invalidated once it reaches the end of the clip; recreate
     // it so the play button replays from the start.
-    if (!_soloud.getIsValidVoiceHandle(handle)) {
+    if (!_engine.isValid(handle)) {
       _startHandle();
     }
     final live = _handle;
     if (live == null) return;
-    _soloud.setPause(live, false);
+    _engine.setPaused(live, paused: false);
     _lastState = const PlayerStateResponse(isPlaying: true);
     notifyListeners();
   }
@@ -332,8 +292,8 @@ class PlayerService extends ChangeNotifier {
   void pause() {
     final handle = _handle;
     if (handle == null) return;
-    if (_soloud.getIsValidVoiceHandle(handle)) {
-      _soloud.setPause(handle, true);
+    if (_engine.isValid(handle)) {
+      _engine.setPaused(handle, paused: true);
     }
     _lastState = const PlayerStateResponse(isPlaying: false);
     notifyListeners();
@@ -348,12 +308,12 @@ class PlayerService extends ChangeNotifier {
   Future<PlayerPositionResponse?> seek(Duration position) async {
     final handle = _handle;
     if (handle == null) return null;
-    if (!_soloud.getIsValidVoiceHandle(handle)) {
+    if (!_engine.isValid(handle)) {
       _startHandle();
     }
     final live = _handle;
     if (live == null) return null;
-    _soloud.seek(live, position);
+    _engine.seek(live, position);
     _lastPosition = position;
     notifyListeners();
     return PlayerPositionResponse(
@@ -365,7 +325,7 @@ class PlayerService extends ChangeNotifier {
   void setVolume(double volume) {
     final handle = _handle;
     if (handle == null) return;
-    _soloud.setVolume(handle, volume);
+    _engine.setVolume(handle, volume);
   }
 
   // ---------------------------------------------------------------------------
@@ -401,17 +361,17 @@ class PlayerService extends ChangeNotifier {
   void setEQGain(double gainDb) {
     if (!isLaunched) return;
     _applyCompensation(gainDb);
-    _soloud.filters.peakingEqFilter.gain.value = gainDb;
+    _engine.setEqGain(gainDb);
   }
 
   void setEQFreq(double frequency) {
     if (!isLaunched) return;
-    _soloud.filters.peakingEqFilter.frequency.value = frequency;
+    _engine.setEqFrequency(frequency);
   }
 
   void setEQQ(double q) {
     if (!isLaunched) return;
-    _soloud.filters.peakingEqFilter.q.value = q;
+    _engine.setEqQ(q);
   }
 
   /// Retunes the band for a new round, and leaves it enabled per [enableEQ].
@@ -427,8 +387,6 @@ class PlayerService extends ChangeNotifier {
     required double gainDb,
   }) async {
     if (!isLaunched) return;
-    final eq = _soloud.filters.peakingEqFilter;
-
     _roundTransitionActive = true;
     try {
       if (_eqEnabled) {
@@ -441,8 +399,8 @@ class PlayerService extends ChangeNotifier {
       }
 
       // Inaudible now, so these are free to snap.
-      eq.frequency.value = frequency;
-      eq.gain.value = gainDb;
+      _engine.setEqFrequency(frequency);
+      _engine.setEqGain(gainDb);
       _applyCompensation(gainDb);
 
       if (enableEQ) {
@@ -463,8 +421,8 @@ class PlayerService extends ChangeNotifier {
   bool get _isRendering {
     final handle = _handle;
     return handle != null &&
-        _soloud.getIsValidVoiceHandle(handle) &&
-        !_soloud.getPause(handle);
+        _engine.isValid(handle) &&
+        !_engine.isPaused(handle);
   }
 
   /// Moves the band's dry/wet mix to [target].
@@ -475,11 +433,10 @@ class PlayerService extends ChangeNotifier {
   /// signal for a step to click on, and a fade would not advance at all (see
   /// [_isRendering]), leaving `wet` stuck at its old value.
   void _setWet(double target) {
-    final wet = _soloud.filters.peakingEqFilter.wet;
     if (_isRendering) {
-      wet.fadeFilterParameter(to: target, time: _fadeDuration);
+      _engine.fadeEqWet(target, _fadeDuration);
     } else {
-      wet.value = target;
+      _engine.stepEqWet(target);
     }
   }
 
@@ -490,13 +447,12 @@ class PlayerService extends ChangeNotifier {
   /// fixed [_fadeDuration] in Dart would return while the band was still
   /// audible and the retune below it would click.
   Future<void> _awaitWet(double target) async {
-    final wet = _soloud.filters.peakingEqFilter.wet;
     final deadline = DateTime.now().add(_fadeWaitTimeout);
-    while ((wet.value - target).abs() > _wetEpsilon) {
+    while ((_engine.eqWet - target).abs() > _wetEpsilon) {
       if (DateTime.now().isAfter(deadline)) {
         // Fall through rather than hang the round. Snapping the coefficients
         // now may be audible, but a session that never advances is worse.
-        wet.value = target;
+        _engine.stepEqWet(target);
         return;
       }
       await Future<void>.delayed(_fadeWaitPollInterval);
@@ -509,8 +465,8 @@ class PlayerService extends ChangeNotifier {
     _compensationVolume =
         _volumeCompensation ? pow(10, -gainDb.abs() / 20.0).toDouble() : 1.0;
     final handle = _handle;
-    if (handle != null && _soloud.getIsValidVoiceHandle(handle)) {
-      _soloud.setVolume(handle, _compensationVolume);
+    if (handle != null && _engine.isValid(handle)) {
+      _engine.setVolume(handle, _compensationVolume);
     }
   }
 
@@ -533,13 +489,13 @@ class PlayerService extends ChangeNotifier {
 
     var changed = false;
 
-    if (_soloud.getIsValidVoiceHandle(handle)) {
-      final position = _soloud.getPosition(handle);
+    if (_engine.isValid(handle)) {
+      final position = _engine.positionOf(handle);
       if (position != _lastPosition) {
         _lastPosition = position;
         changed = true;
       }
-      final playing = !_soloud.getPause(handle);
+      final playing = !_engine.isPaused(handle);
       if (_lastState?.isPlaying != playing) {
         _lastState = PlayerStateResponse(isPlaying: playing);
         changed = true;
