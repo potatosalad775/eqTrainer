@@ -119,6 +119,7 @@ void main() {
     required String pick,
     FakeClipEncoder? encoder,
     Object? loadError,
+    bool Function()? settled,
   }) async {
     FilePickerPlatform.instance = _FakePicker(pick);
     await tester.pumpWidget(MultiProvider(
@@ -151,12 +152,23 @@ void main() {
     // The temp directory and the fake encoder do real file I/O, which a
     // fake-async test only sees complete if the real clock is let run, one
     // step at a time since each await resumes on a pump.
-    for (var i = 0; i < 10; i++) {
+    //
+    // Without [settled] that is a fixed 10 steps. With it, the wait ends as
+    // soon as it holds, and is given up to 2 s of real time, for a slow disk.
+    final steps = settled == null ? 10 : 100;
+    for (var i = 0; i < steps; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 20)));
       await tester.pump();
+      if (settled != null && settled()) break;
     }
   }
+
+  /// True once a pick that converts has landed its file and shown the editor.
+  bool Function() convertedAndShown(WidgetTester tester, File converted) =>
+      () =>
+          converted.existsSync() &&
+          find.byType(EditorClipSaveButton).evaluate().isNotEmpty;
 
   // Flutter tests run as Android whatever the host, so ask the same question
   // the message does.
@@ -229,11 +241,20 @@ void main() {
   });
 
   testWidgets('leaving deletes the converted file', (tester) async {
-    await pumpPage(tester, pick: 'song.m4a');
     final converted = File(p.join(tmp.path, 'temp', 'song.opus'));
+    await pumpPage(tester,
+        pick: 'song.m4a', settled: convertedAndShown(tester, converted));
     expect(converted.existsSync(), isTrue);
 
     await tester.pumpWidget(const SizedBox());
+    // The delete is one synchronous call, but a slow runner can still have the
+    // conversion or its continuation in flight, which only finishes on the real
+    // clock. Wait for the file to go rather than checking at once.
+    for (var i = 0; i < 100 && converted.existsSync(); i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
     expect(converted.existsSync(), isFalse);
   });
 
@@ -253,8 +274,9 @@ void main() {
       existedWhenRead =
           File(invocation.namedArguments[#sourcePath] as String).existsSync();
     });
-    await pumpPage(tester, pick: 'song.m4a');
     final converted = File(p.join(tmp.path, 'temp', 'song.opus'));
+    await pumpPage(tester,
+        pick: 'song.m4a', settled: convertedAndShown(tester, converted));
 
     await tester.tap(find.byType(EditorClipSaveButton));
     await tester.pump();
