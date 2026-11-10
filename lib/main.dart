@@ -25,7 +25,6 @@ import 'package:eq_trainer/data/clips/clip_recompress_service.dart';
 import 'package:eq_trainer/data/clips/import_workflow_service.dart';
 import 'package:eq_trainer/data/legacy/legacy_clip_migration.dart';
 import 'package:eq_trainer/data/legacy/legacy_settings_migration.dart';
-import 'package:eq_trainer/data/clips/playlist_service.dart';
 import 'package:eq_trainer/ui/core/upgrader_service.dart';
 import 'package:eq_trainer/domain/session_parameter.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
@@ -207,10 +206,6 @@ class AppState extends State<App> with WidgetsBindingObserver {
 
         // Services
         Provider<AudioClipService>(create: (ctx) => AudioClipService(
-          ctx.read<IAudioClipRepository>(),
-          ctx.read<AppDirectories>(),
-        )),
-        Provider<PlaylistService>(create: (ctx) => PlaylistService(
           ctx.read<IAudioClipRepository>(),
           ctx.read<AppDirectories>(),
         )),

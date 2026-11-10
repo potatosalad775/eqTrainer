@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:eq_trainer/data/audio_state.dart';
 import 'package:eq_trainer/data/player_service.dart';
-import 'package:eq_trainer/data/clips/playlist_service.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
 import 'package:eq_trainer/domain/session_parameter.dart';
@@ -47,7 +47,7 @@ class SessionController {
     required AudioState audioState,
     required SessionStore sessionStore,
     required SessionParameter sessionParameter,
-    required PlaylistService playlistService,
+    required ClipLibrary clipLibrary,
     required bool volumeCompensation,
     // Checked before each write to the (app-scoped) SessionStore after an
     // await, so exiting the session page mid-launch doesn't leave a stray
@@ -69,7 +69,7 @@ class SessionController {
       sessionStore.resetResult();
 
       // Load enabled audio clip absolute paths
-      final paths = await playlistService.listEnabledClipPaths();
+      final paths = await clipLibrary.enabledClipPaths();
       if (!active()) return;
       sessionStore.setPlaylistPaths(paths);
 

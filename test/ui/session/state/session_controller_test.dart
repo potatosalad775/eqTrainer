@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter_soloud/flutter_soloud.dart' show AndroidAudioBackend;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:path/path.dart' as p;
 import 'package:eq_trainer/data/audio_state.dart';
+import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
+import 'package:eq_trainer/data/clips/clip_library.dart';
+import 'package:eq_trainer/domain/audio_clip.dart';
 import 'package:eq_trainer/ui/session/state/session_controller.dart';
 import 'package:eq_trainer/ui/session/state/session_store.dart';
 import 'package:eq_trainer/ui/session/state/session_state.dart';
@@ -300,7 +306,7 @@ void main() {
     // launchSession — the one path that touches every collaborator
     // -------------------------------------------------------------------------
     group('launchSession', () {
-      late MockPlaylistService playlist;
+      late MockClipLibrary library;
       late AudioState audioState;
 
       // A fresh store: the outer setUp has already run one round on the
@@ -308,7 +314,7 @@ void main() {
       late SessionStore store;
 
       setUp(() {
-        playlist = MockPlaylistService();
+        library = MockClipLibrary();
         audioState = AudioState(
           androidBackend: AndroidAudioBackend.openSles,
           outputDevice: null,
@@ -327,19 +333,22 @@ void main() {
         audioState.dispose();
       });
 
-      Future<void> launch({bool Function()? shouldContinue}) =>
+      Future<void> launch({
+        bool Function()? shouldContinue,
+        ClipLibrary? clipLibrary,
+      }) =>
           controller.launchSession(
             mockPlayer,
             audioState: audioState,
             sessionStore: store,
             sessionParameter: sessionParameter,
-            playlistService: playlist,
+            clipLibrary: clipLibrary ?? library,
             volumeCompensation: true,
             shouldContinue: shouldContinue,
           );
 
       test('opens the first enabled clip and reports ready', () async {
-        when(playlist.listEnabledClipPaths)
+        when(library.enabledClipPaths)
             .thenAnswer((_) async => ['/a.flac', '/b.flac']);
 
         await launch();
@@ -360,7 +369,7 @@ void main() {
       });
 
       test('applies the session Q to the fresh player once', () async {
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
         sessionParameter.qFactor = 2.5;
 
         await launch();
@@ -370,7 +379,7 @@ void main() {
 
       test('reports playlistEmpty and never touches the player when nothing '
           'is enabled', () async {
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async => []);
+        when(library.enabledClipPaths).thenAnswer((_) async => []);
 
         await launch();
 
@@ -384,7 +393,7 @@ void main() {
       });
 
       test('resets the previous session\'s score and picker', () async {
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
         // Leave a finished session behind in the store.
         await store.initFrequency(sessionParameter: sessionParameter);
         store.applySubmission(centerFreq: 440, isCorrect: true);
@@ -399,8 +408,28 @@ void main() {
         expect(store.currentPickerValue, equals(1));
       });
 
+      test('reports playlistEmpty when the only enabled clip has no file, and '
+          'keeps its record', () async {
+        // The real library: what matters is that a missing clip is skipped
+        // rather than deleted (ADR 0003), so the mock cannot show it.
+        final dir = Directory.systemTemp.createTempSync('eqt_session_');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final repo = await AudioClipRepository.open(
+          File(p.join(dir.path, 'audio_clips.json')),
+        );
+        final clip = AudioClip('gone.flac', 'gone', 1, true);
+        await repo.addClip(clip);
+        final dirs = MockAppDirectories();
+        when(() => dirs.getClipsPath()).thenAnswer((_) async => dir.path);
+
+        await launch(clipLibrary: ClipLibrary(repo, dirs));
+
+        expect(store.sessionState, equals(SessionState.playlistEmpty));
+        expect(repo.getAllClips(), [clip]);
+      });
+
       test('goes to init synchronously, before the first await', () {
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
         store.setSessionState(SessionState.ready);
 
         // Not awaited on purpose: the state must already have moved so a
@@ -413,7 +442,7 @@ void main() {
       test('stops writing to the store once shouldContinue turns false',
           () async {
         var stillOnPage = true;
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async {
+        when(library.enabledClipPaths).thenAnswer((_) async {
           // The user leaves the page while the playlist is being read.
           stillOnPage = false;
           return ['/a.flac'];
@@ -433,7 +462,7 @@ void main() {
       });
 
       test('a player that fails to open reports error and rethrows', () async {
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async => ['/a.flac']);
+        when(library.enabledClipPaths).thenAnswer((_) async => ['/a.flac']);
         when(() => mockPlayer.launch(
               androidBackend: any(named: 'androidBackend'),
               outputDevice: null,
@@ -448,7 +477,7 @@ void main() {
       test('a failure after leaving the page does not write error either',
           () async {
         var stillOnPage = true;
-        when(playlist.listEnabledClipPaths).thenAnswer((_) async {
+        when(library.enabledClipPaths).thenAnswer((_) async {
           stillOnPage = false;
           throw StateError('box closed');
         });
