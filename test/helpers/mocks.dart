@@ -1,8 +1,8 @@
 import 'package:mocktail/mocktail.dart';
-import 'package:eq_trainer/shared/player/player_service.dart';
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
-import 'package:eq_trainer/shared/service/playlist_service.dart';
+import 'package:eq_trainer/data/player_service.dart';
+import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
+import 'package:eq_trainer/data/app_directories.dart';
+import 'package:eq_trainer/data/clips/playlist_service.dart';
 
 /// The mocktail doubles shared across the unit suites.
 ///

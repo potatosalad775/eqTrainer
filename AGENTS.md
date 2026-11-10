@@ -18,26 +18,25 @@ eqTrainer/
 ├── lib/
 │   ├── main.dart              # App bootstrap, provider wiring, legacy data migrations
 │   ├── l10n/                  # ARB translations, context.l10n (generated/ is gitignored)
-│   ├── features/              # Feature-first UI modules
+│   ├── ui/                    # Pages, widgets and the state they own
+│   │   ├── core/              # Shared widgets and themes, error dialog, updater, licenses
 │   │   ├── config/            # Session parameter configuration page
 │   │   ├── import/            # Audio file import workflow
 │   │   ├── playlist/          # Playlist management page
 │   │   ├── result/            # Post-session results display
-│   │   ├── session/           # Core training session (UI + logic)
+│   │   ├── session/           # Core training session (page, widgets, state/)
 │   │   ├── settings/          # App settings page
 │   │   └── main_page.dart     # Root navigation/tab controller
-│   └── shared/                # Cross-feature code
-│       ├── model/             # AudioClip, AudioState, MiscSettingsProvider, legacy Hive records
-│       ├── player/            # Audio engine: PlayerService (flutter_soloud)
-│       ├── repository/        # IAudioClipRepository + JSON file implementation
-│       ├── service/           # Business logic services
-│       ├── themes/            # AppColors, AppTheme, AppDimens
-│       └── widget/            # Reusable UI widgets
+│   ├── domain/                # Pure Dart: AudioClip, format policy, WAV parser, SessionParameter
+│   └── data/                  # Disk, preferences and the audio engine
+│       ├── clips/             # Clip library, encoder, rewrite passes, playlist and import services
+│       └── legacy/            # Hive records and the migrations that read them
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
 │   └── icon/                  # App icon
-├── test/                      # Unit tests, mirroring lib/ (+ helpers/)
+├── test/                      # Unit tests, mirroring lib/ (+ helpers/, layers_test.dart)
 ├── integration_test/          # Real-engine tests — local only, never CI
+├── docs/agents/               # Config the agent skills read; see Agent skills
 ├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners and packaging
 ├── .github/workflows/
 │   ├── build.yml              # 5-platform release builds
@@ -76,26 +75,28 @@ The app uses **Provider** with `ChangeNotifier` throughout. All providers are re
 | `SessionStore` | ChangeNotifier | Session runtime state & results |
 | `SessionController` | Provider | Orchestrates session launch & answer submission |
 
-### Feature Layer (`lib/features/`)
+### Layers
 
-Each feature is a self-contained module with:
-- `*_page.dart` — top-level page widget
-- `widget/` or `widgets/` — feature-local widgets
-- `data/` — local state/data classes (if any)
-- `model/` — feature-specific models (if any)
+`lib/` has three layers, plus `main.dart` and `l10n/`. `ui/` is pages, widgets and the state they own. `domain/` is pure Dart. `data/` is anything that touches disk, preferences or the audio engine. The import rules:
+
+- `ui` may import `domain` and `data`; `data` may import `domain`; `domain` imports neither.
+- `ui` does not import `dart:io`, `package:path`, `shared_preferences` or `AppDirectories`.
+- `domain` does not import `dart:io`.
+- `domain` and `data` use only `package:flutter/foundation.dart` from Flutter, and never take a `BuildContext`.
+- Nothing in the three layers imports `main.dart`.
+
+`test/layers_test.dart` checks these. It carries an allow-list of the violations that remain, which can only shrink: delete an entry when you fix it. The reasons are in `docs/adr/0002-three-layers-enforced-by-test.md`.
 
 There are **no barrel files** (`l10n/l10n.dart` is the one exception, see [Localization](#localization)). Import the specific `package:eq_trainer/...` path.
 
-### Shared Layer (`lib/shared/`)
-
-| Sub-directory | Content |
+| Folder | Content |
 |---|---|
-| `model/` | `AudioClip` (immutable, JSON), `AudioState` (backend/device), `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`) |
-| `player/` | `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
-| `repository/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl) |
-| `service/` | `AppDirectories`, `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `UpgraderService`, `AudioFormatHelper`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService`, `legacy_settings_migration.dart`, `legacy_clip_migration.dart`, `wav_pcm.dart` (WAV parser), `third_party_licenses.dart` |
-| `themes/` | `AppColors`, `AppTheme`, `AppDimens` |
-| `widget/` | `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
+| `ui/<feature>/` | `config`, `import`, `playlist`, `result`, `session`, `settings`. Each has a `*_page.dart` and `widget/` or `widgets/`. `session/state/` holds `SessionStore`, `SessionController`, `SessionState`, `GraphState` and `FrequencyCalculator`; `import/` holds `ImportAudioData` |
+| `ui/core/` | `AppColors`, `AppTheme`, `AppDimens`, the player error dialog (`error.dart`), `UpgraderService`, `third_party_licenses.dart`, and in `widget/` `DeviceDropdown`, `InteractionLock`, `CustomNumberPicker`, `PlayerControlButtons` |
+| `domain/` | `AudioClip` (immutable, JSON), `AudioFormatHelper`, `wav_pcm.dart` (WAV parser), `SessionParameter` |
+| `data/` | `AppDirectories`, `AudioState` (backend/device), `MiscSettingsProvider` + `LocaleProvider` (ChangeNotifiers over `shared_preferences`), `PlayerService` (flutter_soloud engine + peaking EQ), `ImportPlayer` |
+| `data/clips/` | `IAudioClipRepository` interface + `AudioClipRepository` (JSON file impl), `AudioClipService`, `PlaylistService`, `ImportWorkflowService`, `ClipEncoder`, `ClipFormatMigration`, `ClipRecompressService` |
+| `data/legacy/` | `LegacyAudioClip` + `BackendData` + `MiscSettings` (Hive records, read only by the migrations), `legacy_settings_migration.dart`, `legacy_clip_migration.dart` |
 
 ---
 
@@ -166,7 +167,11 @@ would be lost:
 |---|---|
 | Peaking EQ filter | A bandpass-refactored biquad whose poles don't depend on gain, so sweeping dry/wet moves no recursive coefficient. This is what makes the Original/Filtered toggle click-free by construction. |
 | Android backend override | Upstream prefers AAudio on API ≥ 30; several DAP devices misbehave on it. |
-| Offline PCM-to-file encode | `encodePcmToFile` — Ogg Opus / FLAC / WAV from a float buffer. Runs on a `compute()` isolate and touches no engine state, so it is safe to call while audio is playing and two encodes may overlap. `ClipEncoder` is built on it. |
+| Offline PCM-to-file encode | `encodePcmToFile` — Ogg Opus / FLAC / WAV from a float buffer. Runs on a `compute()` isolate and touches no engine state, so it is safe to call while audio is playing and two encodes may overlap. `ClipEncoder.encodeWavBytes` is built on it. |
+| Offline file-to-PCM decode | `decodeFileToPcm`: a whole file or a frame-exact time range, with no engine running. Refuses files with no recognised signature, because `dr_mp3` otherwise turns them into a moment of noise and reports success. Looks past ID3v2 tags of any size at what follows, since that can be AAC as well as MP3. MP3 alone is also found behind junk in the first 4 KB, where it takes four consecutive frames to count, since one header turns up by chance. Memory follows the range, except for platform-decoded formats such as M4A, which only decode whole. |
+| Offline file-to-file convert | `convertFile`: decodes straight into the encoder, so memory does not follow the length of the audio, except for platform-decoded formats. A whole file or a frame-exact range, and `ClipEncoder.convertFile` and `trimFile` are both built on it. Because a source can now fail after output has begun, a failure removes the output, and a file that cannot be read never touches it. Refuses to write over its own source. |
+| Windows ADTS through the AAC transform | `decodeFileToPcm` and `convertFile` skip Media Foundation's source reader for ADTS. It sniffs only the first 2048 bytes, so it refuses audio behind an ID3 tag longer than that, and it believes a `.mp3` extension over the contents, reporting success on 1152 frames of an ADTS file named that way. The transform is the same decoder, and its samples match to the bit. |
+| Windows format from the first sample | Media Foundation guesses double the rate in stereo for AAC at 24 kHz and below, and corrects it with the first sample. Believing the guess turned mono 22.05 kHz into 44.1 kHz stereo, a quarter of the length, reported as a success, which a migration would then delete the source over. |
 | Opus bitrate + complexity | Upstream ran libopus defaults with no `OPUS_SET_BITRATE`. |
 | Kaiser-windowed sinc polyphase resampler | Replaced a linear-interpolation 44.1→48 kHz resampler. Opus mandates 48 kHz, so *every* Opus encode went through it — on the exact top-octave material users train against. |
 | Bisected `seekOpus` | Was a linear rewind-and-decode, i.e. O(position), and `PlayerService.seek` is a synchronous FFI call. Deep seeks in long Opus files blocked. |
@@ -179,11 +184,21 @@ Measured, on the fork's own test material:
   24.7 dB down.
 - **Seek** — seeking to 115 s in a two-minute file went from 71.77 ms to
   0.45 ms, and is now flat in position rather than linear.
+- **Memory** — peak native memory converting an hour of stereo at 44.1 kHz on
+  Windows, where one copy of the PCM is 1214 MB:
+
+  | Source | Decode then encode | `convertFile` |
+  |---|---|---|
+  | WAV, FLAC, MP3 | 3641 MB | under 1 MB |
+  | Ogg Opus | | 7.5 MB |
+  | ADTS | | 6 MB |
+  | M4A | 3644 MB | 2554 MB |
 
 Three upstream bugs were found and fixed along the way: OpusHead advertised a
 pre-skip of 0, granulepos was written before being advanced (truncating ~20 ms
 off every file), and FLAC never declared `total_samples`, so every decoder
-reported an unknown duration.
+reported an unknown duration. `convertFile` only knows that count at the end, so
+it patches `STREAMINFO` in the finished file.
 
 MP3 output was considered and dropped: it was the only target needing a new
 codec (LAME) and an LGPL dependency. WAV remains the zero-work fallback.
@@ -192,10 +207,43 @@ codec (LAME) and an LGPL dependency. WAV remains the zero-work fallback.
 
 Clips are app-owned copies, converted once at import rather than on every load.
 `AudioFormatHelper` holds the mapping and is the single source of truth for
-which extensions the engine plays natively — `PlayerService` shares that set
-rather than restating it, because the two drifting apart is what breaks Ogg on
-Apple platforms (the `audio_decoder` fallback is AVFoundation, which cannot
-open an Ogg container at all).
+which extensions the engine streams — `PlayerService` shares that set rather than
+restating it, and loads anything else whole in `LoadMode.memory`.
+
+The import picker's list is per platform, from what each was measured to read. It
+removes known failures but cannot promise a file works, since `.m4a` does not identify
+its codec. A file nothing can read is refused with its own dialog, and on Linux that
+is also what a missing FFmpeg looks like, so the Linux message says to install it, and so
+do the playback errors on an old `.m4a` or `.aac` clip, which is how an upgraded install
+with no FFmpeg finds out. The offline encoder takes mono and stereo only, so a file with
+more channels plays but is refused when something has to convert or trim it. It is not
+mixed down, because channel order depends on the decoder.
+
+SoLoud is the only decoder. On Linux, M4A, AAC, AIFF and WMA go through a system
+FFmpeg that it opens with `dlopen`, measured on 6.1, 7.1, 8.1 and 9.0. The packages
+recommend FFmpeg rather than depend on it, since the core formats need nothing. `caf`
+is left out of the Linux picker because CAF ALAC decodes about 70 ms short on 8.1 and 9.0.
+
+A trim reads the file the user picked rather than the converted temp file, so a lossy
+import is not encoded twice. It falls back to the temp file only if the original can no
+longer be read, for example because it was on a drive that has been removed.
+
+**What memory a conversion still takes.** WAV, FLAC, MP3 and Ogg stream everywhere, so
+an hour costs what a minute does. Formats only a platform codec reads cannot, and hold
+the decoded PCM, about 1.2 GB per hour of stereo:
+
+- M4A, AIFF, WMA and CAF, everywhere, and ADTS on everything but Windows. Android holds
+  one copy, planar and sized from the container, and fails rather than truncates past
+  2 GiB, about 1.7 hours of stereo at 44.1 kHz, or 512 MiB on a 32-bit device. So an
+  hour of M4A is improved but may still not fit on a small DAP.
+- Windows peaks at about twice that, because the source reader's interleaved buffer and
+  the planar copy exist together for a moment.
+- `ClipRecompressService` does not use `convertFile`. It reads the WAV into Dart and goes
+  through `encodeWavBytes`, so a long WAV still costs several copies.
+
+Android, iOS and macOS have `NativeStream`, which decodes M4A a piece at a time for
+playback, and ADTS has a stream decoder on every platform. Either could feed the encoder
+and remove these copies, but neither has been tested on a device for this use.
 
 Two background passes rewrite clips in an existing library:
 
@@ -213,8 +261,7 @@ adopted with the 5.2.2 fork because of what is still unknown or awkward:
 - A streamed voice can underrun if decoding falls behind, which has not been tested
   on a slow DAP.
 - `.m4a` does not identify the codec. On an Android 17 (API 37) emulator, AAC
-  plays but ALAC has no decoder, through SoLoud and `audio_decoder` alike, so this
-  varies by device. Adopting it needs a load that handles that failure, not just a
+  plays but ALAC has no decoder, so this varies by device. Adopting it needs a load that handles that failure, not just a
   per-platform extension set.
 
 Both passes keep the record and the basename and change only the extension. The
@@ -226,7 +273,7 @@ relies on to follow a clip that moved underneath a live session.
 decode-plus-encode is CPU-seconds per clip on a phone or a DAP — the hardware
 where libraries are largest and the contention is audible. `ClipFormatMigration`
 exposes `pause()`/`resume()`, and the screens that play audio (`SessionPage`,
-`PlaylistControlView`) hold it while they are open; the checkpoint is between
+`PlaylistControlView`, `ImportPage`) hold it while they are open; the checkpoint is between
 clips, which the per-clip commit makes free. Disabling the UI instead was
 considered and rejected: a large library on a slow device is minutes of a dead
 Start button, and legacy clips still play through `PlayerService`'s
@@ -353,9 +400,9 @@ one of its items.
 - Material Design 3. `AppColors` holds fully enumerated `lightScheme`/`darkScheme`
   `ColorScheme` literals — there is **no** `ColorScheme.fromSeed` call to edit;
   regenerate the pair if the palette changes
-- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/shared/model/misc_settings_provider.dart`; theme mode is persisted to `shared_preferences`
+- Dark/light modes via `MiscSettingsProvider` (ChangeNotifier) in `lib/data/misc_settings_provider.dart`; theme mode is persisted to `shared_preferences`
 - Custom font: `PretendardVariable` (supports Korean)
-- Colors/dimensions in `lib/shared/themes/` (`AppColors`, `AppDimens`)
+- Colors/dimensions in `lib/ui/core/` (`AppColors`, `AppDimens`)
 - Orientation lock for screens with `shortestSide < 300`
 
 ---
@@ -403,10 +450,13 @@ scaffolding is in `test/helpers/`:
 | `mocks.dart` | The mocktail doubles: repository, `AppDirectories`, `PlayerService`, `PlaylistService`. `AudioState` is a `final class` and cannot be mocked; construct a real one, it needs no engine. |
 | `fake_encoder.dart` | `FakeClipEncoder`: writes a file of a known size, or throws. Records every destination in `encoded`. |
 
-Platform channels (`audio_decoder`, `path_provider`) are stubbed per test with
+Platform channels (`path_provider`) are stubbed per test with
 `setMockMethodCallHandler` rather than by depending on the plugin; see
 `import_workflow_service_test.dart`. `shared_preferences` is a direct dependency,
 so use its `setMockInitialValues`.
+
+`layers_test.dart` checks the import rules of the three layers; see
+[Layers](#layers).
 
 `l10n_test.dart` covers what the compiler cannot: every ARB file has every message
 and placeholder, the iOS plist matches `supportedLocales`, and the plural forms
@@ -512,21 +562,21 @@ so both downloads carry them. The build fails if they cannot be found.
 | File | Purpose |
 |---|---|
 | `lib/main.dart` | App entry, provider tree, legacy data migrations |
-| `lib/features/session/model/session_controller.dart` | Session orchestration logic |
-| `lib/features/session/model/session_store.dart` | Session UI state (ChangeNotifier) |
-| `lib/features/session/data/session_parameter.dart` | User-configurable session settings |
-| `lib/features/session/model/frequency_calculator.dart` | Pure EQ frequency math |
-| `lib/shared/player/player_service.dart` | Audio engine wrapper + EQ control |
-| `lib/shared/service/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
-| `lib/shared/service/clip_encoder.dart` | Decode-to-WAV then encode to Opus/FLAC/WAV; the one place the two decoders meet |
-| `lib/shared/service/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
-| `lib/shared/repository/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
-| `lib/shared/service/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
-| `lib/shared/service/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
-| `lib/shared/model/audio_state.dart` | Output device + Android backend state |
+| `lib/ui/session/state/session_controller.dart` | Session orchestration logic |
+| `lib/ui/session/state/session_store.dart` | Session UI state (ChangeNotifier) |
+| `lib/domain/session_parameter.dart` | User-configurable session settings |
+| `lib/ui/session/state/frequency_calculator.dart` | Pure EQ frequency math |
+| `lib/data/player_service.dart` | Audio engine wrapper + EQ control |
+| `lib/data/clips/clip_format_migration.dart` | See [Clip Formats](#clip-formats) |
+| `lib/data/clips/clip_recompress_service.dart` | See [Clip Formats](#clip-formats) |
+| `lib/data/clips/clip_encoder.dart` | Convert or trim through SoLoud to Opus/FLAC/WAV |
+| `lib/domain/audio_format_helper.dart` | Import/trim format policy and the natively-playable extension set |
+| `lib/data/clips/audio_clip_repository.dart` | The clip library's JSON file; see [Persistence](#persistence) |
+| `lib/data/legacy/legacy_clip_migration.dart` | Moves the library out of Hive; see [Persistence](#persistence) |
+| `lib/data/clips/playlist_service.dart` | Playlist business logic; `resolveClipPath` follows a clip whose file was rewritten mid-session |
+| `lib/data/audio_state.dart` | Output device + Android backend state |
 | `lib/l10n/app_en.arb` | Template strings; see [Localization](#localization) |
-| `lib/shared/model/locale_provider.dart` | The language picked in settings |
+| `lib/data/locale_provider.dart` | The language picked in settings |
 
 ---
 
@@ -537,7 +587,6 @@ so both downloads carry them. The build fails if they cannot be found.
 | `provider` | State management |
 | `hive_ce` + `hive_ce_flutter` | Reading what older versions stored, nothing else; see [Persistence](#persistence) |
 | `flutter_soloud` (git fork) | Cross-platform audio engine, plus the offline encoder `ClipEncoder` writes through. See [What the `flutter_soloud` fork carries](#what-the-flutter_soloud-fork-carries) |
-| `audio_decoder` (hosted) | Decodes foreign containers (m4a/aac/wma/alac/aiff) via platform codecs, and emits WAV. Formats like WMA and AIFF are why it is still here: SoLoud cannot open them |
 | `flutter_localizations` + `intl` | i18n, through `gen-l10n`. `intl`'s version is pinned by the SDK. See [Localization](#localization) |
 | `shared_preferences` | All settings, including the chosen language |
 | `fl_chart` | EQ frequency graph visualization |
@@ -599,3 +648,18 @@ name a moment after launch. It comes from `CFBundleName` instead, which also
 fixes the menu items the nib builds from `APP_NAME` ("Quit eqTrainer" rather
 than "Quit eq_trainer"). `PRODUCT_NAME` stays `eq_trainer` because it names the
 binary and the `.app`, which the DMG packaging in CI depends on.
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (`potatosalad775/eqTrainer`), through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels, each named after its role: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root, created only when a term or decision is settled. See `docs/agents/domain.md`.

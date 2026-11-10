@@ -33,7 +33,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any # version pinned by flutter_localizations
-  audio_decoder: ^0.8.1
   file_picker: ^13.3.2
   provider: ^6.1.5
   font_awesome_flutter: ^11.0.0
@@ -61,7 +60,7 @@ dependencies:
   flutter_soloud:
     git:
       url: https://github.com/potatosalad775/flutter_soloud.git
-      ref: c203eb26f32af7cf2b3cac4a2be0cc6ac8023b12 # was: custom-5.2.2
+      ref: ef8323113c4a88de53ada2cdfb6f1ea54fa810e1 # custom-5.2.2
 
 # flutter_soloud's build hook downloads its Xiph binaries (libopus and the other
 # codecs) from alnitak/flutter_soloud_prebuilds. It defaults to the `latest`

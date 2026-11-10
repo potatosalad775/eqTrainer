@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:eq_trainer/shared/repository/audio_clip_repository.dart';
-import 'package:eq_trainer/shared/service/audio_clip_service.dart';
-import 'package:eq_trainer/shared/service/audio_format_helper.dart';
-import 'package:eq_trainer/shared/service/app_directories.dart';
+import 'package:eq_trainer/data/clips/audio_clip_repository.dart';
+import 'package:eq_trainer/data/clips/audio_clip_service.dart';
+import 'package:eq_trainer/domain/audio_format_helper.dart';
+import 'package:eq_trainer/data/app_directories.dart';
 
 import 'helpers/fixtures.dart';
 
@@ -129,7 +129,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // isTrimmed: true — trim path (AudioDecoder.trimAudio)
+  // isTrimmed: true — trim path (decode the range, then encode)
   // ---------------------------------------------------------------------------
   group('createClip (isTrimmed: true)', () {
     testWidgets('trims WAV and stores duration = endSec - startSec', (tester) async {

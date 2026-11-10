@@ -1,12 +1,16 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'package:eq_trainer/shared/service/clip_encoder.dart';
-import 'package:eq_trainer/shared/service/wav_pcm.dart';
+import 'package:eq_trainer/data/player_service.dart';
+import 'package:eq_trainer/data/clips/clip_encoder.dart';
+import 'package:eq_trainer/domain/wav_pcm.dart';
 
+import 'helpers/fixture_adts.dart';
+import 'helpers/fixture_formats.dart';
 import 'helpers/fixtures.dart';
 
 /// End-to-end coverage for the Opus/FLAC clip path.
@@ -37,7 +41,7 @@ void main() {
     // The encoder needs no engine, but loading its output back to check that
     // it decodes does.
     if (!SoLoud.instance.isInitialized) {
-      await SoLoud.instance.init();
+      await SoLoud.instance.init(androidBackend: defaultAndroidBackend);
     }
   });
 
@@ -74,6 +78,58 @@ void main() {
       });
     }
 
+    // What an All-WAV import or migration of an M4A clip does.
+    test('converts an M4A source to WAV', () async {
+      final format = formatFixtures.firstWhere((f) => f.name == 'm4a_aac');
+      final sourcePath = fixture(format.fileName);
+      await File(sourcePath).writeAsBytes(base64Decode(format.base64Data));
+      final dest = fixture('out_from_m4a.wav');
+
+      await encoder.convertFile(sourcePath: sourcePath, destPath: dest);
+
+      final pcm = parseWav(await File(dest).readAsBytes());
+      expect(pcm.channels, 2);
+      expect(pcm.frameCount * 1000 ~/ pcm.sampleRate, closeTo(325, 50));
+    });
+
+    // Through compute(), which is how a migration reaches the platform's AAC decoder.
+    test('converts an ADTS source to WAV', () async {
+      final sourcePath = fixture('tone.aac');
+      await File(sourcePath).writeAsBytes(base64Decode(fixtureAdtsBase64));
+      final dest = fixture('out_from_adts.wav');
+
+      await encoder.convertFile(sourcePath: sourcePath, destPath: dest);
+
+      final pcm = parseWav(await File(dest).readAsBytes());
+      expect(pcm.channels, 1);
+      expect(pcm.sampleRate, 44100);
+      expect(pcm.frameCount * 1000 ~/ pcm.sampleRate, closeTo(500, 60));
+    });
+
+    // Each of these went wrong through Media Foundation's source reader on Windows:
+    // a tag this long was refused, and the extension got one frame reported as success.
+    test('converts tagged ADTS named .mp3 to WAV', () async {
+      const tagBody = 4096;
+      final sourcePath = fixture('tagged_adts.mp3');
+      await File(sourcePath).writeAsBytes([
+        ...ascii.encode('ID3'),
+        4, 0, 0,
+        (tagBody >> 21) & 0x7F,
+        (tagBody >> 14) & 0x7F,
+        (tagBody >> 7) & 0x7F,
+        tagBody & 0x7F,
+        ...List.filled(tagBody, 0),
+        ...base64Decode(fixtureAdtsBase64),
+      ]);
+      final dest = fixture('out_from_tagged_adts.wav');
+
+      await encoder.convertFile(sourcePath: sourcePath, destPath: dest);
+
+      final pcm = parseWav(await File(dest).readAsBytes());
+      expect(pcm.sampleRate, 44100);
+      expect(pcm.frameCount * 1000 ~/ pcm.sampleRate, closeTo(500, 60));
+    }, skip: Platform.isWindows ? null : 'Only Windows is known to handle this so far');
+
     test('converts an MP3 source to Opus', () async {
       final dest = fixture('out_from_mp3.opus');
       await encoder.convertFile(
@@ -106,6 +162,56 @@ void main() {
       );
       final sourceSize = File(fixture('sine_440hz_1s.wav')).lengthSync();
       expect(File(dest).lengthSync(), lessThan(sourceSize));
+    });
+  });
+
+  group('failures and ranges', () {
+    test('a trim writes only the range', () async {
+      final dest = fixture('trimmed.wav');
+      await encoder.trimFile(
+        sourcePath: fixture('sine_440hz_3s.mp3'),
+        destPath: dest,
+        start: const Duration(milliseconds: 500),
+        end: const Duration(milliseconds: 1500),
+      );
+
+      final pcm = parseWav(await File(dest).readAsBytes());
+      expect(pcm.frameCount, pcm.sampleRate);
+    });
+
+    test('a file SoLoud cannot read leaves nothing behind', () async {
+      final source = File(fixture('not_audio.mp3'))
+        ..writeAsBytesSync(List.generate(32 * 1024, (i) => 1 + (i * 31) % 200));
+      final dest = fixture('not_audio.flac');
+
+      await expectLater(
+        encoder.convertFile(sourcePath: source.path, destPath: dest),
+        throwsA(predicate(isUnreadableAudioError)),
+      );
+      expect(File(dest).existsSync(), isFalse);
+    });
+
+    test('a range past the end of the file leaves nothing behind', () async {
+      final dest = fixture('past_end.flac');
+      await expectLater(
+        encoder.trimFile(
+          sourcePath: fixture('sine_440hz_1s.wav'),
+          destPath: dest,
+          start: const Duration(minutes: 1),
+          end: const Duration(minutes: 2),
+        ),
+        throwsA(isA<SoLoudOfflineDecodeCppException>()),
+      );
+      expect(File(dest).existsSync(), isFalse);
+    });
+
+    test('a file with non-ASCII characters in its output path', () async {
+      final dest = fixture('변환 결과 é.flac');
+      await encoder.convertFile(
+        sourcePath: fixture('sine_440hz_1s.wav'),
+        destPath: dest,
+      );
+      expect(File(dest).existsSync(), isTrue);
     });
   });
 

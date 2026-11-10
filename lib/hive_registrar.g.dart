@@ -3,8 +3,8 @@
 // Check in to version control
 
 import 'package:hive_ce/hive_ce.dart';
-import 'package:eq_trainer/shared/model/legacy_audio_clip.dart';
-import 'package:eq_trainer/shared/model/setting_data.dart';
+import 'package:eq_trainer/data/legacy/legacy_audio_clip.dart';
+import 'package:eq_trainer/data/legacy/setting_data.dart';
 
 extension HiveRegistrar on HiveInterface {
   void registerAdapters() {

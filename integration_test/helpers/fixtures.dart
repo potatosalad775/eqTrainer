@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
-import 'package:eq_trainer/shared/service/clip_encoder.dart';
+import 'package:eq_trainer/data/clips/clip_encoder.dart';
 
 import 'fixture_mp3.dart';
 
