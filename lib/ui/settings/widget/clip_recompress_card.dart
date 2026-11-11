@@ -128,6 +128,22 @@ class _ClipRecompressCardState extends State<ClipRecompressCard> {
       return const SizedBox.shrink();
     }
 
+    // The spacer above and the description below belong to the card, so a
+    // hidden card leaves no orphaned text or doubled gap on the page.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 12),
+        _buildCard(context, estimate),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          child: Text(context.l10n.audioSettingRecompressDesc),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard(BuildContext context, RecompressEstimate? estimate) {
     return SettingsCard(
       icon: Icons.compress,
       title: context.l10n.audioSettingRecompressTitle,

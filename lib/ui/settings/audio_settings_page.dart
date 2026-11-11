@@ -36,14 +36,9 @@ class AudioSettingsPage extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                 child: Text(context.l10n.audioSettingImportFormatDesc3),
               ),
-              const SizedBox(height: 12),
-              // Renders nothing when the library holds no WAV clips, so this
-              // costs an empty box rather than a dead button.
+              // Renders nothing, description and spacing included, when the
+              // library holds no WAV clips.
               const ClipRecompressCard(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                child: Text(context.l10n.audioSettingRecompressDesc),
-              ),
               const SizedBox(height: 12),
               const VolumeCompensationCard(),
               Padding(
