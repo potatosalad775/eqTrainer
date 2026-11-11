@@ -4,6 +4,24 @@
         <title>eqTrainer - Appcast</title>
 
         <item>
+            <title>v2.7.0</title>
+            <link>https://github.com/potatosalad775/eqTrainer</link>
+            <description>
+                <p>Added Ukrainian and Russian translations.</p>
+                <p>Audio files are now converted by the app's own audio engine, so long files need far less memory.</p>
+                <p>A clip that fails to load is now skipped instead of ending the session.</p>
+                <p>The playlist now marks clips whose file is missing.</p>
+                <p>Fixed a new session starting with the previous session's points and band count.</p>
+                <p>Fixed bugs and improved performance.</p>
+                <p>[Windows] Added an installer.</p>
+                <p>[Linux] GStreamer is no longer needed. FFmpeg is used for M4A, AAC, AIFF and WMA.</p>
+                <p>[Desktop] Only one copy of the app can run at a time.</p>
+            </description>
+            <pubDate>Wed, 11 Nov 2026 07:55:09 +0000</pubDate>
+            <enclosure url="https://github.com/potatosalad775/eqTrainer/releases/tag/v2.7.0" sparkle:version="2.7.0" />
+        </item>
+
+        <item>
             <title>v2.6.0</title>
             <link>https://github.com/potatosalad775/eqTrainer</link>
             <description>
