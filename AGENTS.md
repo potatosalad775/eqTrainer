@@ -251,7 +251,9 @@ An import is a `ClipImport` (`data/clips/clip_import.dart`). `prepare` converts 
 picked file when the format policy says to and owns the temp file it makes, `save` hands
 the result to `AudioClipService`, and `dispose` deletes the temp file, also when it is
 called while a conversion is still running, and waits for a running save to settle first,
-since the save may be reading it. The page does the picking and loads the
+since the save may be reading it. A delete that fails is retried in the background for
+two seconds, because Windows will not delete a file the player still has open; a retry
+stops once a newer import owns that path. The page does the picking and loads the
 result into the player, since the engine stays out of `ClipImport`. `importFailureOf`
 sorts any failure into too many channels, unreadable or other, and `ffmpegMayBeMissing`
 is the one place the Linux hint is decided.

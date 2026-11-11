@@ -14,9 +14,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Each entry is 'lib/relative/path.dart -> offending import uri'.
 const _knownViolations = <String>{
-  // Rule 1: ui must not import dart:io.
-  'lib/ui/core/upgrader_service.dart -> dart:io',
-  'lib/ui/settings/audio_settings_page.dart -> dart:io',
   // Rule 4: domain and data take only package:flutter/foundation.dart.
   'lib/data/misc_settings_provider.dart -> package:flutter/material.dart',
   'lib/data/clips/clip_format_migration.dart -> package:flutter/scheduler.dart',

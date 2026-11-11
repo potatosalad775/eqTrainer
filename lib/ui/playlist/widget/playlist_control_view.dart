@@ -10,9 +10,14 @@ import 'package:eq_trainer/data/clips/clip_format_migration.dart';
 import 'package:eq_trainer/ui/core/widget/player_control_buttons.dart';
 
 class PlaylistControlView extends StatefulWidget {
-  const PlaylistControlView({super.key, required this.filePath});
+  const PlaylistControlView({super.key, required this.filePath, this.createPlayer});
 
   final String filePath;
+
+  /// Replaces the [PlaylistPlayer] the view builds, so a test can give it an
+  /// in-memory engine instead of SoLoud.
+  @visibleForTesting
+  final PlaylistPlayer Function(BuildContext context)? createPlayer;
 
   @override
   State<PlaylistControlView> createState() => _PlaylistControlViewState();
@@ -28,10 +33,11 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
     // decode-and-encode running against it costs CPU we would rather spend on
     // the audio. Nested pauses are counted, so a preview opened over a
     // session does not resume the run when only the preview closes.
-    _player = PlaylistPlayer(
-      context.read<OutputSelection>(),
-      hold: context.read<ClipFormatMigration>(),
-    );
+    _player = widget.createPlayer?.call(context) ??
+        PlaylistPlayer(
+          context.read<OutputSelection>(),
+          hold: context.read<ClipFormatMigration>(),
+        );
     _player.launch(
       path: widget.filePath,
     ).onError((e, _) {
@@ -42,7 +48,10 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
         showPlayerErrorDialog(context,
           action: () {
             _player.shutdown();
-            Navigator.of(context).pop();
+            // Twice: the dialog is the top route, and the sheet is under it.
+            final navigator = Navigator.of(context);
+            navigator.pop();
+            navigator.pop();
           },
           error: e,
           path: widget.filePath,
@@ -109,5 +118,5 @@ class _PlaylistControlViewState extends State<PlaylistControlView> {
 }
 
 class PlaylistPlayer extends PlayerService {
-  PlaylistPlayer(super.output, {required super.hold});
+  PlaylistPlayer(super.output, {required super.hold, super.engine});
 }

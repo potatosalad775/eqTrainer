@@ -339,6 +339,100 @@ void main() {
     });
   });
 
+  group('a delete that fails', () {
+    // testWidgets for its clock: the retries are timers, and `pump` fires them.
+    // The conversion is real file I/O, so it runs under `runAsync`.
+    const retryEvery = Duration(milliseconds: 250);
+
+    ClipImport failing(void Function(String path) deleteFile) => ClipImport(
+          clips: clips,
+          importFormat: ImportFormat.smart,
+          encoder: FakeClipEncoder(),
+          tempDirectory: () async => tmp,
+          deleteFile: deleteFile,
+        );
+
+    Future<String> prepared(WidgetTester tester, ClipImport import) async =>
+        (await tester.runAsync(() => import.prepare(
+            pickedPath: '/picked/song.m4a', pickedName: 'song.m4a')))!;
+
+    testWidgets('is tried again until it works', (tester) async {
+      var attempts = 0;
+      final import = failing((path) {
+        if (++attempts <= 2) throw const FileSystemException('in use');
+        File(path).deleteSync();
+      });
+      final path = await prepared(tester, import);
+
+      import.dispose();
+      expect(attempts, 1);
+      expect(File(path).existsSync(), isTrue);
+
+      await tester.pump(retryEvery);
+      expect(attempts, 2);
+      await tester.pump(retryEvery);
+      expect(attempts, 3);
+      expect(File(path).existsSync(), isFalse);
+
+      await tester.pump(const Duration(seconds: 5));
+      expect(attempts, 3);
+    });
+
+    testWidgets('is given up on after two seconds', (tester) async {
+      var attempts = 0;
+      final import = failing((path) {
+        attempts++;
+        throw const FileSystemException('in use');
+      });
+      await prepared(tester, import);
+
+      import.dispose();
+      await tester.pump(const Duration(milliseconds: 1900));
+      expect(attempts, 8);
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(attempts, 9);
+      await tester.pump(const Duration(seconds: 5));
+      expect(attempts, 9);
+    });
+
+    testWidgets('that works the first time is not repeated', (tester) async {
+      var attempts = 0;
+      final import = failing((path) {
+        attempts++;
+        File(path).deleteSync();
+      });
+      await prepared(tester, import);
+
+      import.dispose();
+      await tester.pump(const Duration(seconds: 5));
+      expect(attempts, 1);
+    });
+
+    testWidgets('stops being retried once a newer import owns that path',
+        (tester) async {
+      var attempts = 0;
+      // Fails once, then would work: a retry would remove the file.
+      final first = failing((path) {
+        if (++attempts == 1) throw const FileSystemException('in use');
+        File(path).deleteSync();
+      });
+      final path = await prepared(tester, first);
+      first.dispose();
+      expect(attempts, 1);
+
+      // The same file picked again straight away converts to the same path.
+      final second = make();
+      expect(await prepared(tester, second), path);
+
+      await tester.pump(const Duration(seconds: 5));
+      expect(attempts, 1);
+      expect(File(path).existsSync(), isTrue);
+
+      second.dispose();
+      expect(File(path).existsSync(), isFalse);
+    });
+  });
+
   group('importFailureOf', () {
     test('too many channels', () {
       expect(importFailureOf(const UnsupportedChannelCountException(6)),

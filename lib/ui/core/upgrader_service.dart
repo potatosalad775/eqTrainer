@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:eq_trainer/l10n/l10n.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -10,7 +10,7 @@ class UpgraderService {
   final appcastURL = "https://raw.githubusercontent.com/potatosalad775/eqTrainer/master/appcast.xml";
 
   Future<String?> _getInstallationSource() async {
-    if (!Platform.isAndroid) return null;
+    if (defaultTargetPlatform != TargetPlatform.android) return null;
     // StoreChecker.getSource is an async getter — it must be awaited. The old
     // code stored the unresolved Future in a field and compared it to a Source
     // enum, which was never equal, so Play Store installs always fell through

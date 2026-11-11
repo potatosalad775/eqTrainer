@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:eq_trainer/data/clips/audio_clip_service.dart';
@@ -39,15 +40,34 @@ class ClipImport {
     required int importFormat,
     ClipEncoder? encoder,
     Future<Directory> Function()? tempDirectory,
+    void Function(String path)? deleteFile,
   })  : _clips = clips,
         _importFormat = importFormat,
         _encoder = encoder ?? ClipEncoder(),
-        _tempDirectory = tempDirectory ?? getTemporaryDirectory;
+        _tempDirectory = tempDirectory ?? getTemporaryDirectory,
+        _deleteFile = deleteFile ?? _deleteIfPresent;
 
   final AudioClipService _clips;
   final int _importFormat;
   final ClipEncoder _encoder;
   final Future<Directory> Function() _tempDirectory;
+
+  /// Deletes one file, throwing if it cannot. A parameter so a test can make
+  /// it fail the way a file that is still open does on Windows.
+  final void Function(String path) _deleteFile;
+
+  /// How long a failed delete keeps being retried: 8 times, 250 ms apart.
+  static const int _deleteRetries = 8;
+  static const Duration _deleteRetryDelay = Duration(milliseconds: 250);
+
+  /// Temp paths that a live import is converting to or still owns. Static
+  /// because it is what one import's retry asks about another.
+  static final Set<String> _claimed = {};
+
+  static void _deleteIfPresent(String path) {
+    final file = File(path);
+    if (file.existsSync()) file.deleteSync();
+  }
 
   String? _pickedPath;
   String? _sourcePath;
@@ -80,11 +100,12 @@ class ClipImport {
       final destPath =
           p.join(tempDir.path, '${p.basenameWithoutExtension(pickedName)}$targetExt');
 
+      _claimed.add(destPath);
       try {
         await _encoder.convertFile(sourcePath: pickedPath, destPath: destPath);
       } catch (_) {
         // Never leave a half-written file behind.
-        _deleteSyncQuietly(destPath);
+        _deleteQuietly(destPath);
         rethrow;
       }
 
@@ -92,7 +113,7 @@ class ClipImport {
       _tempPath = destPath;
       // A conversion cannot be cancelled, so [dispose] may have run while it
       // did and has found nothing to delete.
-      if (_disposed) _deleteSyncQuietly(destPath);
+      if (_disposed) _deleteQuietly(destPath);
     }
 
     _pickedPath = pickedPath;
@@ -140,15 +161,35 @@ class ClipImport {
 
   void _deleteTemp() {
     final temp = _tempPath;
-    if (temp != null) _deleteSyncQuietly(temp);
+    if (temp != null) _deleteQuietly(temp);
   }
 
   /// Best effort: a leftover temp file is a smaller problem than failing to
   /// finish tearing down, and the original error is the one worth reporting.
-  void _deleteSyncQuietly(String path) {
+  ///
+  /// One attempt at once, and if that fails, more in the background. The page
+  /// disposes its player just before this and does not wait for it, and
+  /// Windows will not delete a file that is still open. Nothing else clears
+  /// the temp folder, so a file left here stays.
+  void _deleteQuietly(String path) {
+    _claimed.remove(path);
     try {
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    } catch (_) {}
+      _deleteFile(path);
+    } catch (_) {
+      unawaited(_retryDelete(path));
+    }
+  }
+
+  Future<void> _retryDelete(String path) async {
+    for (var i = 0; i < _deleteRetries; i++) {
+      await Future<void>.delayed(_deleteRetryDelay);
+      // The same file picked again converts to the same path, and that file
+      // is the newer import's to delete.
+      if (_claimed.contains(path)) return;
+      try {
+        _deleteFile(path);
+        return;
+      } catch (_) {}
+    }
   }
 }

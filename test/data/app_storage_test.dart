@@ -62,6 +62,10 @@ void main() {
     ]);
     await clips.close();
     await Hive.close();
+    // Leave Hive pointing somewhere empty, as a fresh process would not be
+    // pointing at the boxes either: only openAppStorage's own init finds them.
+    final elsewhere = Directory(p.join(dir.path, 'elsewhere'))..createSync();
+    Hive.init(elsewhere.path);
   }
 
   setUp(() async {

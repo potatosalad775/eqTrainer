@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:eq_trainer/l10n/l10n.dart';
+import 'package:eq_trainer/ui/playlist/clip_duration.dart';
 import 'package:eq_trainer/ui/playlist/widget/playlist_control_view.dart';
 import 'package:eq_trainer/ui/playlist/widget/playlist_delete_dialog.dart';
 import 'package:eq_trainer/domain/audio_clip.dart';
@@ -54,9 +55,7 @@ class PlaylistItemTile extends StatelessWidget {
                 context.l10n.playlistAudioFileMissing,
                 style: TextStyle(color: context.colors.error),
               )
-            : Text(
-                Duration(milliseconds: (currentClip.duration * 1000).toInt()).toString().substring(2, 10)
-              ),
+            : Text(formatClipDuration(currentClip.duration)),
         leading: ReorderableDragStartListener(
           index: index,
           child: IconButton(
