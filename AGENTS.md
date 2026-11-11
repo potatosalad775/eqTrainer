@@ -34,15 +34,17 @@ eqTrainer/
 ├── assets/
 │   ├── fonts/                 # PretendardVariable.ttf
 │   └── icon/                  # App icon
-├── test/                      # Unit tests, mirroring lib/ (+ helpers/, layers_test.dart)
+├── test/                      # Unit tests, mirroring lib/ (+ helpers/, layers_test.dart, tool/)
+├── tool/                      # release.dart, changelog.dart, update_appcast.py; see CI/CD
 ├── integration_test/          # Real-engine tests — local only, never CI
 ├── docs/agents/               # Config the agent skills read; see Agent skills
 ├── android/ ios/ macos/ windows/ linux/  # Platform-specific runners and packaging
 ├── .github/workflows/
-│   ├── build.yml              # 5-platform release builds
+│   ├── build.yml              # 5-platform release builds, attached to the GitHub release
 │   └── test.yml               # Unit tests, every push
 ├── distribute_options.yaml    # fastforge jobs: Linux deb + rpm
-├── appcast.xml                # `upgrader` feed
+├── appcast.xml                # `upgrader` feed, written by the build workflow after a release
+├── CHANGELOG.md               # One entry per release: the notes on GitHub, the appcast and Play
 ├── l10n.yaml                  # gen-l10n config
 ├── pubspec.yaml
 ├── analysis_options.yaml
@@ -652,15 +654,54 @@ ready-for-review — `pull_request` deliberately has no `synchronize`, since the
 branch push already covers it — and on manual dispatch. In-progress runs for a
 ref are cancelled when a newer commit lands.
 
-`.github/workflows/build.yml` builds all 5 platforms **only on `release: published` + manual dispatch**
+`.github/workflows/build.yml` builds all 5 platforms **only on `release: published` + manual dispatch**.
+On a release it attaches the downloads to that release, named `eqTrainer_v<version>_<suffix>`;
+a manual run keeps the same files as workflow artifacts and attaches nothing.
 
-| Platform | Artifact |
-|---|---|
-| Android | AAB only (`flutter build appbundle`; the step is misnamed "Build APK") |
-| iOS | IPA |
-| Windows | Inno Setup installer (`windows/packaging/eq_trainer.iss`) + the release folder, zipped by hand as the portable download |
-| macOS | DMG |
-| Linux | DEB + RPM (via `fastforge`, jobs in `distribute_options.yaml`) |
+| Platform | Artifact | Suffix |
+|---|---|---|
+| Android | APK, signed with the same keystore as the Play bundle | `Android.apk` |
+| iOS | IPA, unsigned | `iOS.ipa` |
+| Windows | Inno Setup installer (`windows/packaging/eq_trainer.iss`) + the release folder zipped as the portable download | `Windows_setup.exe`, `Windows_portable.zip` |
+| macOS | DMG | `macOS.dmg` |
+| Linux | DEB + RPM (via `fastforge`, jobs in `distribute_options.yaml`) | `Linux.deb`, `Linux.rpm` |
+
+**To release:** write the version's entry in `CHANGELOG.md`, a `## vX.Y.Z [YYYY-MM-DD]`
+heading and its lines, commit it, then run `fvm dart run tool/release.dart <patch | minor |
+major | X.Y.Z>` on a clean `master`. It runs analyze and the unit tests, then makes one
+`chore(release): vX.Y.Z` commit that bumps `version:` in `pubspec.yaml` (the build number is
+the date as YYMMDD, or one more than the last if that would not go up) and dates the
+changelog entry. It then tags, pushes and publishes the GitHub release with the entry as
+its notes.
+
+**The changelog entry is the release's notes everywhere**: the GitHub release, the appcast
+item and Play's "What's new", which is why the script refuses an entry over 500 characters.
+`tool/changelog.dart` is the parser the release goes through, and a `## ` line that is not a well-formed heading
+is an error rather than a skipped entry.
+
+**A line can be tagged for platforms**: `- [Windows] Added an installer.` or
+`- [Windows, Linux] ...`, with `Android`, `iOS`, `Windows`, `macOS`, `Linux` and `Desktop`
+as the tags. GitHub and the appcast show the line as written. Play gets only untagged lines
+and those tagged `Android`, with the tag removed (`playNotes`, or `tool/changelog.dart
+<version> --play` to see it), and the 500-character limit counts only those. An unknown tag
+is an error.
+
+**`appcast.xml` changes last, and the workflow commits it.** The app reads it from `master`,
+so a new item is what tells installed copies to update. The `update-appcast` job runs
+`tool/update_appcast.py` only after every platform built and `attach` succeeded, then pushes
+a `chore(release): add vX.Y.Z to appcast.xml` commit to `master`, so pull after a release.
+It skips pre-releases and a version the file already has. It is Python so the job needs no
+Flutter SDK, which makes it a second, smaller reader of the changelog format.
+
+The `version` job fails the run before any build if the tag and `pubspec.yaml` disagree.
+Each build job uploads its file as a `release-*` artifact and only the `attach` job can
+write to the repository; it attaches whatever was built, so one platform failing does not
+hold back the rest, and re-running replaces assets rather than duplicating them.
+
+The Android job also builds the Play bundle (AAB). With the `PLAY_SERVICE_ACCOUNT_JSON`
+secret set, a release uploads it to the Play track in the `PLAY_TRACK` variable (internal
+by default); without it, and on manual runs, the bundle is the `play-bundle` workflow
+artifact. The bundle is never attached to the GitHub release.
 
 The Windows installer is per-user, so it needs no UAC prompt, and takes its version
 from the built executable. Three of its values must not drift: `AppId` is what makes

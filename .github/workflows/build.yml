@@ -1,13 +1,79 @@
 name: Build App
 
+# A published GitHub release (tag vX.Y.Z, matching `version:` in pubspec.yaml without the build
+# number) builds all five platforms and attaches the downloads to that release, already named:
+#
+#   eqTrainer_vX.Y.Z_Android.apk            eqTrainer_vX.Y.Z_Windows_setup.exe
+#   eqTrainer_vX.Y.Z_iOS.ipa                eqTrainer_vX.Y.Z_Windows_portable.zip
+#   eqTrainer_vX.Y.Z_macOS.dmg              eqTrainer_vX.Y.Z_Linux.deb / .rpm
+#
+# It also uploads the Play bundle (.aab) to a Play Console track, internal by default, once
+# PLAY_SERVICE_ACCOUNT_JSON is set. Until then the bundle is kept as a workflow artifact.
+#
+# `fvm dart run tool/release.dart <patch|minor|major>` bumps, tags and publishes the release,
+# with the version's CHANGELOG.md entry as its notes; the Play upload takes the same entry.
+#
+# Last, and not for a pre-release, it adds that entry to appcast.xml on the default branch, which
+# is what tells installed copies there is an update.
+#
+# A manual run builds the same files and keeps them all as workflow artifacts. It attaches nothing
+# and uploads nothing to Play (Play refuses a versionCode twice, so only releases upload).
+#
+# Re-running a failed job on a release run is safe: assets are replaced, not duplicated.
+#
+# Repository secrets:
+#   ANDROID_KEYSTORE_BASE64    base64 of the keystore. It signs both the bundle and the APK.
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+#   PLAY_SERVICE_ACCOUNT_JSON  (optional) JSON key of a Google Cloud service account with the
+#                              Android Publisher API enabled, invited in Play Console → Users and
+#                              permissions with release rights for the app.
+#
+# Repository variables (optional):
+#   PLAY_TRACK                 internal (default), alpha, beta or production
+#   PLAY_RELEASE_STATUS        completed (default) or draft
+
 on:
   release:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build-android:
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # Before any build, so a mistyped tag costs seconds rather than five builds.
+      - name: Read the version, check the tag matches
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
+          if [ -z "$version" ]; then
+            echo "::error::Could not read the version from pubspec.yaml"
+            exit 1
+          fi
+          if [ -n "$TAG" ] && [ "$TAG" != "v$version" ]; then
+            echo "::error::Release tag $TAG doesn't match pubspec.yaml (v$version)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build-android:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      # Secrets can't be tested in `if:`, only whether one is set.
+      HAS_PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
 
     steps:
       - uses: actions/checkout@v7
@@ -35,19 +101,74 @@ jobs:
         run: |
           flutter clean
           flutter pub get
-          
-      - name: Build APK
+
+      - name: Build the Play bundle
+        id: bundle
         run: |
           flutter build appbundle --release
+          mkdir -p out/play
+          cp build/app/outputs/bundle/release/app-release.aab "out/play/eqTrainer_v${VERSION}.aab"
 
-      - name: Upload APK
+      # Play's "What's new" is the version's CHANGELOG.md entry, which tool/release.dart makes
+      # sure the tag carries, without the lines tagged for other platforms. Without one (a release
+      # made by hand) Play gets no notes.
+      - name: Release notes from CHANGELOG.md
+        id: notes
+        run: |
+          mkdir whatsnew
+          if dart tool/changelog.dart "$VERSION" --play > whatsnew/whatsnew-en-US; then
+            echo "dir=whatsnew" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::CHANGELOG.md has no notes for Android in v$VERSION; Play gets no release notes"
+          fi
+
+      # Each output depends only on the build it ships: a failed Play upload still keeps the
+      # bundle and still builds the APK.
+      - name: Upload to Play
+        id: play
+        if: github.event_name == 'release' && env.HAS_PLAY_KEY == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: kr.potatosalad775.eq_trainer
+          releaseFiles: out/play/eqTrainer_v${{ needs.version.outputs.version }}.aab
+          releaseName: ${{ needs.version.outputs.version }}
+          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          whatsNewDirectory: ${{ steps.notes.outputs.dir }}
+
+      # Not named release-*, so it is never attached to the GitHub release.
+      - name: Keep the bundle as a workflow artifact
+        if: >-
+          !cancelled() && steps.bundle.outcome == 'success' && (github.event_name != 'release' ||
+          env.HAS_PLAY_KEY != 'true' || steps.play.outcome == 'failure')
         uses: actions/upload-artifact@v7
         with:
-          name: build-android
-          path: build/app/outputs/bundle/release/*
+          name: play-bundle
+          path: out/play/*.aab
+          if-no-files-found: error
+
+      - name: Build the APK
+        id: apk
+        if: ${{ !cancelled() && steps.bundle.outcome == 'success' }}
+        run: |
+          flutter build apk --release
+          mkdir -p out/release
+          cp build/app/outputs/flutter-apk/app-release.apk "out/release/eqTrainer_v${VERSION}_Android.apk"
+
+      - name: Upload APK
+        if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: out/release/*.apk
+          if-no-files-found: error
 
   build-iOS:
+    needs: version
     runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
 
@@ -66,19 +187,23 @@ jobs:
       - name: Build iOS
         run: |
           flutter build ios --release --no-codesign
-          mkdir -p Payload
+          mkdir -p Payload out
           mv build/ios/iphoneos/Runner.app Payload
           zip -r -y Payload.zip Payload/Runner.app
-          mv Payload.zip build/ios/Payload.ipa
+          mv Payload.zip "out/eqTrainer_v${VERSION}_iOS.ipa"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v7
         with:
-          name: build-iOS
-          path: build/ios/Payload.ipa
+          name: release-ios
+          path: out/*.ipa
+          if-no-files-found: error
 
   build-windows:
+    needs: version
     runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
 
@@ -92,12 +217,20 @@ jobs:
           flutter clean
           flutter build windows --release
 
+      # The release folder's contents at the root of the zip, as in earlier releases.
+      - name: Zip the portable build
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Compress-Archive -Path build\windows\x64\runner\Release\* `
+            -DestinationPath "out\eqTrainer_v${env:VERSION}_Windows_portable.zip"
+
       # Before the installer step, so a packaging failure keeps the portable build.
-      - name: Upload EXE
+      - name: Upload portable zip
         uses: actions/upload-artifact@v7
         with:
-          name: build-windows
-          path: build/windows/x64/runner/Release/*
+          name: release-windows-portable
+          path: out/*.zip
+          if-no-files-found: error
 
       # Pinned so the installer's language files and script syntax cannot change
       # under a release build.
@@ -106,16 +239,22 @@ jobs:
           choco install innosetup --version=6.7.1 --no-progress -y
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" windows\packaging\eq_trainer.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $setup = @(Get-ChildItem build\installer\*.exe)
+          if ($setup.Count -ne 1) { throw "Expected one installer, found $($setup.Count)" }
+          Copy-Item $setup[0].FullName "out\eqTrainer_v${env:VERSION}_Windows_setup.exe"
 
       - name: Upload installer
         uses: actions/upload-artifact@v7
         with:
-          name: build-windows-installer
-          path: build/installer/*.exe
+          name: release-windows-setup
+          path: out/*.exe
           if-no-files-found: error
 
   build-macos:
+    needs: version
     runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
 
@@ -138,6 +277,7 @@ jobs:
       - name: Create DMG
         run: |
           brew install create-dmg
+          mkdir -p out
           cd build/macos/Build/Products/Release
           create-dmg \
             --volname "eq_trainer" \
@@ -149,25 +289,29 @@ jobs:
             --hide-extension "eq_trainer.app" \
             --app-drop-link 540 250 \
             --hdiutil-quiet \
-            "eq_trainer.dmg" \
+            "$GITHUB_WORKSPACE/out/eqTrainer_v${VERSION}_macOS.dmg" \
             "eq_trainer.app"
 
-      - name: Upload IPA
+      - name: Upload DMG
         uses: actions/upload-artifact@v7
         with:
-          name: build-macOS
-          path: build/macos/Build/Products/Release/eq_trainer.dmg
+          name: release-macos
+          path: out/*.dmg
+          if-no-files-found: error
 
   build-linux:
+    needs: version
     # Not ubuntu-latest: the rpm on 26.04 runs %install from a -build
     # subdirectory, which breaks the relative paths in fastforge's generated
     # spec. Building on the older image also keeps the glibc requirement of what
     # we ship lower.
     runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
 
     steps:
       - uses: actions/checkout@v7
-  
+
       - uses: subosito/flutter-action@v2
         with:
           channel: "stable"
@@ -181,7 +325,7 @@ jobs:
           sudo apt-get install -y clang cmake git ninja-build \
           pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev \
           rpm
-  
+
       - name: Enable fastforge
         run: |
           dart pub global activate fastforge
@@ -194,13 +338,82 @@ jobs:
         run: |
           $HOME/.pub-cache/bin/fastforge release --name=release
 
-      # always(): the packages are built one after another, so a failure in the
-      # later one would otherwise discard the artifact the earlier one already
-      # produced.
+      # !cancelled(), here and on the upload: the packages are built one after
+      # another, so a failure in the later one would otherwise discard the one the
+      # earlier already produced.
+      - name: Name the packages after the version
+        if: ${{ !cancelled() }}
+        run: |
+          mkdir -p out
+          for ext in deb rpm; do
+            file="$(find dist -name "*.$ext" 2>/dev/null | head -n 1)"
+            if [ -n "$file" ]; then
+              cp "$file" "out/eqTrainer_v${VERSION}_Linux.$ext"
+            fi
+          done
+
       - name: Upload Linux packages
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: build-linux
-          path: dist/*
+          name: release-linux
+          path: out/*
           if-no-files-found: warn
+
+  # The only job that can write to the repository. It attaches whatever was built, so one
+  # platform failing does not hold back the others; re-run the failed job and this one to add it.
+  attach:
+    needs: [version, build-android, build-iOS, build-windows, build-macos, build-linux]
+    if: ${{ !cancelled() && github.event_name == 'release' && needs.version.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: out
+          merge-multiple: true
+
+      - name: Attach the downloads to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          ls -l out
+          gh release upload "$TAG" out/* --repo "${{ github.repository }}" --clobber
+
+  # appcast.xml on the default branch is what tells installed copies about a release, so it
+  # changes last: only after every platform built and its download is attached, and never for a
+  # pre-release. If a platform failed, re-run it and this job follows.
+  update-appcast:
+    needs: [version, build-android, build-iOS, build-windows, build-macos, build-linux, attach]
+    if: ${{ github.event_name == 'release' && !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: update-appcast
+      cancel-in-progress: false
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      # The default branch, not the tag: that is where the app reads the feed from.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Add the changelog entry to appcast.xml
+        run: python3 tool/update_appcast.py "$VERSION"
+
+      # A push made with the workflow's own token starts no other workflow.
+      - name: Commit and push
+        run: |
+          if git diff --quiet -- appcast.xml; then
+            echo "appcast.xml is unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(release): add v$VERSION to appcast.xml" -- appcast.xml
+          git push
